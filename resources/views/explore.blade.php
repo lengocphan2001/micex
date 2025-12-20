@@ -404,10 +404,22 @@
             }
             
             // Chỉ lưu kết quả random vào mảng từ giây 31-60 (30 giây cuối)
+            // Nếu là giây 60 và có admin_set_result, dùng admin_set_result thay vì random
             if (currentSecond > 30 && currentSecond <= 60) {
-                const gemType = getGemForSecond(currentRound.seed, currentSecond);
+                let gemType;
+                if (currentSecond === 60 && currentRound.admin_set_result) {
+                    // Giây 60: ưu tiên admin_set_result nếu có
+                    gemType = currentRound.admin_set_result;
+                } else {
+                    // Các giây khác: tính từ seed
+                    gemType = getGemForSecond(currentRound.seed, currentSecond);
+                }
+                
                 if (!roundResults[currentSecond - 1]) {
                     roundResults[currentSecond - 1] = gemType;
+                } else if (currentSecond === 60 && currentRound.admin_set_result) {
+                    // Nếu đã có kết quả random nhưng admin set result, cập nhật lại
+                    roundResults[currentSecond - 1] = currentRound.admin_set_result;
                 }
             }
             
@@ -456,7 +468,13 @@
                                     if (myBet.round && currentRound) {
                                         // Cập nhật admin_set_result
                                         if (myBet.round.admin_set_result !== undefined) {
+                                            const previousAdminSetResult = currentRound.admin_set_result;
                                             currentRound.admin_set_result = myBet.round.admin_set_result;
+                                            
+                                            // Nếu admin_set_result thay đổi và round đang chạy, cập nhật lại roundResults[59] (giây 60)
+                                            if (previousAdminSetResult !== currentRound.admin_set_result) {
+                                                roundResults[59] = currentRound.admin_set_result; // Index 59 = giây 60
+                                            }
                                         }
                                         // Cập nhật final_result (ưu tiên admin_set_result nếu có)
                                         if (myBet.round.final_result) {
@@ -491,7 +509,13 @@
                                 if (myBet.round && currentRound) {
                                     // Cập nhật admin_set_result
                                     if (myBet.round.admin_set_result !== undefined) {
+                                        const previousAdminSetResult = currentRound.admin_set_result;
                                         currentRound.admin_set_result = myBet.round.admin_set_result;
+                                        
+                                        // Nếu admin_set_result thay đổi và round đang chạy, cập nhật lại roundResults[59] (giây 60)
+                                        if (previousAdminSetResult !== currentRound.admin_set_result) {
+                                            roundResults[59] = currentRound.admin_set_result; // Index 59 = giây 60
+                                        }
                                     }
                                     // Cập nhật final_result (ưu tiên admin_set_result nếu có)
                                     if (myBet.round.final_result) {
@@ -678,7 +702,14 @@
         // 30 giây cuối: random và hiển thị kết quả
         if (sec > 30 && sec <= 60) {
             // Get gem type for current second based on seed (chỉ random từ giây 31-60)
-            const gemType = getGemForSecond(currentRound.seed, sec);
+            // Nếu là giây 60 và có admin_set_result, dùng admin_set_result thay vì random
+            let gemType;
+            if (sec === 60 && currentRound.admin_set_result) {
+                gemType = currentRound.admin_set_result;
+            } else {
+                gemType = getGemForSecond(currentRound.seed, sec);
+            }
+            
             const gem = GEM_TYPES[gemType];
             
             if (gem) {
@@ -757,11 +788,23 @@
             
             if (i < 30) {
                 // 30 giây đầu: hiển thị icon radar
-                iconSrc = '{{ asset("images/icons/bigrada.png") }}';
+                iconSrc = '{{ asset("images/icons/rada.png") }}';
                 iconAlt = 'Radar';
             } else {
-                // 30 giây cuối: hiển thị đá đã random
-                const gemType = getGemForSecond(currentRound.seed, i + 1);
+                // 30 giây cuối: hiển thị đá đã random (dùng roundResults nếu có, nếu không thì tính từ seed)
+                // Nếu là giây 60 và có admin_set_result, dùng admin_set_result
+                let gemType;
+                if (i === 59 && currentRound.admin_set_result) {
+                    // Giây 60: ưu tiên admin_set_result nếu có
+                    gemType = currentRound.admin_set_result;
+                } else if (roundResults[i]) {
+                    // Dùng kết quả đã lưu trong roundResults
+                    gemType = roundResults[i];
+                } else {
+                    // Tính từ seed nếu chưa có trong roundResults
+                    gemType = getGemForSecond(currentRound.seed, i + 1);
+                }
+                
                 const gem = GEM_TYPES[gemType];
                 if (gem) {
                     iconSrc = gem.icon;
