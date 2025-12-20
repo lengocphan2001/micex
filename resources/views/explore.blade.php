@@ -344,9 +344,8 @@
                 if (currentRound._loadingNewRound) {
                     currentRound._loadingNewRound = false;
                 }
-            }
+                
                 // Calculate current second and phase immediately after loading
-            // Calculate current second and phase immediately after loading
                 let initialSecond = 0;
                 let initialPhase = 'break';
                 
@@ -384,7 +383,9 @@
                 }
             }
         } catch (error) {
-            console.error('Error loading round:', error);
+            console.error('Error loading current round:', error);
+        } finally {
+            isLoadingRound = false;
         }
     }
 
@@ -971,6 +972,7 @@
     let previousBetStatus = null; // Track previous bet status to detect changes
     let loadMyBetTimeout = null; // Debounce timeout
     let isLoadingMyBet = false; // Flag to prevent concurrent calls
+    let lastMyBetLoadTime = 0; // Timestamp của lần load bet cuối cùng
     
     async function loadMyBet(immediate = false) {
         // Throttle: chỉ cho phép gọi mỗi 1 giây (trừ khi immediate)
