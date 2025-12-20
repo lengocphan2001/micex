@@ -1,0 +1,172 @@
+@extends('layouts.mobile')
+
+@section('title', 'Đổi mật khẩu quỹ - Micex')
+
+@section('header')
+<header class="w-full px-4 py-4 flex items-center justify-between bg-gray-900 border-b border-gray-800">
+    <button onclick="history.back()" class="text-white">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+    </button>
+    <h1 class="text-white text-base font-semibold">Đổi mật khẩu quỹ</h1>
+    <div class="w-6"></div>
+</header>
+@endsection
+
+@section('content')
+<div class="px-4 py-4 space-y-4">
+    @if ($errors->any())
+        <div class="bg-red-500/20 border border-red-500 text-red-200 text-sm rounded-lg px-3 py-2">
+            <ul class="list-disc list-inside">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @if (session('status'))
+        <div class="bg-green-500/20 border border-green-500 text-green-200 text-sm rounded-lg px-3 py-2">
+            {{ session('status') }}
+        </div>
+    @endif
+
+    <form action="{{ route('me.change-fund-password.submit') }}" method="POST" class="space-y-3">
+        @csrf
+        <input type="password" name="current_fund_password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Mật khẩu quỹ hiện tại" required>
+        <input type="password" name="fund_password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Mật khẩu quỹ mới" required>
+        <input type="password" name="fund_password_confirmation" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Nhập lại mật khẩu quỹ mới" required>
+        <div class="relative">
+            <input type="text" name="verification_code" id="verificationCodeInput" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 pr-24 outline-none placeholder-gray-500" placeholder="Mã xác nhận" required>
+            <button type="button" id="sendVerificationCodeBtn" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-[#2d59ff] hover:bg-[#2448d1] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                Gửi mã
+            </button>
+        </div>
+        <p id="verificationCodeStatus" class="text-xs text-gray-400 hidden"></p>
+
+        <button type="submit" class="w-full bg-[#2d59ff] hover:bg-[#2448d1] text-white font-semibold py-3 rounded-full text-base shadow">Hoàn tất</button>
+    </form>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sendBtn = document.getElementById('sendVerificationCodeBtn');
+        const statusText = document.getElementById('verificationCodeStatus');
+        const verificationCodeInput = document.getElementById('verificationCodeInput');
+        let countdownInterval = null;
+        let remainingSeconds = 0;
+
+        function updateCountdown() {
+            if (remainingSeconds > 0) {
+                remainingSeconds--;
+                sendBtn.textContent = `Gửi lại (${remainingSeconds}s)`;
+                sendBtn.disabled = true;
+                sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                sendBtn.textContent = 'Gửi mã';
+                sendBtn.disabled = false;
+                sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+            }
+        }
+
+        if (sendBtn) {
+            sendBtn.addEventListener('click', async function() {
+                if (sendBtn.disabled) return;
+
+                // Disable button immediately
+                sendBtn.disabled = true;
+                sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                sendBtn.textContent = 'Đang gửi...';
+                
+                // Hide previous status
+                if (statusText) {
+                    statusText.classList.add('hidden');
+                }
+
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+                    || document.querySelector('input[name="_token"]')?.value;
+
+                try {
+                    const response = await fetch('{{ route("me.send-fund-password-verification-code") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken || '',
+                        },
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        // Show success message
+                        if (statusText) {
+                            statusText.textContent = data.message || 'Mã xác nhận đã được gửi đến email của bạn.';
+                            statusText.classList.remove('hidden', 'text-red-400');
+                            statusText.classList.add('text-green-400');
+                        }
+
+                        // Show toast
+                        if (typeof showToast === 'function') {
+                            showToast(data.message || 'Mã xác nhận đã được gửi đến email của bạn.', 'success');
+                        }
+
+                        // Start countdown (60 seconds)
+                        remainingSeconds = 60;
+                        if (countdownInterval) {
+                            clearInterval(countdownInterval);
+                        }
+                        countdownInterval = setInterval(updateCountdown, 1000);
+                        updateCountdown();
+                    } else {
+                        // Show error message
+                        if (statusText) {
+                            statusText.textContent = data.error || data.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+                            statusText.classList.remove('hidden', 'text-green-400');
+                            statusText.classList.add('text-red-400');
+                        }
+
+                        // Show toast
+                        if (typeof showToast === 'function') {
+                            showToast(data.error || data.message || 'Có lỗi xảy ra. Vui lòng thử lại.', 'error');
+                        }
+
+                        // Re-enable button
+                        sendBtn.disabled = false;
+                        sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        sendBtn.textContent = 'Gửi mã';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    
+                    // Show error message
+                    if (statusText) {
+                        statusText.textContent = 'Có lỗi xảy ra. Vui lòng thử lại.';
+                        statusText.classList.remove('hidden', 'text-green-400');
+                        statusText.classList.add('text-red-400');
+                    }
+
+                    // Show toast
+                    if (typeof showToast === 'function') {
+                        showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'error');
+                    }
+
+                    // Re-enable button
+                    sendBtn.disabled = false;
+                    sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    sendBtn.textContent = 'Gửi mã';
+                }
+            });
+        }
+    });
+</script>
+@endpush
+

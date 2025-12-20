@@ -1,0 +1,92 @@
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'guest.admin' => \App\Http\Middleware\RedirectIfAdminAuthenticated::class,
+            'set.admin.guard' => \App\Http\Middleware\SetAdminGuard::class,
+        ]);
+        
+        // Exclude logout from CSRF verification (both user and admin logout)
+        // Temporarily exclude register and login for testing
+        $middleware->validateCsrfTokens(except: [
+            'logout',
+            'admin/logout',
+            'register',
+            'login',
+            'deposit/submit',
+            'withdraw/submit',
+            'me/send-fund-password-verification-code',
+            'giftcode/redeem',
+            'admin/intervene-results/set-round-result',
+        ]);
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        // Handle CSRF token mismatch (419 Page Expired)
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            // For AJAX/JSON requests, return JSON response
+            if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'error' => 'CSRF token mismatch',
+                    'message' => 'Phiên đăng nhập đã hết hạn. Vui lòng tải lại trang và thử lại.',
+                    'requires_refresh' => true,
+                ], 419);
+            }
+            
+            // Handle logout - allow it even with expired token
+            if ($request->is('logout') || $request->routeIs('logout')) {
+                // Force logout and redirect to login
+                try {
+                    \Illuminate\Support\Facades\Auth::guard('web')->logout();
+                    if ($request->hasSession()) {
+                        $request->session()->invalidate();
+                        $request->session()->regenerateToken();
+                    }
+                } catch (\Exception $e) {
+                    // Ignore errors during logout
+                }
+                return redirect()->route('login')->with('success', 'Đăng xuất thành công.');
+            }
+            
+            // Handle admin login
+            if ($request->is('admin/login') || $request->routeIs('admin.login')) {
+                return redirect()->route('admin.login')
+                    ->with('error', 'Phiên đăng nhập đã hết hạn. Vui lòng thử lại.');
+            }
+            
+            // Handle user login
+            if ($request->is('login') || $request->routeIs('login')) {
+                return redirect()->route('login')
+                    ->with('error', 'Phiên đăng nhập đã hết hạn. Vui lòng thử lại.');
+            }
+            
+            // Handle user register
+            if ($request->is('register') || $request->routeIs('register')) {
+                return redirect()->route('register')
+                    ->with('error', 'Phiên đăng nhập đã hết hạn. Vui lòng thử lại.');
+            }
+            
+            // Handle deposit submit - return JSON for AJAX requests
+            if ($request->is('deposit/submit') || $request->routeIs('deposit.submit')) {
+                return response()->json([
+                    'error' => 'CSRF token mismatch',
+                    'message' => 'Phiên đăng nhập đã hết hạn. Vui lòng tải lại trang và thử lại.',
+                    'requires_refresh' => true,
+                ], 419);
+            }
+            
+            return redirect()->back()
+                ->withInput($request->except('password', '_token'))
+                ->with('error', 'Phiên đăng nhập đã hết hạn. Vui lòng thử lại.');
+        });
+    })->create();
