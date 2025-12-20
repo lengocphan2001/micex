@@ -44,19 +44,45 @@ class Round extends Model
     const BASE_TIME = '2025-01-01 00:00:00';
     
     /**
-     * Get current active round or create new one
-     * @deprecated Use getOrCreateRoundByNumber() instead
+     * Calculate round number based on BASE_TIME
+     * Round duration: 60 giây, Break time: 10 giây, Total cycle: 70 giây
      */
-    public static function getCurrentRound()
+    public static function calculateRoundNumber()
     {
-        // Tính round number từ BASE_TIME
-        // Round duration: 60 giây, Break time: 10 giây, Total cycle: 70 giây
         $baseTime = \Carbon\Carbon::parse(self::BASE_TIME)->timestamp;
         $now = now()->timestamp;
         $elapsed = $now - $baseTime;
         $breakTime = 10; // 10 giây break time
         $totalCycle = 60 + $breakTime; // 70 giây mỗi cycle
-        $roundNumber = floor($elapsed / $totalCycle) + 1;
+        return floor($elapsed / $totalCycle) + 1;
+    }
+    
+    /**
+     * Get current active round WITHOUT creating new one
+     * Round should only be created by ProcessRoundTimer command
+     */
+    public static function getCurrentRound()
+    {
+        // Tính round number từ BASE_TIME
+        $roundNumber = self::calculateRoundNumber();
+        $expectedSeed = 'round_' . $roundNumber;
+        
+        // CHỈ lấy round có seed deterministic (round_ + roundNumber), BỎ round có seed random
+        return self::where('round_number', $roundNumber)
+            ->where('seed', $expectedSeed)
+            ->first();
+    }
+    
+    /**
+     * Get current active round or create new one
+     * @deprecated Use getOrCreateRoundByNumber() instead
+     * NOTE: This method is deprecated and should NOT be used anymore.
+     * Round creation should only happen in ProcessRoundTimer command.
+     */
+    public static function getCurrentRoundOrCreate()
+    {
+        // Tính round number từ BASE_TIME
+        $roundNumber = self::calculateRoundNumber();
         
         return self::getOrCreateRoundByNumber($roundNumber);
     }
@@ -70,26 +96,65 @@ class Round extends Model
     {
         // Sử dụng lock để tránh race condition khi nhiều process cùng tạo round
         return \DB::transaction(function () use ($roundNumber) {
-            // Tìm round với round_number này (với lock)
-            $round = self::where('round_number', $roundNumber)->lockForUpdate()->first();
+            $expectedSeed = 'round_' . $roundNumber;
+            
+            // CHỈ tìm round có seed deterministic (round_ + roundNumber)
+            // BỎ TẤT CẢ round có seed random
+            $round = self::where('round_number', $roundNumber)
+                ->where('seed', $expectedSeed)
+                ->lockForUpdate()
+                ->first();
             
             if (!$round) {
-                // Generate deterministic seed for this round (phải giống client)
-                // Client dùng: 'round_' + roundNumber
-                $seed = 'round_' . $roundNumber;
-                $round = self::create([
-                    'round_number' => $roundNumber,
-                    'seed' => $seed,
-                    'status' => 'pending',
-                    'current_second' => 0,
-                ]);
-            } else {
-                // Nếu round đã tồn tại nhưng seed không phải deterministic, cập nhật lại
-                // (chỉ cập nhật nếu round chưa finish để không ảnh hưởng kết quả đã lưu)
-                $expectedSeed = 'round_' . $roundNumber;
-                if ($round->seed !== $expectedSeed && $round->status !== 'finished') {
-                    $round->seed = $expectedSeed;
-                    $round->save();
+                // Double-check sau khi lock để tránh race condition
+                $round = self::where('round_number', $roundNumber)
+                    ->where('seed', $expectedSeed)
+                    ->first();
+                
+                if (!$round) {
+                    // Generate deterministic seed for this round (phải giống client)
+                    // Client dùng: 'round_' + roundNumber
+                    $seed = 'round_' . $roundNumber;
+                    
+                    try {
+                        $round = self::create([
+                            'round_number' => $roundNumber,
+                            'seed' => $seed,
+                            'status' => 'pending',
+                            'current_second' => 0,
+                        ]);
+                    } catch (\Illuminate\Database\QueryException $e) {
+                        // Nếu unique constraint violation (round đã được tạo bởi process khác)
+                        // CHỈ lấy round có seed deterministic
+                        if ($e->getCode() == 23000) { // SQLSTATE[23000]: Integrity constraint violation
+                            $round = self::where('round_number', $roundNumber)
+                                ->where('seed', $expectedSeed)
+                                ->first();
+                        } else {
+                            throw $e;
+                        }
+                    }
+                }
+            }
+            
+            // XÓA TẤT CẢ round có seed random (không phải deterministic) với cùng round_number
+            // Chỉ giữ lại round có seed deterministic
+            $roundsWithRandomSeed = self::where('round_number', $roundNumber)
+                ->where('seed', '!=', $expectedSeed)
+                ->get();
+            
+            foreach ($roundsWithRandomSeed as $randomRound) {
+                // Chỉ xóa round có seed random nếu nó chưa finish và không có bets
+                $hasBets = $randomRound->bets()->count() > 0;
+                if (!$hasBets && $randomRound->status !== 'finished') {
+                    $randomRound->delete();
+                } elseif ($hasBets || $randomRound->status === 'finished') {
+                    // Nếu round có seed random nhưng đã có bets hoặc đã finish
+                    // Cập nhật seed thành deterministic (nếu chưa finish)
+                    if ($randomRound->status !== 'finished') {
+                        $randomRound->seed = $expectedSeed;
+                        $randomRound->save();
+                    }
                 }
             }
             

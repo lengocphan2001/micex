@@ -60,22 +60,21 @@ class ExploreController extends Controller
      */
     public function getCurrentRound()
     {
+        // Lưu ý: Round được tạo và quản lý bởi ProcessRoundTimer command (background)
+        // Không tự động tạo hoặc start round ở đây để tránh duplicate
+        // CHỈ lấy round có seed deterministic (round_ + roundNumber), BỎ round có seed random
         $round = Round::getCurrentRound();
         
-        // Auto-start round if pending and break time passed
-        if ($round->status === 'pending') {
-            // Check if previous round's break time has passed
-            $previousRound = Round::where('id', '<', $round->id)
-                ->orderBy('id', 'desc')
-                ->first();
-            
-            // If no previous round or break time has passed, start immediately
-            if (!$previousRound || !$previousRound->break_until || now()->gte($previousRound->break_until)) {
-                $round->start();
-                // Refresh round to get updated status
-                $round->refresh();
-            }
+        // Nếu round chưa tồn tại, trả về null (không tạo mới)
+        // Round sẽ được tạo bởi ProcessRoundTimer command
+        if (!$round) {
+            return response()->json([
+                'round' => null,
+                'message' => 'Round not found. Please wait for ProcessRoundTimer to create it.',
+            ]);
         }
+        
+        // Không auto-start round ở đây vì ProcessRoundTimer đã xử lý
         
         // Calculate current phase based on started_at
         $phase = 'break'; // break, betting, result
@@ -274,8 +273,12 @@ class ExploreController extends Controller
             'amount' => 'required|numeric|min:0.01',
         ]);
 
-        // Get current round
+        // Get current round (không tạo mới, chỉ lấy từ database)
         $round = Round::getCurrentRound();
+        
+        if (!$round) {
+            return response()->json(['error' => 'Round not found'], 404);
+        }
         
         // Calculate current second
         $currentSecond = 0;
@@ -386,6 +389,11 @@ class ExploreController extends Controller
         }
 
         $round = Round::getCurrentRound();
+        
+        if (!$round) {
+            return response()->json(['bet' => null, 'balance' => $user->balance]);
+        }
+        
         $bet = Bet::where('round_id', $round->id)
             ->where('user_id', $user->id)
             ->with('round') // Eager load round để lấy final_result
@@ -427,6 +435,10 @@ class ExploreController extends Controller
     public function getBetAmounts()
     {
         $round = Round::getCurrentRound();
+        
+        if (!$round) {
+            return response()->json(['bet_amounts' => []]);
+        }
         
         // Get total bet amounts for each gem type (only pending bets count)
         $betAmounts = Bet::where('round_id', $round->id)

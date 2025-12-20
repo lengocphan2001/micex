@@ -8,20 +8,20 @@
             <span class="text-xs whitespace-nowrap {{ request()->routeIs('dashboard') ? 'text-blue-500' : 'text-gray-400' }}">Trang chủ</span>
         </a>
 
-        <!-- Explore -->
-        <a href="{{ route('explore') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg w-14 text-center">
-            <svg class="w-6 h-6 {{ request()->routeIs('explore') ? 'text-blue-500' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        <!-- Intro -->
+        <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg w-14 text-center">
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <span class="text-xs whitespace-nowrap {{ request()->routeIs('explore') ? 'text-blue-500' : 'text-gray-400' }}">Khám phá</span>
+            <span class="text-xs whitespace-nowrap text-gray-400">Giới thiệu</span>
         </a>
 
-        <!-- Intro (center item) -->
-        <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14 -mt-4">
+        <!-- Explore (center item - floating) -->
+        <a href="{{ route('explore') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14 -mt-4">
             <div class="w-10 h-10 rounded-full bg-blue-500 shadow-lg flex items-center justify-center border-2 border-gray-900 ring-2 ring-blue-400/30">
-                <img src="{{ asset('images/icons/gioithieu.png') }}" alt="Giới thiệu" class="w-6 h-6">
+                <img src="{{ asset('images/icons/gioithieu.png') }}" alt="Khám phá" class="w-6 h-6">
             </div>
-            <span class="text-xs whitespace-nowrap {{ request()->routeIs('explore') ? 'text-blue-500' : 'text-gray-400' }}">Giới thiệu</span>
+            <span class="text-xs whitespace-nowrap {{ request()->routeIs('explore') ? 'text-blue-500' : 'text-gray-400' }}">Khám phá</span>
         </a>
 
         <!-- Assets -->

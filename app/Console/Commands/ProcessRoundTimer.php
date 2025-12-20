@@ -119,12 +119,19 @@ class ProcessRoundTimer extends Command
             if ($currentSecond >= 60 || $countdown <= 0) {
                 // Chỉ finish nếu chưa finish (tránh finish nhiều lần)
                 if ($round->status === 'running') {
-                    // Calculate final result based on seed
-                    $finalResult = $this->getGemForSecond($round->seed, 60);
+                    // Refresh round để lấy admin_set_result mới nhất từ database
+                    $round->refresh();
                     
-                    // If admin set result, use that
+                    // Ưu tiên admin_set_result nếu có, nếu không thì tính từ seed
+                    $finalResult = null;
                     if ($round->admin_set_result) {
+                        // Admin đã set result, dùng admin_set_result
                         $finalResult = $round->admin_set_result;
+                        $this->info("Round {$round->round_number} using admin_set_result: {$finalResult}");
+                    } else {
+                        // Admin chưa set, tính từ seed
+                        $finalResult = $this->getGemForSecond($round->seed, 60);
+                        $this->info("Round {$round->round_number} using random result from seed: {$finalResult}");
                     }
                     
                     // Finish the round (this will process bets and update commission)
@@ -138,6 +145,7 @@ class ProcessRoundTimer extends Command
                     \Log::info("Round {$round->round_number} finished", [
                         'round_id' => $round->id,
                         'final_result' => $round->final_result,
+                        'admin_set_result' => $round->admin_set_result,
                         'status' => $round->status,
                     ]);
                 }
@@ -163,16 +171,10 @@ class ProcessRoundTimer extends Command
             }
         }
         
-        // Nếu round hiện tại đã finish và đã đến round mới
-        // Round mới đã được tạo ở đầu function (dòng 99), chỉ cần refresh và start
-        if ($round->round_number < $currentRoundNumber) {
-            // Refresh để lấy round mới (đã được tạo ở đầu function)
-            $round = Round::getOrCreateRoundByNumber($currentRoundNumber);
-            if ($round->status === 'pending' && $currentSecond > 0) {
-                $round->start();
-                $this->info("Round {$round->round_number} started");
-            }
-        }
+        // Lưu ý: Round mới đã được tạo ở đầu function (dòng 99) với getOrCreateRoundByNumber
+        // Không cần tạo lại ở đây vì getOrCreateRoundByNumber đã có lock và unique constraint
+        // Nếu round hiện tại đã finish và đã đến round mới, round mới đã được tạo ở đầu function
+        // Logic start round mới đã được xử lý ở dòng 105-108, không cần xử lý lại ở đây
         
         return 0;
     }

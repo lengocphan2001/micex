@@ -93,22 +93,22 @@
     <div id="tab-content-search" class="tab-content space-y-4">
         <!-- Cards row - Radar with current result -->
         <div class="grid grid-cols-2 gap-3">
-            <div class="bg-gray-800 rounded-xl card-shadow">
+            <div class="bg-[#111111] rounded-xl card-shadow">
                 <div class="flex">
                     <img src="{{ asset('images/icons/bigrada.png') }}" alt="Radar" class="w-28 h-28 object-contain">
-                    <div class="flex items-start gap-2 py-4" id="radarResult">
-                        <img src="{{ asset('images/icons/thachanh.png') }}" alt="Current Result" class="w-6 h-6 object-contain" id="currentGemIcon">
-                        <p class="text-white font-semibold text-xs" id="currentGemPercent">-</p>
+                    <div class="flex items-center justify-center gap-2 py-4" id="radarResult">
+                        <img src="{{ asset('images/icons/thachanh.png') }}" alt="Current Result" class="w-10 h-10 object-contain" id="currentGemIcon">
+                        <p class="text-white font-semibold text-xs" id="currentGemPercent"></p>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-800 rounded-xl p-4 card-shadow flex items-center" id="finalResultCard">
-                <div class="flex items-center gap-3">
-                    <img src="{{ asset('images/icons/thachanhtim.png') }}" alt="Kết quả" class="w-14 h-14 object-contain" id="finalResultIcon">
-                    <div>
-                        <p class="text-white font-semibold" id="finalResultName">Chờ kết quả...</p>
-                        <p class="text-blue-400 text-sm" id="finalResultPayout"></p>
-                    </div>
+            <div class="bg-[#111111] rounded-xl p-4 card-shadow flex flex-col items-center justify-center gap-1" id="finalResultCard">
+                <!-- Icon nhấp nháy lần lượt các loại đá (ở trên) -->
+                <img src="{{ asset('images/icons/thachanh.png') }}" alt="Kết quả" class="w-14 h-14 object-contain" id="finalResultIcon" style="display: block;">
+                <!-- Chữ "Chờ kết quả..." (ở dưới) -->
+                <div class="text-center">
+                    <p class="text-white font-semibold" id="finalResultName">Chờ kết quả...</p>
+                    <p class="text-blue-400 text-sm" id="finalResultPayout"></p>
                 </div>
             </div>
         </div>
@@ -122,10 +122,10 @@
         </div>
 
         <!-- Amount input -->
-        <div class="bg-gray-800 rounded-xl p-4 card-shadow space-y-3">
-            <div class="text-sm text-gray-300">Số lượng <span class="text-blue-400">💎</span></div>
+        <div class="space-y-3">
+            <div class="text-sm text-gray-300 flex items-center gap-1">Số lượng <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Gem" class="w-4 h-4 object-contain"></div>
             <div class="flex items-center gap-3">
-                <div class="flex-1 bg-gray-900 rounded-xl px-3 py-3 flex items-center justify-between">
+                <div class="flex-1 bg-gray-900 rounded-xl px-3 py-3 flex items-center justify-between" style="border: 0.1px solid #FFFFFF80;">
                     <input type="number" min="0.01" step="0.01" value="10" id="betAmount" class="bg-transparent text-white w-full outline-none" placeholder="Nhập số lượng">
                     <button onclick="clearBetAmount()" class="text-gray-400">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -242,7 +242,10 @@
         };
         
         // Load bet để lấy final_result nếu có
-        loadMyBet();
+        await loadMyBet();
+        
+        // Update final result card để hiển thị animation nếu cần
+        updateFinalResultCard();
         
         // Client-side timer runs every second for UI updates (no API calls)
         clientTimerInterval = setInterval(updateClientTimer, 1000);
@@ -403,44 +406,73 @@
                 phase = 'result';
             }
             
-            // Chỉ lưu kết quả random vào mảng từ giây 31-60 (30 giây cuối)
-            // Nếu là giây 60 và có admin_set_result, dùng admin_set_result thay vì random
-            if (currentSecond > 30 && currentSecond <= 60) {
-                let gemType;
-                if (currentSecond === 60 && currentRound.admin_set_result) {
-                    // Giây 60: ưu tiên admin_set_result nếu có
-                    gemType = currentRound.admin_set_result;
-                } else {
-                    // Các giây khác: tính từ seed
-                    gemType = getGemForSecond(currentRound.seed, currentSecond);
-                }
-                
+            // Chỉ lưu kết quả random vào mảng từ giây 31-59 (29 giây cuối)
+            // KHÔNG lưu kết quả cho giây 60, đợi kết quả từ server (admin_set_result hoặc final_result)
+            if (currentSecond > 30 && currentSecond < 60) {
+                // Giây 31-59: lưu random bình thường
+                const gemType = getGemForSecond(currentRound.seed, currentSecond);
                 if (!roundResults[currentSecond - 1]) {
                     roundResults[currentSecond - 1] = gemType;
-                } else if (currentSecond === 60 && currentRound.admin_set_result) {
-                    // Nếu đã có kết quả random nhưng admin set result, cập nhật lại
-                    roundResults[currentSecond - 1] = currentRound.admin_set_result;
+                }
+            }
+            
+            // Giây 60: KHÔNG lưu random, đợi kết quả từ server
+            // Nếu có admin_set_result hoặc final_result, lưu vào roundResults[59]
+            if (currentSecond === 60) {
+                const resultToShow = currentRound.admin_set_result || currentRound.final_result;
+                if (resultToShow) {
+                    roundResults[59] = resultToShow;
                 }
             }
             
             // Nếu round vừa finish (countdown = 0 hoặc currentSecond >= 60)
             if (currentSecond >= 60 || countdown === 0) {
-                // Tính final_result từ seed (giây 60) - ưu tiên admin_set_result nếu có
-                if (!currentRound.final_result) {
-                    // Nếu admin đã set result, dùng admin_set_result, nếu không thì tính từ seed
-                    if (currentRound.admin_set_result) {
-                        currentRound.final_result = currentRound.admin_set_result;
-                    } else {
-                        currentRound.final_result = getGemForSecond(currentRound.seed, 60);
-                    }
-                }
-                
-                // Round đã finish, check bet result của round này
+                // Round đã finish, call API để lấy admin_set_result
+                // Nếu có admin_set_result thì dùng, nếu không thì dùng random
                 if (!currentRound._checkingBetResult) {
                     currentRound._checkingBetResult = true;
                     
                     // Đợi một chút để server xử lý xong round finish
                     setTimeout(async () => {
+                        // Call API để lấy admin_set_result từ server
+                        try {
+                            const response = await fetch('/api/explore/current-round', {
+                                method: 'GET',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json',
+                                },
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data.round) {
+                                    // Cập nhật admin_set_result và final_result từ server
+                                    if (data.round.admin_set_result !== undefined) {
+                                        currentRound.admin_set_result = data.round.admin_set_result;
+                                    }
+                                    if (data.round.final_result !== undefined) {
+                                        currentRound.final_result = data.round.final_result;
+                                    }
+                                    
+                                    // Nếu có admin_set_result, dùng admin_set_result
+                                    // Nếu không có admin_set_result, dùng final_result hoặc tính random
+                                    if (currentRound.admin_set_result) {
+                                        currentRound.final_result = currentRound.admin_set_result;
+                                    } else if (!currentRound.final_result) {
+                                        // Không có admin_set_result và final_result, tính random từ seed
+                                        currentRound.final_result = getGemForSecond(currentRound.seed, 60);
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error fetching round result:', error);
+                            // Nếu call API lỗi, dùng random
+                            if (!currentRound.final_result) {
+                                currentRound.final_result = getGemForSecond(currentRound.seed, 60);
+                            }
+                        }
+                        
                         // Update final result card
                         updateFinalResultCard();
                         
@@ -561,6 +593,10 @@
             updateRadarResult(currentSecond);
             // Update signal grid
             updateSignalGrid(currentSecond, phase);
+        } else if (phase === 'break') {
+            // Trong 10 giây break time, chỉ hiển thị "Chờ kết quả...", không hiển thị kết quả
+            // Vẫn hiển thị signal grid với đủ 60 items (icon thứ 60 sẽ hiển thị radar nếu chưa có kết quả)
+            updateSignalGrid(60, 'break');
         }
     }
 
@@ -701,12 +737,13 @@
         
         // 30 giây cuối: random và hiển thị kết quả
         if (sec > 30 && sec <= 60) {
-            // Get gem type for current second based on seed (chỉ random từ giây 31-60)
-            // Nếu là giây 60 và có admin_set_result, dùng admin_set_result thay vì random
+            // Chỉ giây 60 mới dùng admin_set_result nếu có, các giây khác (31-59) vẫn hiển thị random bình thường
             let gemType;
             if (sec === 60 && currentRound.admin_set_result) {
+                // Giây 60: ưu tiên admin_set_result nếu có
                 gemType = currentRound.admin_set_result;
             } else {
+                // Các giây khác (31-59) hoặc giây 60 nếu chưa có admin_set_result: hiển thị random
                 gemType = getGemForSecond(currentRound.seed, sec);
             }
             
@@ -726,8 +763,10 @@
         }
         
         // Round finished: show final result
-        if (currentRound.final_result) {
-            const gem = GEM_TYPES[currentRound.final_result];
+        // Ưu tiên admin_set_result nếu có, nếu không thì dùng final_result
+        const resultToShow = currentRound.admin_set_result || currentRound.final_result;
+        if (resultToShow) {
+            const gem = GEM_TYPES[resultToShow];
             if (gem) {
                 if (icon) {
                     icon.src = gem.icon;
@@ -748,7 +787,22 @@
         const signalGrid = document.getElementById('signalGrid');
         if (!signalGrid) return;
         
-        const sec = currentSecond || 0;
+        // Tính số giây cần hiển thị
+        // Nếu round đã finish hoặc currentSecond >= 60, hiển thị đủ 60 items
+        // Nếu round đang chạy, hiển thị từ 1 đến currentSecond
+        let sec = currentSecond || 0;
+        
+        // Kiểm tra xem round đã finish chưa (dựa trên countdown)
+        const clientRoundNumber = calculateRoundNumber();
+        const deadline = calculateRoundDeadline(clientRoundNumber);
+        const now = Date.now();
+        const countdown = Math.max(0, Math.floor((deadline - now) / 1000));
+        const isRoundFinished = countdown === 0 || countdown > ROUND_DURATION || (currentRound && currentRound.final_result);
+        
+        // Nếu round đã finish, hiển thị đủ 60 items
+        if (isRoundFinished || sec >= 60) {
+            sec = 60;
+        }
         
         // Clear grid và rebuild từ đầu
         signalGrid.innerHTML = '';
@@ -765,7 +819,9 @@
         // Mỗi cột có 5 hàng, mỗi hàng có 4 items
         // Tổng: 3 cột x 5 hàng x 4 items = 60 items
         // Hiển thị theo hàng ngang: item 0-11 (hàng 1), item 12-23 (hàng 2), ...
-        for (let i = 0; i < sec && i < 60; i++) {
+        // Hiển thị tất cả 60 items (i từ 0 đến 59, tương ứng giây 1 đến 60)
+        const maxItems = Math.min(sec, 60);
+        for (let i = 0; i < maxItems; i++) {
             // Tính toán vị trí theo hàng ngang
             const rowIndex = Math.floor(i / 12); // Hàng ngang (0-4): mỗi hàng có 12 items (4 items x 3 cột)
             const itemInRow = i % 12; // Item trong hàng ngang (0-11)
@@ -790,14 +846,10 @@
                 // 30 giây đầu: hiển thị icon radar
                 iconSrc = '{{ asset("images/icons/rada.png") }}';
                 iconAlt = 'Radar';
-            } else {
-                // 30 giây cuối: hiển thị đá đã random (dùng roundResults nếu có, nếu không thì tính từ seed)
-                // Nếu là giây 60 và có admin_set_result, dùng admin_set_result
+            } else if (i < 59) {
+                // Giây 31-59: hiển thị random bình thường
                 let gemType;
-                if (i === 59 && currentRound.admin_set_result) {
-                    // Giây 60: ưu tiên admin_set_result nếu có
-                    gemType = currentRound.admin_set_result;
-                } else if (roundResults[i]) {
+                if (roundResults[i]) {
                     // Dùng kết quả đã lưu trong roundResults
                     gemType = roundResults[i];
                 } else {
@@ -813,18 +865,174 @@
                     iconSrc = '{{ asset("images/icons/thachanh.png") }}';
                     iconAlt = 'Thạch Anh';
                 }
+            } else {
+                // Icon thứ 60 (i === 59): Ưu tiên admin_set_result, nếu không có thì dùng final_result
+                // KHÔNG hiển thị random cho icon này, đợi kết quả từ server
+                const resultToShow = currentRound.admin_set_result || currentRound.final_result;
+                if (resultToShow) {
+                    const gem = GEM_TYPES[resultToShow];
+                    if (gem) {
+                        iconSrc = gem.icon;
+                        iconAlt = gem.name;
+                    } else {
+                        iconSrc = '{{ asset("images/icons/thachanh.png") }}';
+                        iconAlt = 'Thạch Anh';
+                    }
+                } else {
+                    // Chưa có kết quả, hiển thị radar icon
+                    iconSrc = '{{ asset("images/icons/rada.png") }}';
+                    iconAlt = 'Radar';
+                }
             }
             
             // Thêm background gray và rounded-full cho icon container
-            iconDiv.className = 'flex items-center justify-center bg-gray-700 rounded-full w-8 h-8 p-0.5';
+            // Tăng kích cỡ cho icon rada (30 giây đầu)
+            const isRadaIcon = iconSrc && iconSrc.includes('rada.png');
+            const containerSize = 'w-8 h-8';
+            iconDiv.className = `flex items-center justify-center bg-gray-700 rounded-full ${containerSize} p-0.5`;
             
             const iconImg = document.createElement('img');
             iconImg.src = iconSrc;
             iconImg.alt = iconAlt;
-            iconImg.className = 'w-6 h-6 object-contain'; // Icon size nhỏ hơn
+            // Tăng kích cỡ icon rada
+            const iconSize = isRadaIcon ? 'w-8 h-8' : 'w-6 h-6';
+            iconImg.className = `${iconSize} object-contain`;
             
             iconDiv.appendChild(iconImg);
             rowDiv.appendChild(iconDiv);
+        }
+    }
+    
+    // Animation nhấp nháy các loại đá khi chờ kết quả
+    let gemBlinkInterval = null;
+    let currentBlinkGemIndex = 0;
+    const gemTypesArray = ['thachanh', 'thachanhtim', 'ngusac', 'daquy', 'cuoc', 'kimcuong'];
+    
+    // Màu sắc cho mỗi loại đá (để tạo hiệu ứng nhấp nháy)
+    const gemColors = {
+        'thachanh': 'rgba(255, 255, 255, 0.8)',
+        'thachanhtim': 'rgba(138, 43, 226, 0.8)', // Purple
+        'ngusac': 'rgba(255, 215, 0, 0.8)', // Gold
+        'daquy': 'rgba(0, 191, 255, 0.8)', // Deep Sky Blue
+        'cuoc': 'rgba(255, 20, 147, 0.8)', // Deep Pink
+        'kimcuong': 'rgba(255, 255, 255, 1)', // White (diamond)
+    };
+    
+    function startGemBlinkAnimation() {
+        // Dừng animation cũ nếu có
+        if (gemBlinkInterval) {
+            clearInterval(gemBlinkInterval);
+        }
+        
+        const finalResultIcon = document.getElementById('finalResultIcon');
+        if (!finalResultIcon) return;
+        
+        currentBlinkGemIndex = 0;
+        
+        // Cập nhật icon ngay lập tức
+        updateBlinkGem();
+        
+        // Tạo animation nhấp nháy mỗi 500ms
+        gemBlinkInterval = setInterval(() => {
+            currentBlinkGemIndex = (currentBlinkGemIndex + 1) % gemTypesArray.length;
+            updateBlinkGem();
+        }, 500);
+    }
+    
+    // Animation nhấp nháy cho đá kết quả (chỉ nhấp nháy một loại đá)
+    function startResultGemBlinkAnimation(gemType) {
+        // Dừng animation cũ nếu có
+        if (gemBlinkInterval) {
+            clearInterval(gemBlinkInterval);
+        }
+        
+        const finalResultIcon = document.getElementById('finalResultIcon');
+        if (!finalResultIcon) return;
+        
+        const gem = GEM_TYPES[gemType];
+        if (!gem) return;
+        
+        // Cập nhật icon ngay lập tức
+        updateResultBlinkGem(gemType);
+        
+        // Tạo animation nhấp nháy mỗi 500ms (chỉ nhấp nháy đá kết quả)
+        gemBlinkInterval = setInterval(() => {
+            updateResultBlinkGem(gemType);
+        }, 500);
+    }
+    
+    function stopGemBlinkAnimation() {
+        if (gemBlinkInterval) {
+            clearInterval(gemBlinkInterval);
+            gemBlinkInterval = null;
+        }
+    }
+    
+    function updateBlinkGem() {
+        const finalResultIcon = document.getElementById('finalResultIcon');
+        if (!finalResultIcon) return;
+        
+        const gemType = gemTypesArray[currentBlinkGemIndex];
+        const gem = GEM_TYPES[gemType];
+        
+        if (gem) {
+            finalResultIcon.src = gem.icon;
+            finalResultIcon.alt = gem.name;
+            finalResultIcon.style.display = 'block';
+            
+            // Thêm hiệu ứng nhấp nháy theo màu của đá với animation rõ ràng hơn
+            const gemColor = gemColors[gemType] || 'rgba(255, 255, 255, 0.8)';
+            
+            // Tạo hiệu ứng nhấp nháy bằng cách thay đổi opacity và filter
+            finalResultIcon.style.filter = `drop-shadow(0 0 15px ${gemColor}) drop-shadow(0 0 30px ${gemColor}) brightness(1.2)`;
+            finalResultIcon.style.transition = 'all 0.3s ease';
+            finalResultIcon.style.animation = 'gemBlink 0.5s ease-in-out';
+            
+            // Thêm keyframe animation nếu chưa có
+            if (!document.getElementById('gemBlinkStyle')) {
+                const style = document.createElement('style');
+                style.id = 'gemBlinkStyle';
+                style.textContent = `
+                    @keyframes gemBlink {
+                        0%, 100% { opacity: 1; transform: scale(1); }
+                        50% { opacity: 0.7; transform: scale(1.1); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+    }
+    
+    function updateResultBlinkGem(gemType) {
+        const finalResultIcon = document.getElementById('finalResultIcon');
+        if (!finalResultIcon) return;
+        
+        const gem = GEM_TYPES[gemType];
+        if (!gem) return;
+        
+        finalResultIcon.src = gem.icon;
+        finalResultIcon.alt = gem.name;
+        finalResultIcon.style.display = 'block';
+        
+        // Thêm hiệu ứng nhấp nháy theo màu của đá với animation rõ ràng hơn
+        const gemColor = gemColors[gemType] || 'rgba(255, 255, 255, 0.8)';
+        
+        // Tạo hiệu ứng nhấp nháy bằng cách thay đổi opacity và filter
+        finalResultIcon.style.filter = `drop-shadow(0 0 15px ${gemColor}) drop-shadow(0 0 30px ${gemColor}) brightness(1.2)`;
+        finalResultIcon.style.transition = 'all 0.3s ease';
+        finalResultIcon.style.animation = 'gemBlink 0.5s ease-in-out';
+        
+        // Thêm keyframe animation nếu chưa có
+        if (!document.getElementById('gemBlinkStyle')) {
+            const style = document.createElement('style');
+            style.id = 'gemBlinkStyle';
+            style.textContent = `
+                @keyframes gemBlink {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.7; transform: scale(1.1); }
+                }
+            `;
+            document.head.appendChild(style);
         }
     }
     
@@ -845,15 +1053,47 @@
         const countdown = Math.max(0, Math.floor((deadline - now) / 1000));
         const isRoundFinished = countdown === 0 || countdown > ROUND_DURATION;
         
-        // If round has finished and has final result
-        if ((currentRound.status === 'finished' || isRoundFinished) && currentRound.final_result) {
-            const gem = GEM_TYPES[currentRound.final_result];
+        // Kiểm tra xem có đang trong break time không (10 giây sau khi round finish)
+        // Break time: khi countdown > ROUND_DURATION (tức là đã qua 60 giây của round, đang trong 10 giây break)
+        const isInBreakTime = countdown > ROUND_DURATION && countdown <= TOTAL_CYCLE;
+        
+        // Xác định kết quả cần hiển thị:
+        // 1. Ưu tiên admin_set_result nếu có
+        // 2. Nếu không có admin_set_result, dùng final_result
+        // 3. Nếu không có cả hai, tính random từ seed (giây 60)
+        let resultToShow = null;
+        if (currentRound.admin_set_result) {
+            // Admin đã set result, dùng admin_set_result
+            resultToShow = currentRound.admin_set_result;
+        } else if (currentRound.final_result) {
+            // Có final_result từ server, dùng final_result
+            resultToShow = currentRound.final_result;
+        } else if (isRoundFinished) {
+            // Round đã finish nhưng chưa có kết quả, tính random từ seed (giây 60)
+            resultToShow = getGemForSecond(currentRound.seed, 60);
+            // Lưu vào currentRound để dùng lại
+            if (!currentRound.final_result) {
+                currentRound.final_result = resultToShow;
+            }
+        }
+        
+        // Nếu đang trong break time (10 giây đầu sau khi round finish), chỉ hiển thị "Chờ kết quả..." với animation nhấp nháy
+        // Nếu đã qua break time hoặc round đang chạy và có kết quả, hiển thị kết quả
+        if (isInBreakTime) {
+            // Trong 10 giây break time, hiển thị animation nhấp nháy các loại đá
+            startGemBlinkAnimation();
+            if (finalResultName) {
+                finalResultName.textContent = 'Chờ kết quả...';
+            }
+            if (finalResultPayout) {
+                finalResultPayout.textContent = '';
+            }
+        } else if (resultToShow) {
+            // Có kết quả và không trong break time, hiển thị kết quả với animation nhấp nháy
+            const gem = GEM_TYPES[resultToShow];
             if (gem) {
-                if (finalResultIcon) {
-                    finalResultIcon.src = gem.icon;
-                    finalResultIcon.alt = gem.name;
-                    finalResultIcon.style.display = 'block'; // Đảm bảo icon được hiển thị
-                }
+                // Bắt đầu animation nhấp nháy cho đá kết quả
+                startResultGemBlinkAnimation(resultToShow);
                 if (finalResultName) {
                     finalResultName.textContent = gem.name;
                 }
@@ -861,18 +1101,24 @@
                     finalResultPayout.textContent = `${gem.payoutRate}x`;
                 }
             } else {
-                console.warn('Gem type not found:', currentRound.final_result);
+                console.warn('Gem type not found:', resultToShow);
+                // Nếu không tìm thấy gem type, hiển thị animation nhấp nháy tất cả các loại đá
+                startGemBlinkAnimation();
+                if (finalResultName) {
+                    finalResultName.textContent = 'Chờ kết quả...';
+                }
+                if (finalResultPayout) {
+                    finalResultPayout.textContent = '';
+                }
             }
         } else {
-            // Round chưa kết thúc hoặc chưa có kết quả - chỉ hiển thị text, không hiển thị icon
-            if (finalResultIcon) {
-                finalResultIcon.style.display = 'none';
-            }
+            // Chưa có kết quả (round chưa finish), hiển thị animation nhấp nháy
+            startGemBlinkAnimation();
             if (finalResultName) {
                 finalResultName.textContent = 'Chờ kết quả...';
             }
             if (finalResultPayout) {
-                finalResultPayout.textContent = '-';
+                finalResultPayout.textContent = '';
             }
         }
     }
@@ -969,11 +1215,13 @@
                 currentRound.admin_set_result = myBet.round.admin_set_result;
             }
             // Cập nhật final_result (ưu tiên admin_set_result nếu có)
-            if (myBet.round.final_result) {
-                currentRound.final_result = myBet.round.final_result;
-            } else if (currentRound.admin_set_result && !currentRound.final_result) {
-                // Nếu có admin_set_result nhưng chưa có final_result, dùng admin_set_result
+            // LUÔN ưu tiên admin_set_result nếu có
+            if (currentRound.admin_set_result) {
+                // Admin đã set result, LUÔN dùng admin_set_result
                 currentRound.final_result = currentRound.admin_set_result;
+            } else if (myBet.round.final_result) {
+                // Chỉ dùng final_result từ server nếu chưa có admin_set_result
+                currentRound.final_result = myBet.round.final_result;
             }
             updateFinalResultCard();
         }

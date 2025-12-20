@@ -86,8 +86,13 @@ class AdminController extends Controller
             'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', '5.95'),
         ];
         
-        // Get current round
+        // Get current round (không tạo mới, chỉ lấy từ database)
         $currentRound = Round::getCurrentRound();
+        
+        // Nếu round chưa tồn tại, tạo round rỗng để view không bị lỗi
+        if (!$currentRound) {
+            $currentRound = null;
+        }
         
         return view('admin.intervene-results', compact('payoutRates', 'currentRound'));
     }
@@ -235,6 +240,13 @@ class AdminController extends Controller
     {
         $round = Round::getCurrentRound();
         
+        if (!$round) {
+            return response()->json([
+                'round' => null,
+                'message' => 'Round not found. Please wait for ProcessRoundTimer to create it.',
+            ]);
+        }
+        
         // Calculate current phase and second
         $phase = 'break';
         $currentSecond = 0;
@@ -300,6 +312,10 @@ class AdminController extends Controller
     public function getBetAmounts()
     {
         $round = Round::getCurrentRound();
+        
+        if (!$round) {
+            return response()->json(['bet_amounts' => []]);
+        }
         
         // Get total bet amounts for each gem type (only pending bets count)
         $betAmounts = \App\Models\Bet::where('round_id', $round->id)

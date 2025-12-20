@@ -19,11 +19,11 @@
         }
     </style>
 </head>
-<body class="bg-gray-800 md:bg-gray-800 min-h-screen flex items-center justify-center">
+<body class="bg-[#181A20] md:bg-gray-800 min-h-screen flex items-center justify-center">
     <div class="w-full md:max-w-[450px] h-screen flex flex-col mx-auto bg-gray-900 md:shadow-2xl overflow-hidden text-white">
         @yield('header')
 
-        <main class="flex-1 overflow-y-auto hide-scrollbar text-base leading-relaxed" style="background-color: #0F1317;">
+        <main class="flex-1 overflow-y-auto hide-scrollbar text-base leading-relaxed" style="background-color: #181A20;">
             @yield('content')
         </main>
 
