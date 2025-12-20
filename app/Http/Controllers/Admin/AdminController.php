@@ -146,17 +146,86 @@ class AdminController extends Controller
         
         $round = Round::findOrFail($validated['round_id']);
         
-        // Only allow setting result if round is running
-        if ($round->status !== 'running') {
-            return back()->with('error', 'Chỉ có thể đặt kết quả cho phiên đang chạy.');
-        }
-        
-        // Save admin-set result (round will continue running)
-        // This result will be used as the final result when round ends
+        // Save admin-set result
         $round->admin_set_result = $validated['final_result'];
-        $round->save();
         
-        return back()->with('success', 'Đã đặt kết quả phiên cược. Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng.');
+        // Nếu round đã finish, cập nhật final_result và re-process bets
+        if ($round->status === 'finished') {
+            // Cập nhật final_result
+            $round->final_result = $validated['final_result'];
+            $round->save();
+            
+            // Re-process bets với final_result mới
+            // Chỉ re-process các bets đã được xử lý (won/lost) với final_result cũ
+            $bets = $round->bets()->whereIn('status', ['won', 'lost'])->get();
+            
+            foreach ($bets as $bet) {
+                // Kiểm tra lại với final_result mới
+                if ($bet->gem_type === $round->final_result) {
+                    // User thắng với kết quả mới
+                    if ($bet->status === 'lost') {
+                        // Nếu trước đó thua, bây giờ thắng
+                        $payoutAmount = $bet->amount * $bet->payout_rate;
+                        
+                        // Cộng tiền thắng (tiền đặt cược đã bị trừ khi đặt, không cần hoàn lại)
+                        $user = $bet->user;
+                        $user->balance += $payoutAmount; // Thêm tiền thắng
+                        $user->save();
+                        
+                        $bet->update([
+                            'status' => 'won',
+                            'payout_amount' => $payoutAmount,
+                        ]);
+                        
+                        \Log::info("Bet {$bet->id}: Re-processed from lost to won, user {$user->id} received {$payoutAmount}");
+                    } else if ($bet->status === 'won') {
+                        // Nếu đã thắng rồi, kiểm tra payout_amount có đúng không
+                        $expectedPayout = $bet->amount * $bet->payout_rate;
+                        if ($bet->payout_amount != $expectedPayout) {
+                            // Cập nhật lại payout_amount nếu sai
+                            $user = $bet->user;
+                            $user->balance -= $bet->payout_amount; // Trừ payout cũ
+                            $user->balance += $expectedPayout; // Cộng payout mới
+                            $user->save();
+                            
+                            $bet->update([
+                                'payout_amount' => $expectedPayout,
+                            ]);
+                        }
+                    }
+                } else {
+                    // User thua với kết quả mới
+                    if ($bet->status === 'won') {
+                        // Nếu trước đó thắng, bây giờ thua
+                        // Trừ lại số tiền đã thắng (tiền đặt cược đã bị trừ khi đặt, không cần trừ lại)
+                        $user = $bet->user;
+                        $user->balance -= $bet->payout_amount; // Trừ tiền thắng đã nhận
+                        $user->save();
+                        
+                        $bet->update([
+                            'status' => 'lost',
+                            'payout_amount' => null,
+                        ]);
+                        
+                        \Log::info("Bet {$bet->id}: Re-processed from won to lost, user {$user->id} refunded {$bet->payout_amount}");
+                    }
+                    // Nếu đã thua rồi, không cần làm gì
+                }
+            }
+            
+            // Process các bets pending (nếu có)
+            $round->processBets();
+            
+            return back()->with('success', 'Đã cập nhật kết quả phiên cược và xử lý lại các cược.');
+        } else if ($round->status === 'running') {
+            // Round đang chạy, chỉ lưu admin_set_result
+            // Kết quả này sẽ được dùng khi round finish
+            $round->save();
+            
+            return back()->with('success', 'Đã đặt kết quả phiên cược. Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng.');
+        } else {
+            return back()->with('error', 'Chỉ có thể đặt kết quả cho phiên đang chạy hoặc đã kết thúc.');
+        }
     }
     
     /**
