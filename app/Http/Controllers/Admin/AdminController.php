@@ -426,18 +426,18 @@ class AdminController extends Controller
             $withdrawRequest->notes = $request->input('notes');
             $withdrawRequest->save();
 
-            // Refund user's balance if rejected
-            $user = $withdrawRequest->user;
-            $user->balance += $withdrawRequest->gem_amount;
-            $user->save();
+            // KHÔNG cần hoàn lại balance vì khi user tạo withdraw request, balance CHƯA bị trừ
+            // Balance chỉ bị trừ khi admin approve request
+            // Nếu reject, chỉ cần đổi status, không cần thay đổi balance
 
             // Create notification for user
+            $user = $withdrawRequest->user;
             $vndAmount = $withdrawRequest->gem_amount * SystemSetting::getVndToGemRate();
             Notification::createWithdrawRejected($user, $vndAmount, $withdrawRequest->gem_amount, $withdrawRequest->id, $request->input('notes'));
 
             DB::commit();
 
-            return back()->with('success', 'Đã từ chối yêu cầu rút tiền và hoàn lại số dư cho user.');
+            return back()->with('success', 'Đã từ chối yêu cầu rút tiền.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());

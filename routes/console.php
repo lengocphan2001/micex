@@ -2,5 +2,6 @@
 
 use Illuminate\Support\Facades\Schedule;
 
-// Schedule round timer to run every second
-Schedule::command('round:process')->everySecond();
+// NOTE: Round timer được chạy bởi RoundTimerLoop service (systemd)
+// Không cần schedule ở đây vì service sẽ chạy liên tục mỗi giây
+// Schedule::command('round:process')->everySecond(); // Đã chuyển sang RoundTimerLoop service

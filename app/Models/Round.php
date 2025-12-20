@@ -39,40 +39,53 @@ class Round extends Model
     }
 
     /**
+     * Base time để tính round number (phải giống client và ProcessRoundTimer)
+     */
+    const BASE_TIME = '2025-01-01 00:00:00';
+    
+    /**
      * Get current active round or create new one
+     * @deprecated Use getOrCreateRoundByNumber() instead
      */
     public static function getCurrentRound()
     {
-        // Get the latest round
-        $round = self::orderBy('id', 'desc')->first();
+        // Tính round number từ BASE_TIME
+        // Round duration: 60 giây, Break time: 10 giây, Total cycle: 70 giây
+        $baseTime = \Carbon\Carbon::parse(self::BASE_TIME)->timestamp;
+        $now = now()->timestamp;
+        $elapsed = $now - $baseTime;
+        $breakTime = 10; // 10 giây break time
+        $totalCycle = 60 + $breakTime; // 70 giây mỗi cycle
+        $roundNumber = floor($elapsed / $totalCycle) + 1;
         
-        // Check if we need to create a new round
-        $shouldCreateNew = false;
-        
-        if (!$round) {
-            $shouldCreateNew = true;
-        } elseif ($round->status === 'finished') {
-            // Check if break time has passed
-            if ($round->break_until && now()->lt($round->break_until)) {
-                // Still in break time, return the finished round
-                return $round;
+        return self::getOrCreateRoundByNumber($roundNumber);
+    }
+    
+    /**
+     * Get or create round by round number
+     * Tự động tạo round nếu chưa có, đảm bảo chạy background
+     * Sử dụng lock để tránh race condition khi tạo round
+     */
+    public static function getOrCreateRoundByNumber($roundNumber)
+    {
+        // Sử dụng lock để tránh race condition khi nhiều process cùng tạo round
+        return \DB::transaction(function () use ($roundNumber) {
+            // Tìm round với round_number này (với lock)
+            $round = self::where('round_number', $roundNumber)->lockForUpdate()->first();
+            
+            if (!$round) {
+                // Generate a unique seed for this round
+                $seed = uniqid('round_', true) . '_' . time();
+                $round = self::create([
+                    'round_number' => $roundNumber,
+                    'seed' => $seed,
+                    'status' => 'pending',
+                    'current_second' => 0,
+                ]);
             }
-            $shouldCreateNew = true;
-        }
-        
-        if ($shouldCreateNew) {
-            $roundNumber = self::max('round_number') ?? 0;
-            // Generate a unique seed for this round
-            $seed = uniqid('round_', true) . '_' . time();
-            $round = self::create([
-                'round_number' => $roundNumber + 1,
-                'seed' => $seed,
-                'status' => 'pending',
-                'current_second' => 0,
-            ]);
-        }
-        
-        return $round;
+            
+            return $round;
+        });
     }
 
     /**
@@ -93,6 +106,7 @@ class Round extends Model
 
     /**
      * Update current second and result
+     * Note: Logic finish() đã được xử lý trong ProcessRoundTimer command
      */
     public function updateSecond($second, $result)
     {
@@ -100,11 +114,6 @@ class Round extends Model
             'current_second' => $second,
             'current_result' => $result,
         ]);
-        
-        // If it's the last second (60), set final result and finish
-        if ($second >= 60) {
-            $this->finish($result);
-        }
     }
 
     /**
@@ -112,8 +121,13 @@ class Round extends Model
      */
     public function finish($finalResult)
     {
-        // Set break time: 1 minute after round ends
-        $breakUntil = now()->addMinute();
+        // Chỉ finish nếu chưa finish (tránh finish nhiều lần)
+        if ($this->status === 'finished') {
+            return; // Đã finish rồi, không làm gì
+        }
+        
+        // Set break time: 10 seconds after round ends (để hiển thị kết quả và bets)
+        $breakUntil = now()->addSeconds(10);
         
         $this->update([
             'status' => 'finished',
@@ -121,6 +135,9 @@ class Round extends Model
             'ended_at' => now(),
             'break_until' => $breakUntil,
         ]);
+        
+        // Refresh để đảm bảo có final_result
+        $this->refresh();
         
         // Process all bets for this round
         $this->processBets();
@@ -131,32 +148,63 @@ class Round extends Model
      */
     public function processBets()
     {
+        // Đảm bảo round đã có final_result
+        if (!$this->final_result) {
+            \Log::warning("Round {$this->id} cannot process bets: no final_result");
+            return;
+        }
+        
         $bets = $this->bets()->where('status', 'pending')->get();
         
+        if ($bets->isEmpty()) {
+            return; // Không có bets nào cần xử lý
+        }
+        
+        \Log::info("Processing {$bets->count()} bets for round {$this->id} with final_result: {$this->final_result}");
+        
         foreach ($bets as $bet) {
-            if ($bet->gem_type === $this->final_result) {
-                // User won
-                $bet->update([
-                    'status' => 'won',
-                    'payout_amount' => $bet->amount * $bet->payout_rate,
-                ]);
-                
-                // Add winnings to user balance
-                $bet->user->balance += $bet->payout_amount;
-                $bet->user->save();
-            } else {
-                // User lost
-                $bet->update([
-                    'status' => 'lost',
-                ]);
-                // Balance was already deducted when bet was placed
+            try {
+                if ($bet->gem_type === $this->final_result) {
+                    // User won
+                    $payoutAmount = $bet->amount * $bet->payout_rate;
+                    
+                    $bet->update([
+                        'status' => 'won',
+                        'payout_amount' => $payoutAmount,
+                    ]);
+                    
+                    // Add winnings to user balance
+                    $user = $bet->user;
+                    $user->balance += $payoutAmount;
+                    $user->save();
+                    
+                    \Log::info("Bet {$bet->id}: User {$user->id} won {$payoutAmount}");
+                } else {
+                    // User lost
+                    $bet->update([
+                        'status' => 'lost',
+                    ]);
+                    // Balance was already deducted when bet was placed
+                    
+                    \Log::info("Bet {$bet->id}: User {$bet->user_id} lost");
+                }
+            } catch (\Exception $e) {
+                \Log::error("Error processing bet {$bet->id}: " . $e->getMessage());
             }
-            
-            // Update commission status from 'pending' to 'available' after bet is processed
-            // User có thể rút hoa hồng sau khi bet kết thúc
-            \App\Models\UserCommission::where('bet_id', $bet->id)
+        }
+        
+        // After all bets are processed, update the status of related commissions to 'available'
+        // Commissions are now available for withdrawal
+        // Lấy tất cả bet_id của round này
+        $betIds = $this->bets()->pluck('id')->toArray();
+        
+        if (!empty($betIds)) {
+            // Update commission thông qua bet_id (vì user_commissions không có round_id)
+            \App\Models\UserCommission::whereIn('bet_id', $betIds)
                 ->where('status', 'pending')
                 ->update(['status' => 'available']);
         }
+        
+        \Log::info("Finished processing bets for round {$this->id}");
     }
 }

@@ -388,6 +388,7 @@ class ExploreController extends Controller
         $round = Round::getCurrentRound();
         $bet = Bet::where('round_id', $round->id)
             ->where('user_id', $user->id)
+            ->with('round') // Eager load round để lấy final_result
             ->first();
 
         if (!$bet) {
@@ -397,16 +398,25 @@ class ExploreController extends Controller
         // Refresh user to get latest balance
         $user->refresh();
         
-        return response()->json([
-            'bet' => [
-                'id' => $bet->id,
-                'round_id' => $bet->round_id, // Thêm round_id để client kiểm tra
-                'gem_type' => $bet->gem_type,
-                'amount' => $bet->amount,
-                'payout_rate' => $bet->payout_rate,
-                'status' => $bet->status,
-                'payout_amount' => $bet->payout_amount,
+        $betData = [
+            'id' => $bet->id,
+            'round_id' => $bet->round_id,
+            'round_number' => $bet->round->round_number ?? null, // Thêm round_number để client kiểm tra
+            'gem_type' => $bet->gem_type,
+            'amount' => $bet->amount,
+            'payout_rate' => $bet->payout_rate,
+            'status' => $bet->status,
+            'payout_amount' => $bet->payout_amount,
+            'round' => [
+                'id' => $bet->round->id ?? null,
+                'round_number' => $bet->round->round_number ?? null,
+                'final_result' => $bet->round->final_result ?? null, // Thêm final_result để client hiển thị
+                'admin_set_result' => $bet->round->admin_set_result ?? null, // Thêm admin_set_result để client kiểm tra
             ],
+        ];
+        
+        return response()->json([
+            'bet' => $betData,
             'balance' => $user->balance, // Trả về balance mới nhất
         ]);
     }

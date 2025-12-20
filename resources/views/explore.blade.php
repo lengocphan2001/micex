@@ -165,7 +165,7 @@
         <div class="px-6 text-center">
             <h2 id="resultTitle" class="text-white text-lg font-semibold mb-2">Chúc mừng bạn !</h2>
             <p id="resultAmount" class="text-green-400 text-3xl font-bold mb-4">+0 USDT</p>
-            <p id="resultMessage" class="text-white text-sm mb-6">Phần thưởng đã được sử lý thành công và chuyển đến ví của bạn.</p>
+            <p id="resultMessage" class="text-white text-sm mb-6">Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.</p>
             
             <!-- Confirm Button -->
             <button onclick="closeResultPopup()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-xl w-full">
@@ -219,26 +219,35 @@
     let selectedGemType = null;
     let myBet = null;
     let clientTimerInterval = null;
-    let roundResults = []; // Mảng lưu tất cả kết quả random từ giây 1-60
-    let hasSavedResults = false; // Flag để tránh gọi API nhiều lần
+    let roundResults = []; // Mảng lưu tất cả kết quả random từ giây 1-60 (chỉ để hiển thị)
     let isPollingBet = false; // Flag để tránh polling bet nhiều lần
-    let isLoadingRound = false; // Flag để tránh gọi loadCurrentRound nhiều lần
-    let lastRoundLoadTime = 0; // Timestamp của lần load round cuối cùng
-    let pendingRoundCheckTimeout = null; // Timeout cho pending round check
 
     // Initialize
     document.addEventListener('DOMContentLoaded', async function() {
         initializeGemCards();
         
-        // Load round first, then start timer
-        await loadCurrentRound();
+        // Khởi tạo round với seed tính từ round_number (không cần gọi API)
+        const clientRoundNumber = calculateRoundNumber();
+        const seed = 'round_' + clientRoundNumber; // Seed deterministic từ round_number
+        
+        currentRound = {
+            round_number: clientRoundNumber,
+            seed: seed,
+            status: 'pending',
+            phase: 'break',
+            current_second: 0,
+            final_result: null,
+            admin_set_result: null,
+            deadline: calculateRoundDeadline(clientRoundNumber),
+        };
+        
+        // Load bet để lấy final_result nếu có
         loadMyBet();
         
         // Client-side timer runs every second for UI updates (no API calls)
-        // Start timer after round is loaded to avoid showing wrong countdown
         clientTimerInterval = setInterval(updateClientTimer, 1000);
         
-        // Update immediately after loading
+        // Update immediately
         updateClientTimer();
     });
 
@@ -277,186 +286,116 @@
         selectedGemType = gemType;
     }
 
-    // Load current round
-    async function loadCurrentRound(force = false) {
-        // Throttle: chỉ cho phép gọi mỗi 2 giây (trừ khi force)
+    // Base time để tính round number và deadline
+    // Mặc định: 2025-01-01 00:00:00 UTC (có thể lấy từ server nếu cần)
+    const BASE_TIME = new Date('2025-01-01T00:00:00Z').getTime();
+    const ROUND_DURATION = 60; // 60 giây mỗi round
+    const BREAK_TIME = 10; // 10 giây break time giữa các phiên
+    const TOTAL_CYCLE = ROUND_DURATION + BREAK_TIME; // 70 giây mỗi cycle (60 + 10)
+    
+    // Tính round number dựa trên base time
+    function calculateRoundNumber() {
         const now = Date.now();
-        if (!force && (isLoadingRound || (now - lastRoundLoadTime < 2000))) {
-            return;
-        }
+        const elapsed = Math.floor((now - BASE_TIME) / 1000); // Elapsed seconds
+        return Math.floor(elapsed / TOTAL_CYCLE) + 1;
+    }
+    
+    // Tính deadline cho round hiện tại
+    function calculateRoundDeadline(roundNumber) {
+        // Round start time = BASE_TIME + (roundNumber - 1) * TOTAL_CYCLE
+        const roundStartTime = BASE_TIME + ((roundNumber - 1) * TOTAL_CYCLE * 1000);
+        // Deadline = roundStartTime + ROUND_DURATION (60 giây)
+        return roundStartTime + (ROUND_DURATION * 1000);
+    }
+    
+    // Khởi tạo round mới với seed tính từ round_number (không cần gọi API)
+    function initializeRound(roundNumber) {
+        const seed = 'round_' + roundNumber; // Seed deterministic từ round_number
         
-        isLoadingRound = true;
-        lastRoundLoadTime = now;
+        const previousRoundNumber = currentRound?.round_number;
         
-        try {
-            const response = await fetch('{{ route("explore.current-round") }}');
-            const data = await response.json();
+        currentRound = {
+            round_number: roundNumber,
+            seed: seed,
+            status: 'pending',
+            phase: 'break',
+            current_second: 0,
+            final_result: null,
+            admin_set_result: null,
+            deadline: calculateRoundDeadline(roundNumber),
+        };
+        
+        // Reset results array và flag khi load round mới
+        if (previousRoundNumber !== roundNumber) {
+            roundResults = [];
+            isPollingBet = false;
             
-            if (data.round) {
-                const previousRoundId = currentRound?.id;
-                currentRound = {
-                    id: data.round.id,
-                    round_number: data.round.round_number,
-                    seed: data.round.seed,
-                    status: data.round.status,
-                    phase: data.round.phase,
-                    current_second: data.round.current_second || 0,
-                    final_result: data.round.final_result,
-                    admin_set_result: data.round.admin_set_result,
-                    started_at: data.round.started_at ? new Date(data.round.started_at) : null,
-                    break_until: data.round.break_until ? new Date(data.round.break_until) : null,
-                    is_in_break: data.round.is_in_break || false,
-                };
-                
-                // Update payout rates from API response
-                if (data.gem_types && Array.isArray(data.gem_types)) {
-                    updatePayoutRates(data.gem_types);
-                }
-                
-                // Reset results array và flag khi load round mới
-                if (previousRoundId !== currentRound.id) {
-                    roundResults = [];
-                    hasSavedResults = false;
-                    isPollingBet = false;
-                    
-                    // Reset bet info khi chuyển sang round mới
-                    myBet = null;
-                    hideMyBet();
-                    clearBetAmount();
-                    selectedGemType = null;
-                    
-                    // Clear gem card selection
-                    document.querySelectorAll('.gem-card').forEach(card => {
-                        card.classList.remove('selected');
-                    });
-                    
-                    // Clear signal grid
-                    const signalGrid = document.getElementById('signalGrid');
-                    if (signalGrid) {
-                        signalGrid.innerHTML = '';
-                    }
-                    
-                    // Load bet của round mới (chỉ khi có round mới)
-                    loadMyBet();
-                }
-                
-                // Reset loading flag
-                if (currentRound._loadingNewRound) {
-                    currentRound._loadingNewRound = false;
-                }
-                
-                // Calculate current second and phase immediately after loading
-                let initialSecond = 0;
-                let initialPhase = 'break';
-                
-                if (currentRound.status === 'running' && currentRound.started_at) {
-                    const now = new Date();
-                    const startedAt = new Date(currentRound.started_at);
-                    
-                    if (!isNaN(startedAt.getTime())) {
-                        const elapsed = Math.floor((now - startedAt) / 1000);
-                        if (elapsed >= 0 && elapsed < 120) {
-                            initialSecond = Math.min(60, Math.max(0, elapsed + 1));
-                            if (initialSecond <= 30) {
-                                initialPhase = 'betting';
-                            } else {
-                                initialPhase = 'result';
-                            }
-                        }
-                    }
-                } else if (currentRound.status === 'finished' && currentRound.break_until) {
-                    const now = new Date();
-                    const breakUntil = new Date(currentRound.break_until);
-                    if (!isNaN(breakUntil.getTime()) && now < breakUntil) {
-                        initialPhase = 'break';
-                    }
-                }
-                
-                // Update display with calculated values
-                updateRoundDisplay(initialSecond, initialPhase);
-                updateFinalResultCard(); // Update final result card when loading round
-                
-                // Update radar and signal grid if needed
-                if (initialPhase === 'betting' || initialPhase === 'result') {
-                    updateRadarResult(initialSecond);
-                    updateSignalGrid(initialSecond, initialPhase);
-                }
+            // Reset checking bet result flag khi round mới bắt đầu
+            if (currentRound._checkingBetResult) {
+                currentRound._checkingBetResult = false;
             }
-        } catch (error) {
-            console.error('Error loading current round:', error);
-        } finally {
-            isLoadingRound = false;
+            
+            // Reset bet info khi chuyển sang round mới
+            myBet = null;
+            hideMyBet();
+            clearBetAmount();
+            selectedGemType = null;
+            
+            // Clear gem card selection
+            document.querySelectorAll('.gem-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Clear signal grid
+            const signalGrid = document.getElementById('signalGrid');
+            if (signalGrid) {
+                signalGrid.innerHTML = '';
+            }
+            
+            // Reset final result về null khi round mới bắt đầu
+            currentRound.final_result = null;
+            currentRound.admin_set_result = null;
+            
+            // Reset final result card về "Chờ kết quả..." khi round mới bắt đầu
+            updateFinalResultCard();
+            
+            // Load bet của round mới
+            loadMyBet();
         }
     }
 
-    // Save final result and all results array to server when round ends (chỉ gọi 1 lần)
-    async function saveRoundResult(roundId, finalResult, results) {
-        try {
-            const response = await fetch('{{ route("explore.save-result") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify({
-                    round_id: roundId,
-                    final_result: finalResult,
-                    results: results, // Mảng kết quả từ giây 1-60
-                }),
-            });
-            
-            if (!response.ok) {
-                console.error('Failed to save round result:', response.status);
-                return false;
-            }
-            
-            const data = await response.json();
-            return data.success === true;
-        } catch (error) {
-            console.error('Error saving round result:', error);
-            return false;
-        }
-    }
-    
-    // Client-side timer that runs every second (no API calls)
-    // Tất cả thiết bị tính toán countdown giống nhau dựa trên started_at từ server
+    // Client-side timer tính toán dựa trên deadline (mặc định)
+    // Tất cả thiết bị tính toán giống nhau vì dùng cùng BASE_TIME
     async function updateClientTimer() {
-        if (!currentRound) return;
+        if (!currentRound) {
+            // Khởi tạo round nếu chưa có
+            const clientRoundNumber = calculateRoundNumber();
+            initializeRound(clientRoundNumber);
+            return;
+        }
         
+        const now = Date.now();
+        const clientRoundNumber = calculateRoundNumber();
+        const deadline = calculateRoundDeadline(clientRoundNumber);
+        const countdown = Math.max(0, Math.floor((deadline - now) / 1000)); // Countdown in seconds
+        
+        // Update round number nếu thay đổi
+        if (currentRound.round_number !== clientRoundNumber) {
+            // Round mới bắt đầu, khởi tạo round mới với seed tính từ round_number
+            if (currentRound._checkingBetResult) {
+                currentRound._checkingBetResult = false;
+            }
+            initializeRound(clientRoundNumber);
+            return;
+        }
+        
+        // Tính current second từ countdown
         let currentSecond = 0;
         let phase = 'break';
-        let shouldLoadNewRound = false;
-        let breakRemaining = 0;
         
-        if (currentRound.status === 'running' && currentRound.started_at) {
-            const now = new Date();
-            const startedAt = new Date(currentRound.started_at);
-            
-            // Validate started_at: must be a valid date
-            if (isNaN(startedAt.getTime())) {
-                console.warn('Invalid started_at date:', currentRound.started_at);
-                updateRoundDisplay(0, 'break');
-                return;
-            }
-            
-            // Calculate elapsed time in seconds (chính xác đến giây)
-            // Tất cả thiết bị sẽ tính toán giống nhau vì dùng cùng started_at từ server
-            // Sử dụng getTime() để đảm bảo tính toán chính xác (milliseconds)
-            // Không phụ thuộc vào timezone của client, chỉ so sánh timestamp
-            const elapsed = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
-            
-            // If elapsed is negative (started_at is in the future), wait
-            if (elapsed < 0) {
-                updateRoundDisplay(0, 'break');
-                return;
-            }
-            
-            // Calculate current second (cap at 60)
-            // elapsed + 1 vì giây đầu tiên là giây 1, không phải giây 0
-            // Tất cả thiết bị sẽ có cùng currentSecond vì dùng cùng started_at
-            currentSecond = Math.min(60, Math.max(0, elapsed + 1));
+        if (countdown > 0 && countdown <= ROUND_DURATION) {
+            // Round đang chạy
+            currentSecond = ROUND_DURATION - countdown + 1; // +1 vì giây đầu tiên là giây 1
             
             if (currentSecond <= 30) {
                 phase = 'betting';
@@ -472,181 +411,118 @@
                 }
             }
             
-            // If round just finished (reached second 60)
-            if (currentSecond >= 60) {
-                // Nếu round vẫn running, cần save result (chỉ 1 thiết bị save) hoặc load round mới
-                if (currentRound.status === 'running') {
-                    if (!hasSavedResults) {
-                        // Thiết bị này sẽ save result (chỉ 1 thiết bị save)
-                        const completeResults = [];
-                        for (let i = 0; i < 60; i++) {
-                            if (i < 30) {
-                                completeResults[i] = null;
-                            } else {
-                                if (roundResults[i]) {
-                                    completeResults[i] = roundResults[i];
-                                } else {
-                                    completeResults[i] = getGemForSecond(currentRound.seed, i + 1);
+            // Nếu round vừa finish (countdown = 0 hoặc currentSecond >= 60)
+            if (currentSecond >= 60 || countdown === 0) {
+                // Tính final_result từ seed (giây 60) - ưu tiên admin_set_result nếu có
+                if (!currentRound.final_result) {
+                    // Nếu admin đã set result, dùng admin_set_result, nếu không thì tính từ seed
+                    if (currentRound.admin_set_result) {
+                        currentRound.final_result = currentRound.admin_set_result;
+                    } else {
+                        currentRound.final_result = getGemForSecond(currentRound.seed, 60);
+                    }
+                }
+                
+                // Round đã finish, check bet result của round này
+                if (!currentRound._checkingBetResult) {
+                    currentRound._checkingBetResult = true;
+                    
+                    // Đợi một chút để server xử lý xong round finish
+                    setTimeout(async () => {
+                        // Update final result card
+                        updateFinalResultCard();
+                        
+                        // Check bet result của round vừa finish
+                        if (!isPollingBet && myBet && myBet.status === 'pending') {
+                            isPollingBet = true;
+                            
+                            // Poll để check bet result cho đến khi có kết quả
+                            let pollCount = 0;
+                            const maxPolls = 10; // Poll tối đa 10 lần (20 giây)
+                            
+                            const pollInterval = setInterval(async () => {
+                                pollCount++;
+                                
+                                // Load bet để check status và lấy final_result từ server
+                                await loadMyBet(true);
+                                
+                                // Nếu bet đã có kết quả (won/lost), dừng poll
+                                if (myBet && (myBet.status === 'won' || myBet.status === 'lost')) {
+                                    clearInterval(pollInterval);
+                                    isPollingBet = false;
+                                    currentRound._checkingBetResult = false;
+                                    
+                                    // Cập nhật final_result và admin_set_result từ myBet nếu có
+                                    if (myBet.round && currentRound) {
+                                        // Cập nhật admin_set_result
+                                        if (myBet.round.admin_set_result !== undefined) {
+                                            currentRound.admin_set_result = myBet.round.admin_set_result;
+                                        }
+                                        // Cập nhật final_result (ưu tiên admin_set_result nếu có)
+                                        if (myBet.round.final_result) {
+                                            currentRound.final_result = myBet.round.final_result;
+                                        } else if (currentRound.admin_set_result && !currentRound.final_result) {
+                                            // Nếu có admin_set_result nhưng chưa có final_result, dùng admin_set_result
+                                            currentRound.final_result = currentRound.admin_set_result;
+                                        }
+                                        updateFinalResultCard();
+                                    }
+                                    
+                                    // Hiển thị result popup
+                                    if (myBet.status === 'won') {
+                                        showResultPopup('won', myBet.payout_amount || (myBet.amount * myBet.payout_rate));
+                                    } else if (myBet.status === 'lost') {
+                                        showResultPopup('lost', myBet.amount);
+                                    }
+                                } else if (pollCount >= maxPolls) {
+                                    // Đã poll đủ số lần, dừng
+                                    clearInterval(pollInterval);
+                                    isPollingBet = false;
+                                    currentRound._checkingBetResult = false;
+                                }
+                            }, 2000); // Poll mỗi 2 giây
+                        } else {
+                            // Không có bet hoặc bet đã có kết quả
+                            currentRound._checkingBetResult = false;
+                            
+                            // Nếu có bet và đã có kết quả, hiển thị popup
+                            if (myBet && (myBet.status === 'won' || myBet.status === 'lost')) {
+                                // Cập nhật final_result và admin_set_result từ myBet nếu có
+                                if (myBet.round && currentRound) {
+                                    // Cập nhật admin_set_result
+                                    if (myBet.round.admin_set_result !== undefined) {
+                                        currentRound.admin_set_result = myBet.round.admin_set_result;
+                                    }
+                                    // Cập nhật final_result (ưu tiên admin_set_result nếu có)
+                                    if (myBet.round.final_result) {
+                                        currentRound.final_result = myBet.round.final_result;
+                                    } else if (currentRound.admin_set_result && !currentRound.final_result) {
+                                        // Nếu có admin_set_result nhưng chưa có final_result, dùng admin_set_result
+                                        currentRound.final_result = currentRound.admin_set_result;
+                                    }
+                                    updateFinalResultCard();
+                                }
+                                
+                                if (myBet.status === 'won') {
+                                    showResultPopup('won', myBet.payout_amount || (myBet.amount * myBet.payout_rate));
+                                } else if (myBet.status === 'lost') {
+                                    showResultPopup('lost', myBet.amount);
                                 }
                             }
                         }
-                        
-                        let finalResult = completeResults[59];
-                        if (currentRound.admin_set_result) {
-                            finalResult = currentRound.admin_set_result;
-                            completeResults[59] = currentRound.admin_set_result;
-                        }
-                        
-                        // Save to server (chỉ gọi 1 lần)
-                        hasSavedResults = true;
-                        const saved = await saveRoundResult(currentRound.id, finalResult, completeResults);
-                        // Sau khi save, đợi một chút rồi load round mới
-                        // Tất cả thiết bị sẽ check bet result sau khi load round mới
-                        if (!currentRound._loadingNewRound) {
-                            currentRound._loadingNewRound = true;
-                            // Đợi 1 giây để đảm bảo server đã xử lý xong round finish
-                            // Tất cả thiết bị đều dùng cùng delay để popup hiển thị cùng lúc
-                            setTimeout(async () => {
-                                await loadCurrentRound();
-                                updateFinalResultCard();
-                                
-                                // Tất cả thiết bị đều check bet result cùng lúc sau khi round finish
-                                if (!isPollingBet) {
-                                    isPollingBet = true;
-                                    loadMyBet(true); // Immediate call
-                                    
-                                    // Chỉ poll nếu bet status vẫn là pending (chờ server xử lý)
-                                    let pollCount = 0;
-                                    const pollInterval = setInterval(() => {
-                                        pollCount++;
-                                        // Chỉ poll nếu chưa có kết quả (status vẫn pending)
-                                        if (myBet && myBet.status === 'pending') {
-                                            loadMyBet(true); // Immediate call
-                                        } else {
-                                            // Đã có kết quả, dừng poll
-                                            clearInterval(pollInterval);
-                                            isPollingBet = false;
-                                        }
-                                        
-                                        // Dừng poll sau 2 lần (4 giây) để giảm API calls
-                                        if (pollCount >= 2) {
-                                            clearInterval(pollInterval);
-                                            isPollingBet = false;
-                                        }
-                                    }, 2000);
-                                }
-                            }, 1000); // Tất cả thiết bị đều đợi 1 giây
-                        }
-                    } else {
-                        // Thiết bị này đã save hoặc thiết bị khác đã save
-                        // Load round mới và check bet result cùng lúc (sau khi round finish)
-                        if (!currentRound._loadingNewRound) {
-                            currentRound._loadingNewRound = true;
-                            // Đợi cùng thời gian (1 giây) để đảm bảo tất cả thiết bị check bet result cùng lúc
-                            setTimeout(async () => {
-                                await loadCurrentRound();
-                                updateFinalResultCard();
-                                
-                                // Tất cả thiết bị đều check bet result cùng lúc sau khi round finish
-                                if (!isPollingBet) {
-                                    isPollingBet = true;
-                                    loadMyBet(true); // Immediate call
-                                    
-                                    // Chỉ poll nếu bet status vẫn là pending (chờ server xử lý)
-                                    let pollCount = 0;
-                                    const pollInterval = setInterval(() => {
-                                        pollCount++;
-                                        // Chỉ poll nếu chưa có kết quả (status vẫn pending)
-                                        if (myBet && myBet.status === 'pending') {
-                                            loadMyBet(true); // Immediate call
-                                        } else {
-                                            // Đã có kết quả, dừng poll
-                                            clearInterval(pollInterval);
-                                            isPollingBet = false;
-                                        }
-                                        
-                                        // Dừng poll sau 2 lần (4 giây) để giảm API calls
-                                        if (pollCount >= 2) {
-                                            clearInterval(pollInterval);
-                                            isPollingBet = false;
-                                        }
-                                    }, 2000);
-                                }
-                            }, 1000); // Tất cả thiết bị đều đợi 1 giây
-                        }
-                    }
-                    return; // Return để không update display nữa
+                    }, 1000);
                 }
-            }
-        } else if (currentRound.status === 'finished') {
-            phase = 'break';
-            
-            if (currentRound.break_until) {
-                const now = new Date();
-                const breakUntil = new Date(currentRound.break_until);
-                
-                if (!isNaN(breakUntil.getTime())) {
-                    breakRemaining = Math.max(0, Math.floor((breakUntil.getTime() - now.getTime()) / 1000));
-                    if (breakRemaining > 0) {
-                        // Still in break - chỉ update display, không gọi API
-                        updateRoundDisplay(0, 'break', breakRemaining);
-                        return;
-                    } else {
-                        // Break finished, load new round
-                        shouldLoadNewRound = true;
-                    }
-                } else {
-                    // Invalid break_until, load new round
-                    shouldLoadNewRound = true;
-                }
-            } else {
-                // No break time set, load new round
-                shouldLoadNewRound = true;
-            }
-            
-            // Reset bet when loading new round
-            if (shouldLoadNewRound) {
-                myBet = null;
-                hideMyBet();
-                clearBetAmount();
-                selectedGemType = null;
-                document.querySelectorAll('.gem-card').forEach(card => {
-                    card.classList.remove('selected');
-                });
-            }
-        } else if (currentRound.status === 'pending') {
-            // Round is pending - chỉ update display, không gọi API
-            // Server sẽ tự động start round khi break time hết
-            phase = 'break';
-            updateRoundDisplay(0, 'break');
-            
-            // Chỉ check khi break_until đã hết (nếu có)
-            if (currentRound.break_until) {
-                const now = new Date();
-                const breakUntil = new Date(currentRound.break_until);
-                if (!isNaN(breakUntil.getTime()) && now.getTime() >= breakUntil.getTime()) {
-                    // Break time passed, load round (server should have started it)
-                    shouldLoadNewRound = true;
-                }
-            } else {
-                // No break time, check if round should start (wait a bit)
-                setTimeout(() => {
-                    if (currentRound && currentRound.status === 'pending') {
-                        loadCurrentRound();
-                    }
-                }, 1000);
-            }
-            
-            if (shouldLoadNewRound) {
-                loadCurrentRound();
                 return;
             }
-            return;
-        }
-        
-        if (shouldLoadNewRound) {
-            loadCurrentRound();
-            return;
+        } else if (countdown > ROUND_DURATION) {
+            // Chưa đến thời gian round này (break time)
+            phase = 'break';
+            currentSecond = 0;
+        } else {
+            // Round đã finish, đang trong break time (10 giây)
+            phase = 'break';
+            currentSecond = 0;
+            // Không cần load lại round ở đây vì đã xử lý ở trên (dòng 422-480)
         }
         
         // Update current second in round object
@@ -654,7 +530,7 @@
         currentRound.phase = phase;
         
         // Update display
-        updateRoundDisplay(currentSecond, phase, breakRemaining);
+        updateRoundDisplay(currentSecond, phase, countdown > ROUND_DURATION ? countdown - ROUND_DURATION : 0);
         
         // Update radar result (random based on seed - giống nhau trên tất cả thiết bị)
         if (phase === 'betting' || phase === 'result') {
@@ -665,8 +541,8 @@
     }
 
     // Update round display
-    // Countdown được tính toán chính xác dựa trên started_at từ server
-    // Tất cả thiết bị sẽ hiển thị giống nhau
+    // Countdown được tính toán dựa trên deadline (BASE_TIME)
+    // Tất cả thiết bị sẽ hiển thị giống nhau vì dùng cùng BASE_TIME
     function updateRoundDisplay(currentSecond = null, phase = null, breakRemaining = null) {
         if (!currentRound) {
             return;
@@ -675,43 +551,24 @@
         const sec = currentSecond !== null ? currentSecond : (currentRound.current_second || 0);
         const ph = phase !== null ? phase : (currentRound.phase || 'break');
         
-        // Update round number
+        // Update round number (tính từ BASE_TIME)
         const roundNumberEl = document.getElementById('roundNumber');
         if (roundNumberEl) {
-            roundNumberEl.textContent = `Kỳ số : ${currentRound.round_number || '-'}`;
+            const clientRoundNumber = calculateRoundNumber();
+            roundNumberEl.textContent = `Kỳ số : ${clientRoundNumber}`;
         }
         
-        // Update countdown - tính toán chính xác dựa trên started_at
+        // Update countdown - tính từ deadline
         let remainingSeconds = 0;
         if (ph === 'break' && breakRemaining !== null) {
             // Break time remaining
             remainingSeconds = breakRemaining;
-        } else if (ph === 'break' && currentRound.break_until) {
-            // Calculate break remaining from break_until
-            const now = new Date();
-            const breakUntil = new Date(currentRound.break_until);
-            if (!isNaN(breakUntil.getTime())) {
-                remainingSeconds = Math.max(0, Math.floor((breakUntil.getTime() - now.getTime()) / 1000));
-            }
         } else if (ph === 'betting' || ph === 'result') {
-            // Calculate remaining seconds based on started_at
-            // Đảm bảo tất cả thiết bị tính toán giống nhau bằng cách dùng started_at từ server
-            if (currentRound.started_at) {
-                const now = new Date();
-                const startedAt = new Date(currentRound.started_at);
-                if (!isNaN(startedAt.getTime())) {
-                    // Tính toán chính xác: elapsed time từ started_at đến now
-                    const elapsed = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
-                    // Remaining = 60 - elapsed (đảm bảo >= 0)
-                    remainingSeconds = Math.max(0, 60 - elapsed);
-                } else {
-                    // Fallback nếu started_at không hợp lệ
-                    remainingSeconds = Math.max(0, 60 - sec);
-                }
-            } else {
-                // Fallback nếu không có started_at
-                remainingSeconds = Math.max(0, 60 - sec);
-            }
+            // Tính countdown từ deadline
+            const now = Date.now();
+            const clientRoundNumber = calculateRoundNumber();
+            const deadline = calculateRoundDeadline(clientRoundNumber);
+            remainingSeconds = Math.max(0, Math.floor((deadline - now) / 1000));
         }
         
         const minutes = Math.floor(remainingSeconds / 60);
@@ -938,8 +795,15 @@
         const finalResultName = document.getElementById('finalResultName');
         const finalResultPayout = document.getElementById('finalResultPayout');
         
+        // Kiểm tra xem round đã finish chưa (dựa trên countdown)
+        const clientRoundNumber = calculateRoundNumber();
+        const deadline = calculateRoundDeadline(clientRoundNumber);
+        const now = Date.now();
+        const countdown = Math.max(0, Math.floor((deadline - now) / 1000));
+        const isRoundFinished = countdown === 0 || countdown > ROUND_DURATION;
+        
         // If round has finished and has final result
-        if (currentRound.status === 'finished' && currentRound.final_result) {
+        if ((currentRound.status === 'finished' || isRoundFinished) && currentRound.final_result) {
             const gem = GEM_TYPES[currentRound.final_result];
             if (gem) {
                 if (finalResultIcon) {
@@ -953,6 +817,8 @@
                 if (finalResultPayout) {
                     finalResultPayout.textContent = `${gem.payoutRate}x`;
                 }
+            } else {
+                console.warn('Gem type not found:', currentRound.final_result);
             }
         } else {
             // Round chưa kết thúc hoặc chưa có kết quả - chỉ hiển thị text, không hiển thị icon
@@ -1045,12 +911,28 @@
             return;
         }
         
-        // Kiểm tra xem bet có thuộc round hiện tại không
-        if (currentRound && myBet.round_id && myBet.round_id !== currentRound.id) {
+        // Kiểm tra xem bet có thuộc round hiện tại không (so sánh round_number)
+        if (currentRound && myBet.round_number && myBet.round_number !== currentRound.round_number) {
             // Bet không thuộc round hiện tại, ẩn đi
             myBet = null;
             hideMyBet();
             return;
+        }
+        
+        // Cập nhật final_result và admin_set_result từ myBet nếu có
+        if (myBet.round && currentRound) {
+            // Cập nhật admin_set_result
+            if (myBet.round.admin_set_result !== undefined) {
+                currentRound.admin_set_result = myBet.round.admin_set_result;
+            }
+            // Cập nhật final_result (ưu tiên admin_set_result nếu có)
+            if (myBet.round.final_result) {
+                currentRound.final_result = myBet.round.final_result;
+            } else if (currentRound.admin_set_result && !currentRound.final_result) {
+                // Nếu có admin_set_result nhưng chưa có final_result, dùng admin_set_result
+                currentRound.final_result = currentRound.admin_set_result;
+            }
+            updateFinalResultCard();
         }
         
         const gem = GEM_TYPES[myBet.gem_type];
@@ -1099,14 +981,25 @@
         }
         betInfo.appendChild(statusEl);
         
+        // Update previousBetStatus để track changes
+        const currentStatus = myBet.status;
+        
         // Show result popup chỉ khi status thay đổi từ pending sang won/lost
-        if (previousBetStatus === 'pending' && (myBet.status === 'won' || myBet.status === 'lost')) {
-            if (myBet.status === 'won') {
+        // Hoặc khi load bet và đã có kết quả (won/lost) nhưng chưa hiển thị popup
+        if ((previousBetStatus === 'pending' && (currentStatus === 'won' || currentStatus === 'lost')) ||
+            ((currentStatus === 'won' || currentStatus === 'lost') && !myBet._popupShown)) {
+            
+            if (currentStatus === 'won') {
                 showResultPopup('won', myBet.payout_amount || (myBet.amount * myBet.payout_rate));
-            } else if (myBet.status === 'lost') {
+                myBet._popupShown = true; // Đánh dấu đã hiển thị popup
+            } else if (currentStatus === 'lost') {
                 showResultPopup('lost', myBet.amount);
+                myBet._popupShown = true; // Đánh dấu đã hiển thị popup
             }
         }
+        
+        // Update previousBetStatus
+        previousBetStatus = currentStatus;
     }
     
     // Show result popup
@@ -1122,7 +1015,7 @@
             titleEl.textContent = 'Chúc mừng bạn !';
             amountEl.textContent = `+${parseFloat(amount).toFixed(2)} USDT`;
             amountEl.className = 'text-green-400 text-3xl font-bold mb-4';
-            messageEl.textContent = 'Phần thưởng đã được sử lý thành công và chuyển đến ví của bạn.';
+            messageEl.textContent = 'Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.';
         } else if (result === 'lost') {
             titleEl.textContent = 'Rất tiếc !';
             amountEl.textContent = `-${parseFloat(amount).toFixed(2)} USDT`;
@@ -1137,10 +1030,10 @@
             popup.classList.add('show');
         }, 10);
         
-        // Auto hide after 3 seconds
+        // Auto hide after 10 seconds (để hiển thị kết quả trong break time)
         setTimeout(() => {
             closeResultPopup();
-        }, 3000);
+        }, 10000);
     }
     
     // Close result popup

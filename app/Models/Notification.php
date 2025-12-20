@@ -110,7 +110,7 @@ class Notification extends Model
             'user_id' => $user->id,
             'type' => 'withdraw_rejected',
             'title' => 'Rút tiền bị từ chối',
-            'message' => "Yêu cầu rút tiền của bạn đã bị từ chối. Số tiền: " . number_format($amount, 0, ',', '.') . " VND (" . number_format($gemAmount, 2, ',', '.') . " đá quý) đã được hoàn lại vào tài khoản." . ($notes ? " Lý do: " . $notes : ''),
+            'message' => "Yêu cầu rút tiền của bạn đã bị từ chối. Số tiền: " . number_format($amount, 0, ',', '.') . " VND (" . number_format($gemAmount, 2, ',', '.') . " đá quý)." . ($notes ? " Lý do: " . $notes : ''),
             'data' => [
                 'amount' => $amount,
                 'gem_amount' => $gemAmount,

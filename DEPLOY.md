@@ -130,13 +130,6 @@ sudo mysql_secure_installation
 sudo apt install -y nginx
 ```
 
-### 2.6. Cài đặt Redis (cho queue và cache)
-
-```bash
-sudo apt install -y redis-server
-sudo systemctl enable redis-server
-sudo systemctl start redis-server
-```
 
 ## 🔐 Bước 3: Cấu hình Database
 
@@ -220,21 +213,9 @@ DB_DATABASE=micex
 DB_USERNAME=micex_user
 DB_PASSWORD=password
 
-BROADCAST_CONNECTION=reverb
-REVERB_APP_ID=your-app-id
-REVERB_APP_KEY=your-app-key
-REVERB_APP_SECRET=your-app-secret
-REVERB_HOST=mon88.click
-REVERB_PORT=443
-REVERB_SCHEME=https
-
-CACHE_DRIVER=redis
-QUEUE_CONNECTION=redis
-SESSION_DRIVER=redis
-
-REDIS_HOST=127.0.0.1
-REDIS_PASSWORD=null
-REDIS_PORT=6379
+CACHE_DRIVER=file
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=file
 ```
 
 ### 4.4. Chạy migrations và seeders
@@ -382,113 +363,54 @@ Certbot sẽ tự động:
 sudo certbot renew --dry-run
 ```
 
-## 🔄 Bước 7: Cấu hình Reverb (WebSocket)
+## ⚙️ Bước 7: Cấu hình Round Timer (Background Process)
 
-### 7.1. Tạo systemd service cho Reverb
+### 7.1. Tạo systemd service cho Round Timer
+
+**QUAN TRỌNG**: Round timer phải chạy mỗi giây ở background để xử lý rounds tự động!
 
 ```bash
-sudo nano /etc/systemd/system/reverb.service
+sudo nano /etc/systemd/system/micex-round-timer.service
 ```
 
 Nội dung:
 
 ```ini
 [Unit]
-Description=Laravel Reverb Server
-After=network.target
+Description=Micex Round Timer (runs every second)
+After=network.target mysql.service
 
 [Service]
 Type=simple
 User=www-data
 WorkingDirectory=/var/www/micex
-ExecStart=/usr/bin/php /var/www/micex/artisan reverb:start --host=0.0.0.0 --port=8080
+ExecStart=/usr/bin/php /var/www/micex/artisan round:process-loop
 Restart=always
-RestartSec=3
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-### 7.2. Enable và start Reverb service
+### 7.2. Enable và start Round Timer service
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable reverb
-sudo systemctl start reverb
-sudo systemctl status reverb
+sudo systemctl enable micex-round-timer
+sudo systemctl start micex-round-timer
+sudo systemctl status micex-round-timer
 ```
 
-### 7.3. Cấu hình Nginx proxy cho Reverb
+**Lưu ý**: 
+- Round timer chạy hoàn toàn ở server-side
+- Không phụ thuộc vào client/browser
+- User có thể đóng tab, round vẫn tiếp tục chạy
+- Bets sẽ được xử lý tự động khi round finish
+- Commission được tính tự động
 
-Cập nhật file Nginx config:
+## ⏰ Bước 8: Cấu hình Cron Jobs
 
-```bash
-sudo nano /etc/nginx/sites-available/micex
-```
-
-Thêm vào trong block `server` (sau location /):
-
-```nginx
-    # Reverb WebSocket proxy
-    location /app {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 86400;
-    }
-```
-
-Reload Nginx:
-
-```bash
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-## ⚙️ Bước 8: Cấu hình Queue Worker
-
-### 8.1. Tạo systemd service cho Queue
-
-```bash
-sudo nano /etc/systemd/system/micex-queue.service
-```
-
-Nội dung:
-
-```ini
-[Unit]
-Description=Micex Queue Worker
-After=network.target redis.service mysql.service
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/var/www/micex
-ExecStart=/usr/bin/php /var/www/micex/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### 8.2. Enable và start Queue service
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable micex-queue
-sudo systemctl start micex-queue
-sudo systemctl status micex-queue
-```
-
-## ⏰ Bước 9: Cấu hình Cron Jobs
-
-### 9.1. Cấu hình Laravel Scheduler
+### 8.1. Cấu hình Laravel Scheduler
 
 ```bash
 sudo crontab -e -u www-data
@@ -500,9 +422,13 @@ Thêm dòng:
 * * * * * cd /var/www/micex && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-## 🔧 Bước 10: Cấu hình Firewall
+**Lưu ý**: 
+- Scheduler chạy các scheduled tasks (nếu có)
+- Round timer được xử lý bởi RoundTimerLoop service (bước 7)
 
-### 10.1. Cấu hình UFW
+## 🔧 Bước 9: Cấu hình Firewall
+
+### 9.1. Cấu hình UFW
 
 ```bash
 sudo ufw allow OpenSSH
@@ -511,9 +437,9 @@ sudo ufw enable
 sudo ufw status
 ```
 
-## 📝 Bước 11: Cấu hình Log Rotation
+## 📝 Bước 10: Cấu hình Log Rotation
 
-### 11.1. Tạo logrotate config
+### 10.1. Tạo logrotate config
 
 ```bash
 sudo nano /etc/logrotate.d/micex
@@ -537,9 +463,9 @@ Nội dung:
 }
 ```
 
-## 🔍 Bước 12: Kiểm tra và Test
+## 🔍 Bước 11: Kiểm tra và Test
 
-### 12.1. Kiểm tra services
+### 11.1. Kiểm tra services
 
 ```bash
 # Check PHP-FPM
@@ -551,17 +477,11 @@ sudo systemctl status nginx
 # Check MySQL
 sudo systemctl status mysql
 
-# Check Redis
-sudo systemctl status redis-server
-
-# Check Reverb
-sudo systemctl status reverb
-
-# Check Queue
-sudo systemctl status micex-queue
+# Check Round Timer (QUAN TRỌNG!)
+sudo systemctl status micex-round-timer
 ```
 
-### 12.2. Test website
+### 11.2. Test website
 
 ```bash
 # Test từ server
@@ -626,27 +546,21 @@ sudo chmod -R 775 /var/www/micex/storage
 sudo chmod -R 775 /var/www/micex/bootstrap/cache
 ```
 
-### Reverb không kết nối được
+### Round Timer không chạy
 
 ```bash
-# Kiểm tra Reverb service
-sudo systemctl status reverb
-sudo journalctl -u reverb -f
+# Kiểm tra Round Timer service
+sudo systemctl status micex-round-timer
+sudo journalctl -u micex-round-timer -f
 
-# Kiểm tra port
-sudo netstat -tulpn | grep 8080
-```
-
-### Queue không chạy
-
-```bash
-# Kiểm tra Queue service
-sudo systemctl status micex-queue
-sudo journalctl -u micex-queue -f
-
-# Test queue manually
+# Test command manually
 cd /var/www/micex
-php artisan queue:work redis --once
+php artisan round:process
+
+# Kiểm tra xem round có đang chạy không
+php artisan tinker
+# Trong tinker:
+# \App\Models\Round::getCurrentRound();
 ```
 
 ## 🔄 Cập nhật Code
@@ -680,8 +594,7 @@ php artisan view:cache
 
 # Restart services
 sudo systemctl restart php8.2-fpm
-sudo systemctl restart reverb
-sudo systemctl restart micex-queue
+sudo systemctl restart micex-round-timer
 ```
 
 ## 📊 Monitoring
@@ -696,11 +609,8 @@ tail -f /var/www/micex/storage/logs/laravel.log
 tail -f /var/log/nginx/micex-access.log
 tail -f /var/log/nginx/micex-error.log
 
-# Reverb logs
-sudo journalctl -u reverb -f
-
-# Queue logs
-sudo journalctl -u micex-queue -f
+# Round Timer logs
+sudo journalctl -u micex-round-timer -f
 ```
 
 ## 🔐 Security Checklist
