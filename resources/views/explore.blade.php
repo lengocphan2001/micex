@@ -222,6 +222,9 @@
     let roundResults = []; // Mảng lưu tất cả kết quả random từ giây 1-60
     let hasSavedResults = false; // Flag để tránh gọi API nhiều lần
     let isPollingBet = false; // Flag để tránh polling bet nhiều lần
+    let isLoadingRound = false; // Flag để tránh gọi loadCurrentRound nhiều lần
+    let lastRoundLoadTime = 0; // Timestamp của lần load round cuối cùng
+    let pendingRoundCheckTimeout = null; // Timeout cho pending round check
 
     // Initialize
     document.addEventListener('DOMContentLoaded', async function() {
@@ -275,7 +278,16 @@
     }
 
     // Load current round
-    async function loadCurrentRound() {
+    async function loadCurrentRound(force = false) {
+        // Throttle: chỉ cho phép gọi mỗi 2 giây (trừ khi force)
+        const now = Date.now();
+        if (!force && (isLoadingRound || (now - lastRoundLoadTime < 2000))) {
+            return;
+        }
+        
+        isLoadingRound = true;
+        lastRoundLoadTime = now;
+        
         try {
             const response = await fetch('{{ route("explore.current-round") }}');
             const data = await response.json();
@@ -332,8 +344,9 @@
                 if (currentRound._loadingNewRound) {
                     currentRound._loadingNewRound = false;
                 }
-                
+            }
                 // Calculate current second and phase immediately after loading
+            // Calculate current second and phase immediately after loading
                 let initialSecond = 0;
                 let initialPhase = 'break';
                 
@@ -514,8 +527,8 @@
                                             isPollingBet = false;
                                         }
                                         
-                                        // Dừng poll sau 3 lần (6 giây) để tránh gọi quá nhiều
-                                        if (pollCount >= 3) {
+                                        // Dừng poll sau 2 lần (4 giây) để giảm API calls
+                                        if (pollCount >= 2) {
                                             clearInterval(pollInterval);
                                             isPollingBet = false;
                                         }
@@ -551,8 +564,8 @@
                                             isPollingBet = false;
                                         }
                                         
-                                        // Dừng poll sau 3 lần (6 giây) để tránh gọi quá nhiều
-                                        if (pollCount >= 3) {
+                                        // Dừng poll sau 2 lần (4 giây) để giảm API calls
+                                        if (pollCount >= 2) {
                                             clearInterval(pollInterval);
                                             isPollingBet = false;
                                         }
@@ -960,14 +973,20 @@
     let isLoadingMyBet = false; // Flag to prevent concurrent calls
     
     async function loadMyBet(immediate = false) {
-        // Debounce: chỉ gọi API sau 300ms nếu không phải immediate
+        // Throttle: chỉ cho phép gọi mỗi 1 giây (trừ khi immediate)
+        const now = Date.now();
+        if (!immediate && (isLoadingMyBet || (now - lastMyBetLoadTime < 1000))) {
+            return;
+        }
+        
+        // Debounce: chỉ gọi API sau 500ms nếu không phải immediate
         if (!immediate) {
             if (loadMyBetTimeout) {
                 clearTimeout(loadMyBetTimeout);
             }
             loadMyBetTimeout = setTimeout(() => {
                 loadMyBet(true);
-            }, 300);
+            }, 500);
             return;
         }
         
@@ -977,6 +996,7 @@
         }
         
         isLoadingMyBet = true;
+        lastMyBetLoadTime = now;
         try {
             const response = await fetch('{{ route("explore.my-bet") }}');
             const data = await response.json();

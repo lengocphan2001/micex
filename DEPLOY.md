@@ -9,7 +9,7 @@ Hướng dẫn chi tiết để deploy ứng dụng Laravel Micex lên VPS Ubunt
 - **Database**: MySQL 8.0+ hoặc MariaDB 10.6+
 - **Web Server**: Nginx
 - **SSL**: Let's Encrypt (Certbot)
-- **Domain**: coincexbot.com (đã trỏ về IP VPS)
+- **Domain**: mon88.click (đã trỏ về IP VPS)
 
 ## 🚀 Bước 1: Chuẩn bị VPS
 
@@ -207,7 +207,7 @@ APP_NAME=Micex
 APP_ENV=production
 APP_KEY=base64:... (đã generate ở trên)
 APP_DEBUG=false
-APP_URL=https://coincexbot.com
+APP_URL=https://mon88.click
 
 LOG_CHANNEL=stack
 LOG_DEPRECATIONS_CHANNEL=null
@@ -224,7 +224,7 @@ BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=your-app-id
 REVERB_APP_KEY=your-app-key
 REVERB_APP_SECRET=your-app-secret
-REVERB_HOST=coincexbot.com
+REVERB_HOST=mon88.click
 REVERB_PORT=443
 REVERB_SCHEME=https
 
@@ -278,7 +278,7 @@ Nội dung file:
 server {
     listen 80;
     listen [::]:80;
-    server_name coincexbot.com www.coincexbot.com;
+    server_name mon88.click www.mon88.click;
     
     # Redirect HTTP to HTTPS
     return 301 https://$server_name$request_uri;
@@ -287,14 +287,14 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name coincexbot.com www.coincexbot.com;
+    server_name mon88.click www.mon88.click;
     
     root /var/www/micex/public;
     index index.php index.html;
 
     # SSL Configuration (sẽ được cấu hình bởi Certbot)
-    ssl_certificate /etc/letsencrypt/live/coincexbot.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/coincexbot.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/mon88.click/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mon88.click/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
@@ -342,6 +342,8 @@ server {
 }
 ```
 
+**Lưu ý**: Config trên chỉ có HTTP (port 80). Sau khi cài SSL certificate ở bước 6, Certbot sẽ tự động cập nhật config này để thêm HTTPS.
+
 ### 5.2. Enable site và test configuration
 
 ```bash
@@ -366,7 +368,7 @@ sudo apt install -y certbot python3-certbot-nginx
 ### 6.2. Lấy SSL certificate
 
 ```bash
-sudo certbot --nginx -d coincexbot.com -d www.coincexbot.com
+sudo certbot --nginx -d mon88.click -d www.mon88.click
 ```
 
 Certbot sẽ tự động:
@@ -563,10 +565,10 @@ sudo systemctl status micex-queue
 
 ```bash
 # Test từ server
-curl -I https://coincexbot.com
+curl -I https://mon88.click
 
 # Kiểm tra SSL
-openssl s_client -connect coincexbot.com:443
+openssl s_client -connect mon88.click:443
 ```
 
 ## 🚨 Troubleshooting
