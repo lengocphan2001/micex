@@ -34,50 +34,71 @@ su - deploy
 
 ### 2.1. Cài đặt PHP 8.2 và các extension cần thiết
 
-```bash
-# Cài đặt các package cần thiết để thêm repository
-sudo apt install -y software-properties-common lsb-release ca-certificates apt-transport-https
+**QUAN TRỌNG**: Laravel 12 yêu cầu PHP 8.2 trở lên. PHP 8.1 không tương thích!
 
-# Thêm repository PPA cho PHP
+```bash
+# Bước 1: Cài đặt các package cần thiết để thêm repository
+sudo apt install -y software-properties-common lsb-release ca-certificates apt-transport-https gnupg2
+
+# Bước 2: Thêm GPG key cho repository
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4F4EA0AAE5267A6C
+
+# Bước 3: Thêm repository PPA cho PHP
 sudo add-apt-repository ppa:ondrej/php -y
 
-# Update package list
+# Bước 4: Update package list
 sudo apt update
 
-# Kiểm tra xem repository đã được thêm chưa
-apt-cache search php8.2 | head -5
+# Bước 5: Kiểm tra xem repository đã có PHP 8.2 chưa
+apt-cache search php8.2 | head -10
 
-# Cài đặt PHP 8.2 và các extension
+# Bước 6: Nếu vẫn không thấy, thử cách khác - thêm repository trực tiếp
+echo "deb https://ppa.launchpadcontent.net/ondrej/php/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/ondrej-php.list
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4F4EA0AAE5267A6C
+sudo apt update
+
+# Bước 7: Cài đặt PHP 8.2 và các extension
 sudo apt install -y php8.2-fpm php8.2-cli php8.2-common php8.2-mysql \
     php8.2-zip php8.2-gd php8.2-mbstring php8.2-curl php8.2-xml \
     php8.2-bcmath php8.2-intl php8.2-readline php8.2-sqlite3
 
-# Kiểm tra phiên bản PHP
+# Bước 8: Kiểm tra phiên bản PHP
 php -v
 php8.2 -v
+
+# Bước 9: Set PHP 8.2 làm default (nếu có nhiều phiên bản PHP)
+sudo update-alternatives --set php /usr/bin/php8.2
 ```
 
-**Lưu ý**: Nếu vẫn gặp lỗi "Unable to locate package", thử các bước sau:
+**Nếu vẫn gặp lỗi "Unable to locate package"**, thử các bước sau:
 
 ```bash
-# Xóa và thêm lại repository
+# Cách 1: Xóa và thêm lại repository
 sudo add-apt-repository --remove ppa:ondrej/php -y
-sudo add-apt-repository ppa:ondrej/php -y
-
-# Update lại
+sudo rm -f /etc/apt/sources.list.d/ondrej-ubuntu-php-*.list
 sudo apt update
 
-# Hoặc thử cài đặt từng package một để xem package nào bị lỗi
+# Thêm lại với GPG key
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4F4EA0AAE5267A6C
+sudo add-apt-repository ppa:ondrej/php -y
+sudo apt update
+
+# Cách 2: Kiểm tra architecture
+dpkg --print-architecture
+# Nếu là arm64, có thể cần repository khác
+
+# Cách 3: Cài đặt từng package để xem lỗi cụ thể
 sudo apt install -y php8.2-fpm
 ```
 
-**Nếu vẫn không được**, có thể cài đặt PHP từ source hoặc sử dụng PHP 8.1:
+**Nếu tất cả đều không được**, có thể VPS không hỗ trợ PPA. Thử cài đặt từ source hoặc dùng Docker:
 
 ```bash
-# Alternative: Cài đặt PHP 8.1 (nếu PHP 8.2 không có sẵn)
-sudo apt install -y php8.1-fpm php8.1-cli php8.1-common php8.1-mysql \
-    php8.1-zip php8.1-gd php8.1-mbstring php8.1-curl php8.1-xml \
-    php8.1-bcmath php8.1-intl php8.1-readline php8.1-sqlite3
+# Kiểm tra Ubuntu version
+lsb_release -a
+
+# Nếu là Ubuntu 22.04, PHP 8.2 phải có sẵn trong repository
+# Nếu không có, có thể cần upgrade Ubuntu hoặc dùng Docker
 ```
 
 ### 2.2. Cài đặt Composer
@@ -197,7 +218,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=micex
 DB_USERNAME=micex_user
-DB_PASSWORD=your_strong_password_here
+DB_PASSWORD=password
 
 BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=your-app-id
