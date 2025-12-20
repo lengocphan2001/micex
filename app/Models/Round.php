@@ -74,14 +74,23 @@ class Round extends Model
             $round = self::where('round_number', $roundNumber)->lockForUpdate()->first();
             
             if (!$round) {
-                // Generate a unique seed for this round
-                $seed = uniqid('round_', true) . '_' . time();
+                // Generate deterministic seed for this round (phải giống client)
+                // Client dùng: 'round_' + roundNumber
+                $seed = 'round_' . $roundNumber;
                 $round = self::create([
                     'round_number' => $roundNumber,
                     'seed' => $seed,
                     'status' => 'pending',
                     'current_second' => 0,
                 ]);
+            } else {
+                // Nếu round đã tồn tại nhưng seed không phải deterministic, cập nhật lại
+                // (chỉ cập nhật nếu round chưa finish để không ảnh hưởng kết quả đã lưu)
+                $expectedSeed = 'round_' . $roundNumber;
+                if ($round->seed !== $expectedSeed && $round->status !== 'finished') {
+                    $round->seed = $expectedSeed;
+                    $round->save();
+                }
             }
             
             return $round;

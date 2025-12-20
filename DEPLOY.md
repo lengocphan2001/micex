@@ -408,6 +408,38 @@ sudo systemctl status micex-round-timer
 - Bets sẽ được xử lý tự động khi round finish
 - Commission được tính tự động
 
+### 7.3. Fix Permission Issues cho Round Timer
+
+Nếu gặp lỗi "Permission denied" khi ghi log:
+
+```bash
+# Thêm user deploy vào group www-data
+sudo usermod -a -G www-data deploy
+
+# Set quyền cho storage và bootstrap/cache
+sudo chown -R www-data:www-data /var/www/micex/storage
+sudo chown -R www-data:www-data /var/www/micex/bootstrap/cache
+sudo chmod -R 775 /var/www/micex/storage
+sudo chmod -R 775 /var/www/micex/bootstrap/cache
+
+# Đảm bảo thư mục logs có quyền ghi
+sudo chmod -R 775 /var/www/micex/storage/logs
+sudo touch /var/www/micex/storage/logs/laravel.log
+sudo chown www-data:www-data /var/www/micex/storage/logs/laravel.log
+sudo chmod 664 /var/www/micex/storage/logs/laravel.log
+
+# Hoặc nếu muốn user deploy có thể ghi trực tiếp
+sudo chown -R deploy:www-data /var/www/micex/storage
+sudo chown -R deploy:www-data /var/www/micex/bootstrap/cache
+sudo chmod -R 775 /var/www/micex/storage
+sudo chmod -R 775 /var/www/micex/bootstrap/cache
+
+# Logout và login lại để áp dụng group mới
+# Hoặc chạy: newgrp www-data
+```
+
+**Lưu ý**: Sau khi thay đổi group, cần logout và login lại, hoặc chạy `newgrp www-data` để áp dụng group mới.
+
 ## ⏰ Bước 8: Cấu hình Cron Jobs
 
 ### 8.1. Cấu hình Laravel Scheduler
