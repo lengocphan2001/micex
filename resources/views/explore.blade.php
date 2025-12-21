@@ -28,15 +28,8 @@
 @endpush
 
 @section('header')
-<header class="w-full px-4 py-4 flex items-center justify-between bg-gray-900 border-b border-gray-800">
-    <div class="flex items-center gap-2">
-        <button onclick="history.back()" class="text-white">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-        </button>
-        <h1 class="text-white text-base font-semibold">Trò Chơi</h1>
-    </div>
+<header class="w-full px-4 py-4 flex items-center justify-center bg-gray-900 border-b border-gray-800">
+    <h1 class="text-white text-base font-semibold">Trò Chơi</h1>
 </header>
 @endsection
 
@@ -95,8 +88,8 @@
         <div class="grid grid-cols-2 gap-3">
             <div class="bg-[#111111] rounded-xl card-shadow">
                 <div class="flex">
-                    <img src="{{ asset('images/icons/bigrada.png') }}" alt="Radar" class="w-28 h-28 object-contain">
-                    <div class="flex items-center justify-center gap-2 py-4" id="radarResult">
+                    <img src="{{ asset('images/icons/bigrada.png') }}" alt="Radar" class="w-24 h-24 object-contain">
+                    <div class="flex items-center justify-center gap-2 py-2" id="radarResult">
                         <img src="{{ asset('images/icons/thachanh.png') }}" alt="Current Result" class="w-10 h-10 object-contain" id="currentGemIcon">
                         <p class="text-white font-semibold text-xs" id="currentGemPercent"></p>
                     </div>
@@ -104,9 +97,9 @@
             </div>
             <div class="bg-[#111111] rounded-xl p-4 card-shadow flex flex-col items-center justify-center gap-1" id="finalResultCard">
                 <!-- Icon nhấp nháy lần lượt các loại đá (ở trên) -->
-                <img src="{{ asset('images/icons/thachanh.png') }}" alt="Kết quả" class="w-14 h-14 object-contain" id="finalResultIcon" style="display: block;">
+                <img src="{{ asset('images/icons/thachanh.png') }}" alt="Kết quả" class="w-10 h-10 object-contain flex-shrink-0" id="finalResultIcon" style="display: block;">
                 <!-- Chữ "Chờ kết quả..." (ở dưới) -->
-                <div class="text-center">
+                <div class="text-center min-h-[40px] flex flex-col items-center justify-center">
                     <p class="text-white font-semibold" id="finalResultName">Chờ kết quả...</p>
                     <p class="text-blue-400 text-sm" id="finalResultPayout"></p>
                 </div>
@@ -123,18 +116,21 @@
 
         <!-- Amount input -->
         <div class="space-y-3">
-            <div class="text-sm text-gray-300 flex items-center gap-1">Số lượng <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Gem" class="w-4 h-4 object-contain"></div>
+            <div class="text-sm text-gray-300 flex items-center gap-1">
+                <p class="text-[#3958F5] font-medium text-sm leading-none tracking-normal">Số lượng </p>
+                <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Gem" class="w-4 h-4 object-contain">
+            </div>
             <div class="flex items-center gap-3">
-                <div class="flex-1 bg-gray-900 rounded-xl px-3 py-3 flex items-center justify-between" style="border: 0.1px solid #FFFFFF80;">
+                <div class="flex-1 px-3 flex items-center justify-between" style="width: 281px; height: 47px; border-radius: 5px; border: 0.5px solid #FFFFFF80;">
                     <input type="number" min="0.01" step="0.01" value="10" id="betAmount" class="bg-transparent text-white w-full outline-none" placeholder="Nhập số lượng">
                     <button onclick="clearBetAmount()" class="text-gray-400">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
-                <button id="confirmBetBtn" onclick="placeBet()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-3 rounded-xl min-w-[110px] disabled:opacity-50 disabled:cursor-not-allowed">Xác nhận</button>
+                <button id="confirmBetBtn" onclick="placeBet()" class="text-white font-semibold cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity whitespace-nowrap" style="height: 47px; border-radius: 10px; background: #3958F5; padding-left: 16px; padding-right: 16px;">Xác nhận</button>
             </div>
             <div id="betInfo" class="text-xs text-gray-400 hidden">
-                <p>Bạn đã đặt cược: <span id="betGemType" class="text-white"></span> - <span id="betAmountDisplay" class="text-white"></span> đá quý</p>
+                <p>Bạn đã đặt cược: <span id="betGemType" class="text-white"></span> - <span id="betAmountDisplay" class="text-red-600"></span> đá quý</p>
                 <p>Nếu thắng, bạn sẽ nhận: <span id="betPayout" class="text-green-400"></span> đá quý</p>
             </div>
         </div>
@@ -1258,19 +1254,12 @@
         }
         
         // Show status
-        const statusEl = document.createElement('p');
-        statusEl.className = 'mt-2';
         if (myBet.status === 'won') {
-            statusEl.className += ' text-green-400';
+            const statusEl = document.createElement('p');
+            statusEl.className = 'mt-2 text-green-400';
             statusEl.textContent = '🎉 Bạn đã thắng!';
-        } else if (myBet.status === 'lost') {
-            statusEl.className += ' text-red-400';
-            statusEl.textContent = '😔 Bạn đã thua';
-        } else {
-            statusEl.className += ' text-yellow-400';
-            statusEl.textContent = '⏳ Đang chờ kết quả...';
+            betInfo.appendChild(statusEl);
         }
-        betInfo.appendChild(statusEl);
         
         // Update previousBetStatus để track changes
         const currentStatus = myBet.status;

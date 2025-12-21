@@ -130,6 +130,16 @@
             transform: translateY(0);
         }
     }
+    
+    /* Referral Modal Animation */
+    #referralModal.show {
+        display: flex !important;
+    }
+    
+    #referralModal.show > div:last-child {
+        transform: translateY(0);
+        opacity: 1;
+    }
 </style>
 @endpush
 
@@ -355,13 +365,46 @@
     <div class="flex flex-col gap-3 mx-4 mt-4 mb-20 border border-gray-700 rounded-xl p-3">
         <h3 class="text-white font-semibold mb-2">Hoàn thành nhiệm vụ giới thiệu bạn bè mới</h3>
         <p class="text-gray-400 text-sm mb-4">Cơ hội đào ra đá quý có phần thưởng giá trị lên tới 1000$</p>
-        <button class="w-fit opacity-100 rounded-[20px] bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-1 flex items-center justify-center gap-2 transition-colors">
+        <button id="referralBtn" class="w-fit opacity-100 rounded-[20px] bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-1 flex items-center justify-center gap-2 transition-colors cursor-pointer">
             <span>Giới thiệu bạn bè ngay</span>
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>
         </button>
         <p class=" opacity-100 rounded-[20px] border-[0.5px] border-[#636465] bg-[#111111] py-2 text-gray-500 text-xs text-center flex items-center justify-center">Bạn sẽ nhận được gói quà tặng 20 USDT sau khi hoàn tất</p>
+    </div>
+
+    <!-- Referral Code Modal -->
+    <div id="referralModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/50" onclick="closeReferralModalFunc()"></div>
+        
+        <!-- Popup Content -->
+        <div class="relative bg-[#1e3a8a] rounded-3xl shadow-2xl pb-8 w-full max-w-[419px] mx-4 transform translate-y-4 opacity-0 transition-all duration-300 ease-out">
+            <!-- Content -->
+            <div class="px-6 pt-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-white font-semibold text-lg">Mã giới thiệu của bạn</h3>
+                    <button id="closeReferralModal" onclick="closeReferralModalFunc()" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="mb-6">
+                    <p class="text-white text-sm mb-4">Chia sẻ mã này với bạn bè để nhận phần thưởng:</p>
+                    <div class="flex items-center gap-2 bg-gray-900/50 rounded-lg p-3 border border-gray-700/50 overflow-hidden">
+                        <input type="text" id="referralCodeInput" value="{{ Auth::user()->referral_code ?? '' }}" readonly class="flex-1 min-w-0 bg-transparent text-white font-semibold text-lg outline-none">
+                    <button id="copyReferralCode" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap flex-shrink-0">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        <span id="copyText" class="whitespace-nowrap">Sao chép</span>
+                    </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection
 
@@ -467,6 +510,76 @@
         if (slides.length > 1) {
             resetAutoSlide();
         }
+    }
+
+    // Referral Modal
+    const referralBtn = document.getElementById('referralBtn');
+    const referralModal = document.getElementById('referralModal');
+    const copyReferralCode = document.getElementById('copyReferralCode');
+    const referralCodeInput = document.getElementById('referralCodeInput');
+    const copyText = document.getElementById('copyText');
+
+    // Open modal with animation
+    function openReferralModal() {
+        if (referralModal) {
+            referralModal.classList.remove('hidden');
+            // Trigger animation by adding show class after a small delay
+            setTimeout(() => {
+                referralModal.classList.add('show');
+            }, 10);
+        }
+    }
+
+    // Close modal with animation
+    function closeReferralModalFunc() {
+        if (referralModal) {
+            referralModal.classList.remove('show');
+            // Hide after animation completes
+            setTimeout(() => {
+                referralModal.classList.add('hidden');
+            }, 300);
+        }
+    }
+
+    // Open modal
+    if (referralBtn) {
+        referralBtn.addEventListener('click', function() {
+            openReferralModal();
+        });
+    }
+
+    // Copy referral code
+    if (copyReferralCode && referralCodeInput) {
+        copyReferralCode.addEventListener('click', function() {
+            try {
+                navigator.clipboard.writeText(referralCodeInput.value).then(function() {
+                    // Success feedback
+                    copyText.textContent = 'Đã sao chép!';
+                    copyReferralCode.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                    copyReferralCode.classList.add('bg-green-500');
+                    
+                    setTimeout(function() {
+                        copyText.textContent = 'Sao chép';
+                        copyReferralCode.classList.remove('bg-green-500');
+                        copyReferralCode.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                    }, 2000);
+                }).catch(function(err) {
+                    // Fallback for older browsers
+                    document.execCommand('copy');
+                    copyText.textContent = 'Đã sao chép!';
+                    setTimeout(function() {
+                        copyText.textContent = 'Sao chép';
+                    }, 2000);
+                });
+            } catch (err) {
+                // Fallback for older browsers
+                document.execCommand('copy');
+                copyText.textContent = 'Đã sao chép!';
+                setTimeout(function() {
+                    copyText.textContent = 'Sao chép';
+                }, 2000);
+            }
+        });
     }
 </script>
 @endpush

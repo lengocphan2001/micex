@@ -1,4 +1,4 @@
-<nav class="w-full bg-gray-900 border-t border-gray-800 px-3">
+<nav class="fixed bottom-0 left-0 right-0 w-full bg-gray-900 border-t border-gray-800 px-3 z-50 md:left-auto md:right-auto md:max-w-[450px]">
     <div class="flex items-center justify-between text-gray-300 text-xs gap-1">
         <!-- Home -->
         <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14">
@@ -17,11 +17,11 @@
         </a>
 
         <!-- Explore (center item - floating) -->
-        <a href="{{ route('explore') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14 -mt-4">
+        <a href="{{ route('explore') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14 -mt-5">
             <div class="w-10 h-10 rounded-full bg-blue-500 shadow-lg flex items-center justify-center border-2 border-gray-900 ring-2 ring-blue-400/30">
                 <img src="{{ asset('images/icons/gioithieu.png') }}" alt="Khám phá" class="w-6 h-6">
             </div>
-            <span class="text-xs whitespace-nowrap {{ request()->routeIs('explore') ? 'text-blue-500' : 'text-gray-400' }}">Khám phá</span>
+            <span class="text-xs whitespace-nowrap mt-1 {{ request()->routeIs('explore') ? 'text-blue-500' : 'text-gray-400' }}">Khám phá</span>
         </a>
 
         <!-- Assets -->

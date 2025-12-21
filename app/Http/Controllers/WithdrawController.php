@@ -63,6 +63,15 @@ class WithdrawController extends Controller
                 ], 400);
             }
 
+            // Check betting requirement: user must complete betting rounds >= deposit amount since last deposit
+            if (!$user->hasCompletedBettingRequirement()) {
+                $remaining = $user->getRemainingBettingRequirement();
+                return response()->json([
+                    'success' => false,
+                    'message' => "Vòng cược chưa hoàn thành. Bạn cần đặt cược thêm " . number_format($remaining, 2, '.', ',') . " đá quý trước khi có thể rút tiền.",
+                ], 400);
+            }
+
             // Get VND to Gem rate from settings
             $vndToGemRate = SystemSetting::getVndToGemRate();
             

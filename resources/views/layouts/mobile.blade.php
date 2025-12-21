@@ -23,7 +23,7 @@
     <div class="w-full md:max-w-[450px] h-screen flex flex-col mx-auto bg-gray-900 md:shadow-2xl overflow-hidden text-white">
         @yield('header')
 
-        <main class="flex-1 overflow-y-auto hide-scrollbar text-base leading-relaxed" style="background-color: #181A20;">
+        <main class="flex-1 overflow-y-auto hide-scrollbar text-base leading-relaxed pb-20" style="background-color: #181A20;">
             @yield('content')
         </main>
 

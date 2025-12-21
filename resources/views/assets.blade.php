@@ -38,8 +38,8 @@
                     </p>
                 </div>
                 <div class="text-sm text-blue-100 flex items-center gap-1">
-                    Vòng cược chưa hoàn thành : <span class="font-semibold text-white">123,023</span> <span class="text-yellow-300">
-                        <img src="{{ asset('images/icons/cuoc.png') }}" alt="Cuoc" class="w-5 h-5 object-contain">
+                    Vòng cược chưa hoàn thành : <span class="font-semibold text-white">{{ number_format(auth()->user()->getRemainingBettingRequirement() ?? 0, 2, '.', ',') }}</span> <span class="text-yellow-300">
+                        <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-5 h-5 object-contain">
                     </span>
                 </div>
                 <div class="flex items-center gap-3 pt-1">

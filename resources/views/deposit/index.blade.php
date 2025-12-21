@@ -71,7 +71,6 @@
                         <div class="space-y-1">
                             <div class="flex items-center justify-between">
                                 <p class="text-white text-base font-semibold leading-tight">Nạp qua tài khoản ngân hàng</p>
-                                <span class="text-[12px] text-blue-200 bg-blue-500/10 border border-blue-500/30 px-2 py-1 rounded-full">Ưu tiên</span>
                             </div>
                             <p class="text-sm text-gray-200 leading-snug">Bán Micex và nhận về VND vào tài khoản ngân hàng của bạn...</p>
                         </div>

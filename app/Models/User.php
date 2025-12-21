@@ -118,4 +118,73 @@ class User extends Authenticatable
     {
         return UserCommission::getAvailableCommission($this->id);
     }
+
+    /**
+     * Get the last approved deposit request
+     */
+    public function getLastApprovedDeposit()
+    {
+        return $this->depositRequests()
+            ->where('status', 'approved')
+            ->orderBy('approved_at', 'desc')
+            ->first();
+    }
+
+    /**
+     * Calculate total betting amount since last deposit
+     * Returns the total amount of bets placed after the last approved deposit
+     */
+    public function getTotalBettingSinceLastDeposit()
+    {
+        $lastDeposit = $this->getLastApprovedDeposit();
+        
+        if (!$lastDeposit || !$lastDeposit->approved_at) {
+            // No deposit yet, return 0
+            return 0;
+        }
+
+        // Calculate total betting amount from bets created after the last deposit approval
+        return \App\Models\Bet::where('user_id', $this->id)
+            ->where('created_at', '>=', $lastDeposit->approved_at)
+            ->sum('amount') ?? 0;
+    }
+
+    /**
+     * Get remaining betting requirement (số đá quý cần cược thêm)
+     * Returns the amount that still needs to be bet before withdrawal is allowed
+     */
+    public function getRemainingBettingRequirement()
+    {
+        $lastDeposit = $this->getLastApprovedDeposit();
+        
+        if (!$lastDeposit || !$lastDeposit->approved_at) {
+            // No deposit yet, return 0 (no requirement)
+            return 0;
+        }
+
+        $depositAmount = $lastDeposit->gem_amount ?? 0;
+        $totalBetting = $this->getTotalBettingSinceLastDeposit();
+        
+        // Return remaining amount needed (if negative, means requirement is met)
+        return max(0, $depositAmount - $totalBetting);
+    }
+
+    /**
+     * Check if user has completed betting requirement
+     * Returns true if total betting >= deposit amount since last deposit
+     */
+    public function hasCompletedBettingRequirement(): bool
+    {
+        $lastDeposit = $this->getLastApprovedDeposit();
+        
+        if (!$lastDeposit || !$lastDeposit->approved_at) {
+            // No deposit yet, requirement is considered met
+            return true;
+        }
+
+        $depositAmount = $lastDeposit->gem_amount ?? 0;
+        $totalBetting = $this->getTotalBettingSinceLastDeposit();
+        
+        return $totalBetting >= $depositAmount;
+    }
 }

@@ -16,10 +16,12 @@
             {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
         </div>
         <div class="flex-1">
-            <p class="text-white font-semibold text-base">{{ auth()->user()->name ?? 'User' }}</p>
+            <p class="text-white font-semibold text-base">{{ auth()->user()->display_name ?? 'User' }}</p>
             <p class="text-gray-400 text-sm">{{ auth()->user()->email ?? 'user@example.com' }}</p>
         </div>
-        <a href="{{ route('me.edit') }}" class="text-sm text-blue-400 font-semibold">Chỉnh sửa</a>
+        <a href="{{ route('me.edit') }}" class="inline-flex items-center justify-center w-6 h-6 bg-blue-500 rounded-full">
+            <i class="fas fa-chevron-right text-white text-xs"></i>
+        </a>
     </div>
 
     
@@ -35,7 +37,7 @@
     <hr class="w-full border-gray-700 h-1">
 
     <!-- Chương trình giới thiệu -->
-    <div class="bg-[#111218]">
+    <div class="">
         <div class="flex items-center justify-between mb-2">
             <div class="flex-1">
                 <h3 class="text-[#3958F5] font-semibold text-base mb-1">Chương trình giới thiệu</h3>

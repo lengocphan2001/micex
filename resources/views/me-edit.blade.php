@@ -16,13 +16,13 @@
 
 @section('content')
 <div class="px-4 py-4 space-y-4">
-    <div class="bg-[#111218] flex items-center gap-3">
+    <div class="flex items-center gap-3">
         <div class="w-12 h-12 rounded-full bg-blue-500/30 border border-blue-500/60 flex items-center justify-center text-white font-bold">
-            U
+            {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
         </div>
         <div class="flex-1">
-            <p class="text-white text-xs">Tên hiển thị</p>
-            <p class="text-blue-300 text-sm font-semibold">C3002023</p>
+            <p class="text-white font-semibold text-base">{{ auth()->user()->display_name ?? 'User' }}</p>
+            <p class="text-gray-400 text-sm">{{ auth()->user()->email ?? 'user@example.com' }}</p>
         </div>
     </div>
 
