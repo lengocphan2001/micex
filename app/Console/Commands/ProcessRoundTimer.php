@@ -128,7 +128,7 @@ class ProcessRoundTimer extends Command
                         // Admin đã set result, dùng admin_set_result
                         $finalResult = $round->admin_set_result;
                         $this->info("Round {$round->round_number} using admin_set_result: {$finalResult}");
-                    } else {
+            } else {
                         // Admin chưa set, tính từ seed
                         $finalResult = $this->getGemForSecond($round->seed, 60);
                         $this->info("Round {$round->round_number} using random result from seed: {$finalResult}");

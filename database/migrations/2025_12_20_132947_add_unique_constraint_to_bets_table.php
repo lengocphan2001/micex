@@ -15,7 +15,7 @@ return new class extends Migration
         // Constraint này đã được tạo trong migration create_bets_table
         // Nên migration này chỉ để đảm bảo tính nhất quán
         if (!$this->hasUniqueConstraint()) {
-            Schema::table('bets', function (Blueprint $table) {
+        Schema::table('bets', function (Blueprint $table) {
                 // Add unique constraint: Mỗi user chỉ có thể đặt 1 bet trong 1 round
                 $table->unique(['round_id', 'user_id'], 'bets_round_user_unique');
             });

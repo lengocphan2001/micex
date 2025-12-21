@@ -48,7 +48,7 @@
                 </div>
             </div>
             <div class="flex-shrink-0">
-                <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Gem" class="pl-2 w-10 h-10 object-contain" style="filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 12px rgba(59, 130, 246, 0.4));">
+                <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Gem" class="pl-2 w-8 h-8 object-contain" style="filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 12px rgba(59, 130, 246, 0.4));">
             </div>
         </div>
         <div class="bg-blue-500 rounded-xl p-2 card-shadow">

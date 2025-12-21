@@ -226,8 +226,8 @@ class AdminController extends Controller
             // Round đang chạy, chỉ lưu admin_set_result
             // Kết quả này sẽ được dùng khi round finish
             $round->save();
-            
-            return back()->with('success', 'Đã đặt kết quả phiên cược. Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng.');
+        
+        return back()->with('success', 'Đã đặt kết quả phiên cược. Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng.');
         } else {
             return back()->with('error', 'Chỉ có thể đặt kết quả cho phiên đang chạy hoặc đã kết thúc.');
         }

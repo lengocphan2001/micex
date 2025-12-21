@@ -117,12 +117,12 @@ class Round extends Model
                     $seed = 'round_' . $roundNumber;
                     
                     try {
-                        $round = self::create([
+            $round = self::create([
                             'round_number' => $roundNumber,
-                            'seed' => $seed,
-                            'status' => 'pending',
-                            'current_second' => 0,
-                        ]);
+                'seed' => $seed,
+                'status' => 'pending',
+                'current_second' => 0,
+            ]);
                     } catch (\Illuminate\Database\QueryException $e) {
                         // Nếu unique constraint violation (round đã được tạo bởi process khác)
                         // CHỈ lấy round có seed deterministic
@@ -156,9 +156,9 @@ class Round extends Model
                         $randomRound->save();
                     }
                 }
-            }
-            
-            return $round;
+        }
+        
+        return $round;
         });
     }
 
@@ -238,27 +238,27 @@ class Round extends Model
         
         foreach ($bets as $bet) {
             try {
-                if ($bet->gem_type === $this->final_result) {
-                    // User won
+            if ($bet->gem_type === $this->final_result) {
+                // User won
                     $payoutAmount = $bet->amount * $bet->payout_rate;
                     
-                    $bet->update([
-                        'status' => 'won',
+                $bet->update([
+                    'status' => 'won',
                         'payout_amount' => $payoutAmount,
-                    ]);
-                    
-                    // Add winnings to user balance
+                ]);
+                
+                // Add winnings to user balance
                     $user = $bet->user;
                     $user->balance += $payoutAmount;
                     $user->save();
                     
                     \Log::info("Bet {$bet->id}: User {$user->id} won {$payoutAmount}");
-                } else {
-                    // User lost
-                    $bet->update([
-                        'status' => 'lost',
-                    ]);
-                    // Balance was already deducted when bet was placed
+            } else {
+                // User lost
+                $bet->update([
+                    'status' => 'lost',
+                ]);
+                // Balance was already deducted when bet was placed
                     
                     \Log::info("Bet {$bet->id}: User {$bet->user_id} lost");
                 }

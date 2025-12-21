@@ -62,21 +62,21 @@
                 $date = $createdAt->format('d-m-Y');
             @endphp
             
-            <div class="grid grid-cols-5 gap-3 py-3 border-b border-gray-700/30 hover:bg-gray-800/30 transition-colors rounded px-2">
-                <div class="text-white text-xs text-center leading-tight">
+        <div class="grid grid-cols-5 gap-3 py-3 border-b border-gray-700/30 hover:bg-gray-800/30 transition-colors rounded px-2">
+            <div class="text-white text-xs text-center leading-tight">
                     <div class="font-medium">{{ $time }}</div>
                     <div class="text-gray-400">{{ $date }}</div>
-                </div>
-                <div class="flex items-center justify-center">
+            </div>
+            <div class="flex items-center justify-center">
                     <img src="{{ $gemIcon }}" alt="{{ $gemName }}" class="w-8 h-8 object-contain">
-                </div>
-                <div class="text-white text-xs text-center flex items-center justify-center gap-1.5">
+            </div>
+            <div class="text-white text-xs text-center flex items-center justify-center gap-1.5">
                     <span class="font-medium">{{ number_format($bet->amount, 2, '.', ',') }}</span>
-                    <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin" class="w-5 h-5 object-contain">
-                </div>
+                <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin" class="w-5 h-5 object-contain">
+            </div>
                 <div class="{{ $resultColor }} text-xs text-center font-medium flex items-center justify-center">
                     {{ $resultText }}
-                </div>
+        </div>
                 <div class="{{ $profitColor }} text-xs text-center font-bold flex items-center justify-center">
                     @if($profitAmount > 0)
                         +{{ number_format($profitAmount, 2, '.', ',') }}$
@@ -85,15 +85,15 @@
                     @else
                         -
                     @endif
-                </div>
+            </div>
             </div>
         @empty
             <div class="text-center py-8">
                 <p class="text-gray-400 text-sm">Chưa có giao dịch nào</p>
             </div>
         @endforelse
-    </div>
-    
+        </div>
+
     <!-- Pagination -->
     @if($bets->hasPages())
         <div class="mt-6 flex justify-center">

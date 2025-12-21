@@ -308,17 +308,17 @@ class ExploreController extends Controller
             $user = User::where('id', $user->id)->lockForUpdate()->first();
             
             // Check if user already placed a bet in this round (with lock)
-            $existingBet = Bet::where('round_id', $round->id)
-                ->where('user_id', $user->id)
+        $existingBet = Bet::where('round_id', $round->id)
+            ->where('user_id', $user->id)
                 ->lockForUpdate()
-                ->first();
-            
-            if ($existingBet) {
+            ->first();
+        
+        if ($existingBet) {
                 DB::rollBack();
-                return response()->json([
-                    'error' => 'Bạn đã đặt cược trong phiên này rồi.',
-                ], 400);
-            }
+            return response()->json([
+                'error' => 'Bạn đã đặt cược trong phiên này rồi.',
+            ], 400);
+        }
 
             // Check balance again after lock (in case it changed)
             if ($user->balance < $validated['amount']) {
@@ -334,14 +334,14 @@ class ExploreController extends Controller
 
             // Create bet (unique constraint will prevent duplicates)
             try {
-                $bet = Bet::create([
-                    'round_id' => $round->id,
-                    'user_id' => $user->id,
-                    'gem_type' => $validated['gem_type'],
-                    'amount' => $validated['amount'],
-                    'payout_rate' => $this->getPayoutRates()[$validated['gem_type']],
-                    'status' => 'pending',
-                ]);
+            $bet = Bet::create([
+                'round_id' => $round->id,
+                'user_id' => $user->id,
+                'gem_type' => $validated['gem_type'],
+                'amount' => $validated['amount'],
+                'payout_rate' => $this->getPayoutRates()[$validated['gem_type']],
+                'status' => 'pending',
+            ]);
                 
                 // Calculate and distribute commission to network (F1, F2, F3...) based on bet amount
                 // Commission được tính dựa trên khối lượng bet, không cần thắng
@@ -407,14 +407,14 @@ class ExploreController extends Controller
         $user->refresh();
         
         $betData = [
-            'id' => $bet->id,
+                'id' => $bet->id,
             'round_id' => $bet->round_id,
             'round_number' => $bet->round->round_number ?? null, // Thêm round_number để client kiểm tra
-            'gem_type' => $bet->gem_type,
-            'amount' => $bet->amount,
-            'payout_rate' => $bet->payout_rate,
-            'status' => $bet->status,
-            'payout_amount' => $bet->payout_amount,
+                'gem_type' => $bet->gem_type,
+                'amount' => $bet->amount,
+                'payout_rate' => $bet->payout_rate,
+                'status' => $bet->status,
+                'payout_amount' => $bet->payout_amount,
             'round' => [
                 'id' => $bet->round->id ?? null,
                 'round_number' => $bet->round->round_number ?? null,
