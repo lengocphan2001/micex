@@ -336,9 +336,9 @@
             </div>
             <h3 class="text-white text-base font-bold mb-2">Đào liền tay ! Ring quà về ngay?</h3>
             <p class="text-gray-400 text-xs mb-4">Phần thưởng lên tới 1000 USDT đang chờ bạn</p>
-            <button class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-6 py-3 rounded-lg mb-4 transition-colors">
+            <a href="{{ route('explore') }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-6 py-3 rounded-lg mb-4 transition-colors text-center">
                 Đào ngay
-            </button>
+            </a>
             <!-- Countdown Timer -->
             <div class="flex gap-2 text-white text-xs items-center justify-center">
                 <div class="flex items-center gap-1">

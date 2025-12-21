@@ -51,7 +51,7 @@
         <div class="space-y-2">
             <p class="text-xs text-gray-300">Số lượng nạp</p>
             <div class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] flex items-center">
-                <input id="depositAmount" type="text" inputmode="decimal" class="flex-1 bg-transparent text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="100,000 đến 500,000,000">
+                <input id="depositAmount" type="text" inputmode="decimal" class="flex-1 bg-transparent text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="100,000 đến 500,000,000">
                 <span class="px-3 text-blue-400 text-sm font-semibold">VND</span>
             </div>
         </div>
