@@ -76,11 +76,18 @@ class AdminController extends Controller
      */
     public function interveneResults()
     {
-        // Get current payout rates from database
+        // Get current payout rates from database (3 đá thường)
         $payoutRates = [
             'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', '1.95'),
             'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', '5.95'),
             'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', '1.95'),
+        ];
+        
+        // Get payout rates for 3 đá nổ hũ (chỉ admin set, user không thể cược)
+        $jackpotRates = [
+            'thachanhtim' => (float) SystemSetting::getValue('gem_payout_rate_thachanhtim', '10.00'),
+            'ngusac' => (float) SystemSetting::getValue('gem_payout_rate_ngusac', '20.00'),
+            'cuoc' => (float) SystemSetting::getValue('gem_payout_rate_cuoc', '50.00'),
         ];
         
         // Get current round (không tạo mới, chỉ lấy từ database)
@@ -91,7 +98,7 @@ class AdminController extends Controller
             $currentRound = null;
         }
         
-        return view('admin.intervene-results', compact('payoutRates', 'currentRound'));
+        return view('admin.intervene-results', compact('payoutRates', 'jackpotRates', 'currentRound'));
     }
     
     /**
@@ -103,12 +110,26 @@ class AdminController extends Controller
             'thachanh' => 'required|numeric|min:1',
             'daquy' => 'required|numeric|min:1',
             'kimcuong' => 'required|numeric|min:1',
+            'thachanhtim' => 'nullable|numeric|min:1',
+            'ngusac' => 'nullable|numeric|min:1',
+            'cuoc' => 'nullable|numeric|min:1',
         ]);
         
-        // Save each rate to database
+        // Save each rate to database (3 đá thường)
         SystemSetting::setValue('gem_payout_rate_thachanh', (string) $validated['thachanh'], 'Tỉ lệ ăn cho thạch anh');
         SystemSetting::setValue('gem_payout_rate_daquy', (string) $validated['daquy'], 'Tỉ lệ ăn cho đá quý');
         SystemSetting::setValue('gem_payout_rate_kimcuong', (string) $validated['kimcuong'], 'Tỉ lệ ăn cho kim cương');
+        
+        // Save payout rates for 3 đá nổ hũ (nếu có)
+        if (isset($validated['thachanhtim'])) {
+            SystemSetting::setValue('gem_payout_rate_thachanhtim', (string) $validated['thachanhtim'], 'Tỉ lệ ăn cho thạch anh tím (nổ hũ)');
+        }
+        if (isset($validated['ngusac'])) {
+            SystemSetting::setValue('gem_payout_rate_ngusac', (string) $validated['ngusac'], 'Tỉ lệ ăn cho ngũ sắc (nổ hũ)');
+        }
+        if (isset($validated['cuoc'])) {
+            SystemSetting::setValue('gem_payout_rate_cuoc', (string) $validated['cuoc'], 'Tỉ lệ ăn cho cuốc (nổ hũ)');
+        }
         
         // If AJAX request, return JSON response
         if ($request->ajax() || $request->wantsJson()) {
@@ -134,7 +155,7 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'round_id' => 'required|exists:rounds,id',
-            'final_result' => 'required|in:thachanh,daquy,kimcuong',
+            'final_result' => 'required|in:thachanh,daquy,kimcuong,thachanhtim,ngusac,cuoc',
         ]);
         
         $round = Round::findOrFail($validated['round_id']);
@@ -148,61 +169,112 @@ class AdminController extends Controller
             $round->final_result = $validated['final_result'];
             $round->save();
             
+            // Check if this is a jackpot result (nổ hũ)
+            $jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
+            $isJackpot = in_array($validated['final_result'], $jackpotTypes);
+            
             // Re-process bets với final_result mới
             // Chỉ re-process các bets đã được xử lý (won/lost) với final_result cũ
             $bets = $round->bets()->whereIn('status', ['won', 'lost'])->get();
             
-            foreach ($bets as $bet) {
-                // Kiểm tra lại với final_result mới
-                if ($bet->gem_type === $round->final_result) {
-                    // User thắng với kết quả mới
+            if ($isJackpot) {
+                // Nổ hũ: Tất cả bets đều thắng với tỉ lệ của hũ
+                // Default rates for each jackpot type
+                $defaultRates = [
+                    'thachanhtim' => 10.00,
+                    'ngusac' => 20.00,
+                    'cuoc' => 50.00,
+                ];
+                $defaultRate = $defaultRates[$validated['final_result']] ?? 10.00;
+                $jackpotPayoutRate = (float) SystemSetting::getValue('gem_payout_rate_' . $validated['final_result'], (string) $defaultRate);
+                
+                foreach ($bets as $bet) {
+                    $expectedPayout = $bet->amount * $jackpotPayoutRate;
+                    
                     if ($bet->status === 'lost') {
-                        // Nếu trước đó thua, bây giờ thắng
-                        $payoutAmount = $bet->amount * $bet->payout_rate;
-                        
-                        // Cộng tiền thắng (tiền đặt cược đã bị trừ khi đặt, không cần hoàn lại)
+                        // Nếu trước đó thua, bây giờ thắng (nổ hũ)
                         $user = $bet->user;
-                        $user->balance += $payoutAmount; // Thêm tiền thắng
+                        $user->balance += $expectedPayout;
                         $user->save();
                         
                         $bet->update([
                             'status' => 'won',
-                            'payout_amount' => $payoutAmount,
+                            'payout_amount' => $expectedPayout,
+                            'payout_rate' => $jackpotPayoutRate,
                         ]);
                         
-                        \Log::info("Bet {$bet->id}: Re-processed from lost to won, user {$user->id} received {$payoutAmount}");
+                        \Log::info("Bet {$bet->id}: Re-processed JACKPOT from lost to won, user {$user->id} received {$expectedPayout}");
                     } else if ($bet->status === 'won') {
-                        // Nếu đã thắng rồi, kiểm tra payout_amount có đúng không
-                        $expectedPayout = $bet->amount * $bet->payout_rate;
+                        // Nếu đã thắng, cập nhật payout với tỉ lệ jackpot
                         if ($bet->payout_amount != $expectedPayout) {
-                            // Cập nhật lại payout_amount nếu sai
                             $user = $bet->user;
                             $user->balance -= $bet->payout_amount; // Trừ payout cũ
-                            $user->balance += $expectedPayout; // Cộng payout mới
+                            $user->balance += $expectedPayout; // Cộng payout mới (jackpot)
                             $user->save();
                             
                             $bet->update([
                                 'payout_amount' => $expectedPayout,
+                                'payout_rate' => $jackpotPayoutRate,
                             ]);
+                            
+                            \Log::info("Bet {$bet->id}: Re-processed JACKPOT payout, user {$user->id} adjusted from {$bet->payout_amount} to {$expectedPayout}");
                         }
                     }
-                } else {
-                    // User thua với kết quả mới
-                    if ($bet->status === 'won') {
-                        // Nếu trước đó thắng, bây giờ thua
-                        // Trừ lại số tiền đã thắng (tiền đặt cược đã bị trừ khi đặt, không cần trừ lại)
-                        $user = $bet->user;
-                        $user->balance -= $bet->payout_amount; // Trừ tiền thắng đã nhận
-                        $user->save();
-                        
-                        $bet->update([
-                            'status' => 'lost',
-                            'payout_amount' => null,
-                        ]);
-                        
-                        \Log::info("Bet {$bet->id}: Re-processed from won to lost, user {$user->id} refunded {$bet->payout_amount}");
+                }
+            } else {
+                // Normal result: chỉ bets đúng loại đá mới thắng
+                foreach ($bets as $bet) {
+                    // Kiểm tra lại với final_result mới
+                    if ($bet->gem_type === $round->final_result) {
+                        // User thắng với kết quả mới
+                        if ($bet->status === 'lost') {
+                            // Nếu trước đó thua, bây giờ thắng
+                            $payoutAmount = $bet->amount * $bet->payout_rate;
+                            
+                            // Cộng tiền thắng (tiền đặt cược đã bị trừ khi đặt, không cần hoàn lại)
+                            $user = $bet->user;
+                            $user->balance += $payoutAmount; // Thêm tiền thắng
+                            $user->save();
+                            
+                            $bet->update([
+                                'status' => 'won',
+                                'payout_amount' => $payoutAmount,
+                            ]);
+                            
+                            \Log::info("Bet {$bet->id}: Re-processed from lost to won, user {$user->id} received {$payoutAmount}");
+                        } else if ($bet->status === 'won') {
+                            // Nếu đã thắng rồi, kiểm tra payout_amount có đúng không
+                            $expectedPayout = $bet->amount * $bet->payout_rate;
+                            if ($bet->payout_amount != $expectedPayout) {
+                                // Cập nhật lại payout_amount nếu sai
+                                $user = $bet->user;
+                                $user->balance -= $bet->payout_amount; // Trừ payout cũ
+                                $user->balance += $expectedPayout; // Cộng payout mới
+                                $user->save();
+                                
+                                $bet->update([
+                                    'payout_amount' => $expectedPayout,
+                                ]);
+                            }
+                        }
+                    } else {
+                        // User thua với kết quả mới
+                        if ($bet->status === 'won') {
+                            // Nếu trước đó thắng, bây giờ thua
+                            // Trừ lại số tiền đã thắng (tiền đặt cược đã bị trừ khi đặt, không cần trừ lại)
+                            $user = $bet->user;
+                            $user->balance -= $bet->payout_amount; // Trừ tiền thắng đã nhận
+                            $user->save();
+                            
+                            $bet->update([
+                                'status' => 'lost',
+                                'payout_amount' => null,
+                            ]);
+                            
+                            \Log::info("Bet {$bet->id}: Re-processed from won to lost, user {$user->id} refunded {$bet->payout_amount}");
+                        }
+                        // Nếu đã thua rồi, không cần làm gì
                     }
-                    // Nếu đã thua rồi, không cần làm gì
                 }
             }
             

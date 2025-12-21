@@ -109,6 +109,53 @@
                             @enderror
                         </div>
 
+                        <hr class="my-3">
+                        <h5 class="mb-3 text-warning">
+                            <i class="fas fa-trophy"></i> Tỉ lệ ăn cho đá Nổ Hũ (Tất cả user thắng khi admin set)
+                        </h5>
+
+                        <div class="form-group">
+                            <label for="thachanhtim">
+                                <img src="{{ asset('images/icons/thachanhtim.png') }}" alt="Thạch Anh Tím" class="d-inline-block" style="width: 24px; height: 24px;">
+                                Thạch Anh Tím (Nổ Hũ)
+                            </label>
+                            <input type="number" step="0.01" min="1" class="form-control @error('thachanhtim') is-invalid @enderror" 
+                                   id="thachanhtim" name="thachanhtim" 
+                                   value="{{ old('thachanhtim', $jackpotRates['thachanhtim'] ?? '10.00') }}">
+                            @error('thachanhtim')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">Khi admin set đá này, tất cả user đặt cược đều thắng với tỉ lệ này</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ngusac">
+                                <img src="{{ asset('images/icons/ngusac.png') }}" alt="Ngũ Sắc" class="d-inline-block" style="width: 24px; height: 24px;">
+                                Ngũ Sắc (Nổ Hũ)
+                            </label>
+                            <input type="number" step="0.01" min="1" class="form-control @error('ngusac') is-invalid @enderror" 
+                                   id="ngusac" name="ngusac" 
+                                   value="{{ old('ngusac', $jackpotRates['ngusac'] ?? '20.00') }}">
+                            @error('ngusac')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">Khi admin set đá này, tất cả user đặt cược đều thắng với tỉ lệ này</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cuoc">
+                                <img src="{{ asset('images/icons/cuoc.png') }}" alt="Cuốc" class="d-inline-block" style="width: 24px; height: 24px;">
+                                Cuốc (Nổ Hũ)
+                            </label>
+                            <input type="number" step="0.01" min="1" class="form-control @error('cuoc') is-invalid @enderror" 
+                                   id="cuoc" name="cuoc" 
+                                   value="{{ old('cuoc', $jackpotRates['cuoc'] ?? '50.00') }}">
+                            @error('cuoc')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">Khi admin set đá này, tất cả user đặt cược đều thắng với tỉ lệ này</small>
+                        </div>
+
                         <button type="submit" class="btn btn-primary" id="saveRatesBtn">
                             <i class="fas fa-save"></i> <span id="saveRatesBtnText">Lưu tỉ lệ ăn</span>
                         </button>
@@ -148,6 +195,9 @@
                                                 'thachanh' => 'Thạch Anh',
                                                 'daquy' => 'Đá Quý',
                                                 'kimcuong' => 'Kim Cương',
+                                                'thachanhtim' => 'Thạch Anh Tím (Nổ Hũ)',
+                                                'ngusac' => 'Ngũ Sắc (Nổ Hũ)',
+                                                'cuoc' => 'Cuốc (Nổ Hũ)',
                                             ];
                                         @endphp
                                         <img src="{{ asset('images/icons/' . $currentRound->final_result . '.png') }}" alt="{{ $gemNames[$currentRound->final_result] ?? $currentRound->final_result }}" style="width: 24px; height: 24px;" class="d-inline-block">
@@ -173,20 +223,46 @@
                                     <div class="row" id="gemOptionsContainer">
                                         @php
                                             $gemOptions = [
-                                                'thachanh' => ['name' => 'Thạch Anh', 'icon' => 'thachanh.png'],
-                                                'daquy' => ['name' => 'Đá Quý', 'icon' => 'daquy.png'],
-                                                'kimcuong' => ['name' => 'Kim Cương', 'icon' => 'kimcuong.png'],
+                                                'thachanh' => ['name' => 'Thạch Anh', 'icon' => 'thachanh.png', 'type' => 'normal'],
+                                                'daquy' => ['name' => 'Đá Quý', 'icon' => 'daquy.png', 'type' => 'normal'],
+                                                'kimcuong' => ['name' => 'Kim Cương', 'icon' => 'kimcuong.png', 'type' => 'normal'],
+                                            ];
+                                            $jackpotOptions = [
+                                                'thachanhtim' => ['name' => 'Thạch Anh Tím (Nổ Hũ)', 'icon' => 'thachanhtim.png', 'type' => 'jackpot', 'rate' => $jackpotRates['thachanhtim'] ?? '10.00'],
+                                                'ngusac' => ['name' => 'Ngũ Sắc (Nổ Hũ)', 'icon' => 'ngusac.png', 'type' => 'jackpot', 'rate' => $jackpotRates['ngusac'] ?? '20.00'],
+                                                'cuoc' => ['name' => 'Cuốc (Nổ Hũ)', 'icon' => 'cuoc.png', 'type' => 'jackpot', 'rate' => $jackpotRates['cuoc'] ?? '50.00'],
                                             ];
                                         @endphp
+                                        <div class="col-12 mb-2">
+                                            <strong class="text-white">Đá thường:</strong>
+                                        </div>
                                         @foreach($gemOptions as $value => $gem)
                                             <div class="col-6 mb-2">
                                                 <label class="d-flex align-items-center p-2 border rounded cursor-pointer gem-option-label" style="cursor: pointer;" data-gem-value="{{ $value }}">
                                                     <input type="radio" name="final_result" value="{{ $value }}" 
                                                            class="mr-2 gem-option-radio" 
-                                                           {{ old('final_result', $currentRound->admin_set_result) === $value ? 'checked' : '' }} required>
+                                                           {{ old('final_result', $currentRound->admin_set_result ?? '') === $value ? 'checked' : '' }} required>
                                                     <img src="{{ asset('images/icons/' . $gem['icon']) }}" alt="{{ $gem['name'] }}" 
                                                          style="width: 24px; height: 24px;" class="mr-2">
                                                     <span>{{ $gem['name'] }}</span>
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                        <div class="col-12 mb-2 mt-3">
+                                            <strong class="text-warning">Đá Nổ Hũ (Tất cả user thắng):</strong>
+                                        </div>
+                                        @foreach($jackpotOptions as $value => $gem)
+                                            <div class="col-6 mb-2">
+                                                <label class="d-flex align-items-center p-2 border border-warning rounded cursor-pointer gem-option-label" style="cursor: pointer; background-color: rgba(255, 193, 7, 0.1);" data-gem-value="{{ $value }}">
+                                                    <input type="radio" name="final_result" value="{{ $value }}" 
+                                                           class="mr-2 gem-option-radio" 
+                                                           {{ old('final_result', $currentRound->admin_set_result ?? '') === $value ? 'checked' : '' }}>
+                                                    <img src="{{ asset('images/icons/' . $gem['icon']) }}" alt="{{ $gem['name'] }}" 
+                                                         style="width: 24px; height: 24px;" class="mr-2">
+                                                    <div class="flex-1">
+                                                        <div class="font-weight-bold">{{ $gem['name'] }}</div>
+                                                        <small class="text-warning">Tỉ lệ: {{ $gem['rate'] }}x</small>
+                                                    </div>
                                                 </label>
                                             </div>
                                         @endforeach

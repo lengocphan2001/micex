@@ -298,62 +298,126 @@ class Round extends Model
         
         \Log::info("Processing {$bets->count()} bets for round {$this->id} with final_result: {$this->final_result}");
         
+        // Check if this is a jackpot result (nổ hũ)
+        $jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
+        $isJackpot = in_array($this->final_result, $jackpotTypes);
+        
+        // Get jackpot payout rate if it's a jackpot
+        $jackpotPayoutRate = null;
+        if ($isJackpot) {
+            // Default rates for each jackpot type
+            $defaultRates = [
+                'thachanhtim' => 10.00,
+                'ngusac' => 20.00,
+                'cuoc' => 50.00,
+            ];
+            $defaultRate = $defaultRates[$this->final_result] ?? 10.00;
+            $jackpotPayoutRate = (float) \App\Models\SystemSetting::getValue('gem_payout_rate_' . $this->final_result, (string) $defaultRate);
+            \Log::info("Round {$this->id}: Jackpot detected - type: {$this->final_result}, payout_rate: {$jackpotPayoutRate}");
+        }
+        
         // Use transaction to ensure data consistency
         \DB::beginTransaction();
         try {
-        foreach ($bets as $bet) {
-            try {
-            if ($bet->gem_type === $this->final_result) {
-                // User won
-                    $payoutAmount = $bet->amount * $bet->payout_rate;
-                    
-                    // Get user with lock to prevent race condition
-                    $user = \App\Models\User::where('id', $bet->user_id)->lockForUpdate()->first();
-                    
-                    if (!$user) {
-                        \Log::error("Bet {$bet->id}: User {$bet->user_id} not found");
-                        continue;
+            foreach ($bets as $bet) {
+                try {
+                    if ($isJackpot) {
+                        // Nổ hũ: Tất cả bets đều thắng với tỉ lệ của hũ
+                        $payoutAmount = (float) $bet->amount * (float) $jackpotPayoutRate;
+                        
+                        \Log::info("Bet {$bet->id}: Processing JACKPOT - amount: {$bet->amount}, rate: {$jackpotPayoutRate}, payout: {$payoutAmount}");
+                        
+                        // Get user with lock to prevent race condition
+                        $user = \App\Models\User::where('id', $bet->user_id)->lockForUpdate()->first();
+                        
+                        if (!$user) {
+                            \Log::error("Bet {$bet->id}: User {$bet->user_id} not found");
+                            continue;
+                        }
+                        
+                        // Get old balance before update
+                        $oldBalance = (float) $user->balance;
+                        $newBalance = $oldBalance + $payoutAmount;
+                        
+                        // Update bet status FIRST - tất cả đều thắng
+                        $bet->status = 'won';
+                        $bet->payout_amount = $payoutAmount;
+                        $bet->payout_rate = $jackpotPayoutRate; // Update payout rate to jackpot rate
+                        $bet->save();
+                        
+                        // Then update user balance
+                        $user->balance = $newBalance;
+                        $user->save();
+                        
+                        // Refresh to verify
+                        $bet->refresh();
+                        $user->refresh();
+                        
+                        \Log::info("Bet {$bet->id}: User {$user->id} won JACKPOT - Bet status: {$bet->status}, Payout: {$payoutAmount}, Rate: {$bet->payout_rate}, Balance: {$oldBalance} -> {$user->balance}");
+                        
+                        // Final verification
+                        if ($bet->status !== 'won') {
+                            \Log::error("Bet {$bet->id}: Status is not 'won' after update! Status: {$bet->status}");
+                        }
+                        if (abs((float) $user->balance - $newBalance) > 0.01) {
+                            \Log::error("Bet {$bet->id}: Balance mismatch! Expected: {$newBalance}, Actual: {$user->balance}");
+                        }
+                    } else if ($bet->gem_type === $this->final_result) {
+                        // User won (normal result)
+                        $payoutAmount = $bet->amount * $bet->payout_rate;
+                        
+                        // Get user with lock to prevent race condition
+                        $user = \App\Models\User::where('id', $bet->user_id)->lockForUpdate()->first();
+                        
+                        if (!$user) {
+                            \Log::error("Bet {$bet->id}: User {$bet->user_id} not found");
+                            continue;
+                        }
+                        
+                        // Update bet status first
+                        $bet->update([
+                            'status' => 'won',
+                            'payout_amount' => $payoutAmount,
+                        ]);
+                        
+                        // Add winnings to user balance
+                        $oldBalance = $user->balance;
+                        $user->balance += $payoutAmount;
+                        $user->save();
+                        
+                        // Refresh user to ensure balance is updated
+                        $user->refresh();
+                        
+                        \Log::info("Bet {$bet->id}: User {$user->id} won {$payoutAmount}. Balance: {$oldBalance} -> {$user->balance}");
+                    } else {
+                        // User lost
+                        $bet->update([
+                            'status' => 'lost',
+                        ]);
+                        // Balance was already deducted when bet was placed
+                        \Log::info("Bet {$bet->id}: User {$bet->user_id} lost");
                     }
-                    
-                    // Update bet status first
-                $bet->update([
-                    'status' => 'won',
-                        'payout_amount' => $payoutAmount,
-                ]);
-                
-                // Add winnings to user balance
-                    $oldBalance = $user->balance;
-                    $user->balance += $payoutAmount;
-                    $user->save();
-                    
-                    // Refresh user to ensure balance is updated
-                    $user->refresh();
-                    
-                    \Log::info("Bet {$bet->id}: User {$user->id} won {$payoutAmount}. Balance: {$oldBalance} -> {$user->balance}");
-            } else {
-                // User lost
-                $bet->update([
-                    'status' => 'lost',
-                ]);
-                // Balance was already deducted when bet was placed
-                    
-                    \Log::info("Bet {$bet->id}: User {$bet->user_id} lost");
+                } catch (\Exception $e) {
+                        \Log::error("Error processing bet {$bet->id}: " . $e->getMessage());
+                        \Log::error("Stack trace: " . $e->getTraceAsString());
+                        // Continue processing other bets even if one fails
+                    }
                 }
+                
+                // Commit transaction after all bets processed
+                \DB::commit();
+                \Log::info("Round {$this->id}: Successfully processed all bets. Transaction committed.");
+                
+                // Final verification: Check all bets were processed correctly
+                $this->refresh();
+                $processedBets = $this->bets()->whereIn('status', ['won', 'lost'])->get();
+                \Log::info("Round {$this->id}: After processing - Won: " . $processedBets->where('status', 'won')->count() . ", Lost: " . $processedBets->where('status', 'lost')->count());
             } catch (\Exception $e) {
-                \Log::error("Error processing bet {$bet->id}: " . $e->getMessage());
+                \DB::rollBack();
+                \Log::error("Round {$this->id}: Failed to process bets - " . $e->getMessage());
                 \Log::error("Stack trace: " . $e->getTraceAsString());
-                // Continue processing other bets even if one fails
+                throw $e; // Re-throw to ensure error is logged
             }
-            }
-            
-            // Commit transaction after all bets processed
-            \DB::commit();
-            \Log::info("Round {$this->id}: Successfully processed all bets");
-        } catch (\Exception $e) {
-            \DB::rollBack();
-            \Log::error("Round {$this->id}: Failed to process bets - " . $e->getMessage());
-            \Log::error("Stack trace: " . $e->getTraceAsString());
-        }
         
         // After all bets are processed, update the status of related commissions to 'available'
         // Commissions are now available for withdrawal

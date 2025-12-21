@@ -276,7 +276,24 @@
             withdrawCommissionBtn.disabled = true;
             withdrawStatus.textContent = 'Đang xử lý...';
 
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            // Lấy CSRF token từ meta tag hoặc từ form
+            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            // Nếu không tìm thấy trong meta tag, thử lấy từ form
+            if (!csrfToken) {
+                const csrfInput = document.querySelector('input[name="_token"]');
+                if (csrfInput) {
+                    csrfToken = csrfInput.value;
+                }
+            }
+            
+            if (!csrfToken) {
+                withdrawStatus.textContent = 'Lỗi: Không tìm thấy CSRF token';
+                withdrawStatus.classList.remove('text-gray-400', 'text-green-400');
+                withdrawStatus.classList.add('text-red-400');
+                withdrawCommissionBtn.disabled = false;
+                return;
+            }
             
             fetch('{{ route("subordinate-system.withdraw-commission") }}', {
                 method: 'POST',
@@ -287,7 +304,17 @@
                     'X-CSRF-TOKEN': csrfToken,
                 },
             })
-            .then(response => response.json())
+            .then(async response => {
+                // Kiểm tra nếu response không phải JSON (có thể là 419 error page)
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    if (response.status === 419) {
+                        throw new Error('CSRF token mismatch. Vui lòng refresh trang và thử lại.');
+                    }
+                    throw new Error('Server trả về response không hợp lệ');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     withdrawStatus.textContent = 'Rút hoa hồng thành công!';

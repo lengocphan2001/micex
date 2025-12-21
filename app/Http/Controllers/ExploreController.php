@@ -423,19 +423,28 @@ class ExploreController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $round = Round::getCurrentRound();
-        
-        if (!$round) {
-            return response()->json(['bet' => null, 'balance' => $user->balance]);
-        }
-        
-        $bet = Bet::where('round_id', $round->id)
-            ->where('user_id', $user->id)
-            ->with('round') // Eager load round để lấy final_result
-            ->first();
-
         // Refresh user to get latest balance (important after bet processing)
         $user->refresh();
+
+        // Lấy bet của round hiện tại trước
+        $round = Round::getCurrentRound();
+        
+        $bet = null;
+        if ($round) {
+            $bet = Bet::where('round_id', $round->id)
+                ->where('user_id', $user->id)
+                ->with('round') // Eager load round để lấy final_result
+                ->first();
+        }
+        
+        // Nếu không có bet ở round hiện tại, tìm bet gần nhất (có thể là round đã finish)
+        // Điều này đảm bảo khi refresh trang, vẫn lấy được bet của round đã finish
+        if (!$bet) {
+            $bet = Bet::where('user_id', $user->id)
+                ->with('round')
+                ->orderBy('created_at', 'desc')
+                ->first();
+        }
 
         if (!$bet) {
             return response()->json([
@@ -552,7 +561,7 @@ class ExploreController extends Controller
     {
         $request->validate([
             'round_number' => 'required|integer',
-            'final_result' => 'required|in:thachanh,daquy,kimcuong',
+            'final_result' => 'required|in:thachanh,daquy,kimcuong,thachanhtim,ngusac,cuoc',
         ]);
         
         // Lấy rounds hiện tại từ SystemSetting
