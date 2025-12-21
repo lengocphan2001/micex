@@ -523,6 +523,214 @@ curl -I https://mon88.click
 openssl s_client -connect mon88.click:443
 ```
 
+## 🔄 Chạy Round Process Loop trên VPS
+
+Command `round:process-loop` cần chạy liên tục trên VPS để xử lý rounds. Dưới đây là các cách để chạy command này sao cho nó vẫn hoạt động khi bạn disconnect khỏi VPS.
+
+### Phương pháp 1: Screen (Đơn giản nhất, khuyến nghị)
+
+Screen cho phép bạn tạo một session chạy background, có thể attach/detach bất cứ lúc nào.
+
+```bash
+# 1. Cài đặt screen (nếu chưa có)
+sudo apt install screen -y
+
+# 2. Tạo screen session mới và chạy command
+screen -dmS round-process-loop bash -c "cd /var/www/micex && php artisan round:process-loop"
+
+# 3. Kiểm tra session đang chạy
+screen -ls
+
+# 4. Attach vào session để xem logs (tùy chọn)
+screen -r round-process-loop
+# Để detach: Nhấn Ctrl+A, sau đó nhấn D
+
+# 5. Dừng process (nếu cần)
+# Tìm PID
+ps aux | grep "round:process-loop"
+# Hoặc kill từ screen
+screen -S round-process-loop -X quit
+```
+
+**Ưu điểm:**
+- Đơn giản, dễ sử dụng
+- Có thể attach để xem logs real-time
+- Process vẫn chạy khi disconnect
+
+### Phương pháp 2: Tmux (Tương tự Screen)
+
+```bash
+# 1. Cài đặt tmux
+sudo apt install tmux -y
+
+# 2. Tạo session và chạy
+tmux new-session -d -s round-process-loop 'cd /path/to/your/project && php artisan round:process-loop'
+
+# 3. Kiểm tra session
+tmux ls
+
+# 4. Attach vào session
+tmux attach -t round-process-loop
+# Để detach: Nhấn Ctrl+B, sau đó nhấn D
+
+# 5. Dừng process
+tmux kill-session -t round-process-loop
+```
+
+### Phương pháp 3: Nohup (Chạy background)
+
+```bash
+# 1. Chạy với nohup
+cd /path/to/your/project
+nohup php artisan round:process-loop > storage/logs/round-process.log 2>&1 &
+
+# 2. Lưu PID để quản lý sau
+echo $! > /tmp/round-process.pid
+
+# 3. Kiểm tra process
+ps aux | grep "round:process-loop"
+
+# 4. Xem logs
+tail -f storage/logs/round-process.log
+
+# 5. Dừng process
+kill $(cat /tmp/round-process.pid)
+# Hoặc tìm và kill
+pkill -f "round:process-loop"
+```
+
+### Phương pháp 4: Supervisor (Chuyên nghiệp, tự động restart)
+
+Supervisor tự động restart process nếu bị crash, phù hợp cho production.
+
+```bash
+# 1. Cài đặt Supervisor
+sudo apt install supervisor -y
+
+# 2. Tạo config file
+sudo nano /etc/supervisor/conf.d/round-process-loop.conf
+```
+
+Thêm nội dung sau (thay `/path/to/your/project` bằng đường dẫn thực tế):
+
+```ini
+[program:round-process-loop]
+process_name=%(program_name)s
+command=php /path/to/your/project/artisan round:process-loop
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=1
+redirect_stderr=true
+stdout_logfile=/path/to/your/project/storage/logs/round-process.log
+stopwaitsecs=3600
+```
+
+```bash
+# 3. Reload Supervisor config
+sudo supervisorctl reread
+sudo supervisorctl update
+
+# 4. Start service
+sudo supervisorctl start round-process-loop
+
+# 5. Kiểm tra status
+sudo supervisorctl status round-process-loop
+
+# 6. Xem logs
+sudo tail -f /path/to/your/project/storage/logs/round-process.log
+
+# 7. Dừng/Restart
+sudo supervisorctl stop round-process-loop
+sudo supervisorctl restart round-process-loop
+```
+
+### Phương pháp 5: Systemd Service (Production, khuyến nghị)
+
+Tạo systemd service để quản lý như một service chính thức.
+
+```bash
+# 1. Tạo service file
+sudo nano /etc/systemd/system/round-process-loop.service
+```
+
+Thêm nội dung sau (thay các giá trị phù hợp):
+
+```ini
+[Unit]
+Description=Micex Round Process Loop
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/path/to/your/project
+ExecStart=/usr/bin/php /path/to/your/project/artisan round:process-loop
+Restart=always
+RestartSec=10
+StandardOutput=append:/path/to/your/project/storage/logs/round-process.log
+StandardError=append:/path/to/your/project/storage/logs/round-process-error.log
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+# 2. Reload systemd
+sudo systemctl daemon-reload
+
+# 3. Enable service (tự động start khi boot)
+sudo systemctl enable round-process-loop.service
+
+# 4. Start service
+sudo systemctl start round-process-loop.service
+
+# 5. Kiểm tra status
+sudo systemctl status round-process-loop.service
+
+# 6. Xem logs
+sudo journalctl -u round-process-loop.service -f
+# Hoặc
+tail -f /path/to/your/project/storage/logs/round-process.log
+
+# 7. Dừng/Restart
+sudo systemctl stop round-process-loop.service
+sudo systemctl restart round-process-loop.service
+```
+
+### Script tự động dừng và chạy lại
+
+Sử dụng script `restart-round-process-simple.sh` đã tạo sẵn:
+
+```bash
+# 1. Upload script lên VPS
+# 2. Cấp quyền thực thi
+chmod +x restart-round-process-simple.sh
+
+# 3. Chạy script
+./restart-round-process-simple.sh
+```
+
+### Kiểm tra Process đang chạy
+
+```bash
+# Kiểm tra process
+ps aux | grep "round:process-loop"
+
+# Kiểm tra port/process chi tiết
+pgrep -f "round:process-loop"
+
+# Xem logs real-time
+tail -f storage/logs/round-process.log
+```
+
+### Khuyến nghị
+
+- **Development/Testing**: Dùng **Screen** hoặc **Tmux** (đơn giản, dễ debug)
+- **Production**: Dùng **Supervisor** hoặc **Systemd** (tự động restart, quản lý tốt hơn)
+
 ## 🚨 Troubleshooting
 
 ### Lỗi "Unable to locate package php8.2-*"

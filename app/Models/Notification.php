@@ -147,4 +147,20 @@ class Notification extends Model
             ],
         ]);
     }
+
+    /**
+     * Create a notification for commission available
+     */
+    public static function createCommissionAvailable($user, $totalCommission)
+    {
+        return self::create([
+            'user_id' => $user->id,
+            'type' => 'commission_available',
+            'title' => 'Hoa hồng có sẵn',
+            'message' => "Bạn có " . number_format($totalCommission, 2, ',', '.') . "$ hoa hồng có thể rút. Vui lòng vào màn Hệ thống để rút hoa hồng.",
+            'data' => [
+                'total_commission' => $totalCommission,
+            ],
+        ]);
+    }
 }
