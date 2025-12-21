@@ -19,7 +19,7 @@
     #resultPopup {
         align-items: flex-end;
         justify-content: center;
-        padding-bottom: 0;
+        padding-bottom: 80px; /* Đảm bảo popup nằm trên bottom menu */
     }
     
     #resultPopup.show {
@@ -160,7 +160,7 @@
 </div>
 
 <!-- Result Popup (Modal Bottom) -->
-<div id="resultPopup" class="fixed inset-0 z-[100] flex items-end justify-center hidden">
+<div id="resultPopup" class="fixed inset-0 z-[9999] flex items-end justify-center hidden">
     <!-- Backdrop -->
     <div class="absolute inset-0 bg-black/50" onclick="closeResultPopup()"></div>
     
