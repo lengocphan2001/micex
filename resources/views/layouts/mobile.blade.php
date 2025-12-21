@@ -18,10 +18,19 @@
             font-family: 'Inter', sans-serif;
         }
         
-        /* Smooth scrolling */
+        /* Prevent body scroll - only allow main content to scroll */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+        
+        /* Smooth scrolling for main content */
         main {
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
         
         /* Hide scrollbar but keep functionality */
@@ -34,15 +43,15 @@
         }
     </style>
 </head>
-<body class="bg-[#181A20] md:bg-gray-800 min-h-screen flex items-center justify-center">
-    <div class="w-full md:max-w-[450px] h-screen flex flex-col mx-auto bg-gray-900 md:shadow-2xl text-white relative">
+<body class="bg-[#181A20] md:bg-gray-800 h-screen w-screen overflow-hidden flex items-center justify-center">
+    <div class="w-full md:max-w-[450px] h-full flex flex-col mx-auto bg-gray-900 md:shadow-2xl text-white relative">
         <!-- Fixed Header -->
-        <div class="fixed top-0 left-0 right-0 z-40 md:left-auto md:right-auto md:max-w-[450px]">
+        <div class="fixed top-0 left-0 right-0 z-40 md:left-auto md:right-auto md:max-w-[450px] bg-gray-900">
             @yield('header')
         </div>
 
         <!-- Scrollable Main Content -->
-        <main class="overflow-y-auto hide-scrollbar text-base leading-relaxed" style="background-color: #181A20; padding-top: 64px; padding-bottom: 80px; height: 100vh;">
+        <main class="flex-1 overflow-y-auto hide-scrollbar text-base leading-relaxed" style="background-color: #181A20; padding-top: 64px; padding-bottom: 80px; height: 100%;">
             @yield('content')
         </main>
 
