@@ -20,6 +20,8 @@
         align-items: flex-end;
         justify-content: center;
         padding-bottom: 0; /* Nằm sát bottom, đè lên bottom menu */
+        z-index: 9999 !important; /* Đảm bảo đè lên bottom menu (z-50) */
+        position: fixed !important;
     }
     
     #resultPopup.show {
@@ -158,8 +160,9 @@
         </div>
     </div>
 </div>
+@endsection
 
-<!-- Result Popup (Modal Bottom) -->
+<!-- Result Popup (Modal Bottom) - Đặt ngoài @section('content') để đè lên bottom menu -->
 <div id="resultPopup" class="fixed inset-0 z-[9999] flex items-end justify-center hidden">
     <!-- Backdrop -->
     <div class="absolute inset-0 bg-black/50" onclick="closeResultPopup()"></div>
@@ -189,7 +192,6 @@
         </div>
     </div>
 </div>
-@endsection
 
 @push('scripts')
 <script>
