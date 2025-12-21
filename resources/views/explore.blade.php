@@ -19,7 +19,7 @@
     #resultPopup {
         align-items: flex-end;
         justify-content: center;
-        padding-bottom: 80px; /* Đảm bảo popup nằm trên bottom menu */
+        padding-bottom: 0; /* Nằm sát bottom, đè lên bottom menu */
     }
     
     #resultPopup.show {
@@ -165,7 +165,7 @@
     <div class="absolute inset-0 bg-black/50" onclick="closeResultPopup()"></div>
     
     <!-- Popup Content -->
-    <div class="popup-content relative bg-gradient-to-b from-[#2d1b69] to-[#1a0f3d] rounded-t-3xl shadow-2xl mb-6">
+    <div class="popup-content relative bg-gradient-to-b from-[#2d1b69] to-[#1a0f3d] rounded-t-3xl shadow-2xl mb-0">
         <!-- Top Right Payout Rate Badge -->
         <div class="absolute top-4 right-4 bg-blue-500/80 rounded-lg px-3 py-1">
             <span id="resultPayoutRate" class="text-white text-sm font-semibold">1.95x</span>
