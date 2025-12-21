@@ -78,12 +78,9 @@ class AdminController extends Controller
     {
         // Get current payout rates from database
         $payoutRates = [
-            'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', '2.0'),
-            'thachanhtim' => (float) SystemSetting::getValue('gem_payout_rate_thachanhtim', '2.5'),
-            'ngusac' => (float) SystemSetting::getValue('gem_payout_rate_ngusac', '3.0'),
-            'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', '4.0'),
-            'cuoc' => (float) SystemSetting::getValue('gem_payout_rate_cuoc', '5.0'),
-            'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', '5.95'),
+            'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', '1.95'),
+            'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', '5.95'),
+            'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', '1.95'),
         ];
         
         // Get current round (không tạo mới, chỉ lấy từ database)
@@ -104,19 +101,13 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'thachanh' => 'required|numeric|min:1',
-            'thachanhtim' => 'required|numeric|min:1',
-            'ngusac' => 'required|numeric|min:1',
             'daquy' => 'required|numeric|min:1',
-            'cuoc' => 'required|numeric|min:1',
             'kimcuong' => 'required|numeric|min:1',
         ]);
         
         // Save each rate to database
         SystemSetting::setValue('gem_payout_rate_thachanh', (string) $validated['thachanh'], 'Tỉ lệ ăn cho thạch anh');
-        SystemSetting::setValue('gem_payout_rate_thachanhtim', (string) $validated['thachanhtim'], 'Tỉ lệ ăn cho thạch anh tím');
-        SystemSetting::setValue('gem_payout_rate_ngusac', (string) $validated['ngusac'], 'Tỉ lệ ăn cho ngũ sắc');
         SystemSetting::setValue('gem_payout_rate_daquy', (string) $validated['daquy'], 'Tỉ lệ ăn cho đá quý');
-        SystemSetting::setValue('gem_payout_rate_cuoc', (string) $validated['cuoc'], 'Tỉ lệ ăn cho cục');
         SystemSetting::setValue('gem_payout_rate_kimcuong', (string) $validated['kimcuong'], 'Tỉ lệ ăn cho kim cương');
         
         // If AJAX request, return JSON response
@@ -126,10 +117,7 @@ class AdminController extends Controller
                 'message' => 'Đã cập nhật tỉ lệ ăn thành công.',
                 'payout_rates' => [
                     'thachanh' => (float) $validated['thachanh'],
-                    'thachanhtim' => (float) $validated['thachanhtim'],
-                    'ngusac' => (float) $validated['ngusac'],
                     'daquy' => (float) $validated['daquy'],
-                    'cuoc' => (float) $validated['cuoc'],
                     'kimcuong' => (float) $validated['kimcuong'],
                 ],
             ]);
@@ -146,7 +134,7 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'round_id' => 'required|exists:rounds,id',
-            'final_result' => 'required|in:thachanh,thachanhtim,ngusac,daquy,cuoc,kimcuong',
+            'final_result' => 'required|in:thachanh,daquy,kimcuong',
         ]);
         
         $round = Round::findOrFail($validated['round_id']);
@@ -225,7 +213,7 @@ class AdminController extends Controller
         } else if ($round->status === 'running') {
             // Round đang chạy, chỉ lưu admin_set_result
             // Kết quả này sẽ được dùng khi round finish
-            $round->save();
+        $round->save();
         
         return back()->with('success', 'Đã đặt kết quả phiên cược. Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng.');
         } else {
@@ -284,10 +272,7 @@ class AdminController extends Controller
         // Initialize all gem types with 0
         $allBetAmounts = [
             'thachanh' => isset($betAmounts['thachanh']) ? (float) $betAmounts['thachanh'] : 0,
-            'thachanhtim' => isset($betAmounts['thachanhtim']) ? (float) $betAmounts['thachanhtim'] : 0,
-            'ngusac' => isset($betAmounts['ngusac']) ? (float) $betAmounts['ngusac'] : 0,
             'daquy' => isset($betAmounts['daquy']) ? (float) $betAmounts['daquy'] : 0,
-            'cuoc' => isset($betAmounts['cuoc']) ? (float) $betAmounts['cuoc'] : 0,
             'kimcuong' => isset($betAmounts['kimcuong']) ? (float) $betAmounts['kimcuong'] : 0,
         ];
         
@@ -329,10 +314,7 @@ class AdminController extends Controller
         // Initialize all gem types with 0
         $allBetAmounts = [
             'thachanh' => isset($betAmounts['thachanh']) ? (float) $betAmounts['thachanh'] : 0,
-            'thachanhtim' => isset($betAmounts['thachanhtim']) ? (float) $betAmounts['thachanhtim'] : 0,
-            'ngusac' => isset($betAmounts['ngusac']) ? (float) $betAmounts['ngusac'] : 0,
             'daquy' => isset($betAmounts['daquy']) ? (float) $betAmounts['daquy'] : 0,
-            'cuoc' => isset($betAmounts['cuoc']) ? (float) $betAmounts['cuoc'] : 0,
             'kimcuong' => isset($betAmounts['kimcuong']) ? (float) $betAmounts['kimcuong'] : 0,
         ];
         

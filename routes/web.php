@@ -87,6 +87,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/explore/bet', [\App\Http\Controllers\ExploreController::class, 'placeBet'])->name('explore.bet');
     Route::get('/api/explore/my-bet', [\App\Http\Controllers\ExploreController::class, 'getMyBet'])->name('explore.my-bet');
     Route::get('/api/explore/bet-amounts', [\App\Http\Controllers\ExploreController::class, 'getBetAmounts'])->name('explore.bet-amounts');
+    Route::get('/api/explore/gem-types', [\App\Http\Controllers\ExploreController::class, 'getGemTypes'])->name('explore.gem-types');
+    Route::get('/api/explore/recent-rounds', [\App\Http\Controllers\ExploreController::class, 'getRecentRounds'])->name('explore.recent-rounds');
+    Route::get('/api/explore/round-result', [\App\Http\Controllers\ExploreController::class, 'getRoundResult'])->name('explore.round-result');
+    Route::get('/api/explore/signal-grid-rounds', [\App\Http\Controllers\ExploreController::class, 'getSignalGridRounds'])->name('explore.signal-grid-rounds');
+    Route::post('/api/explore/signal-grid-rounds/append', [\App\Http\Controllers\ExploreController::class, 'appendSignalGridRound'])->name('explore.signal-grid-rounds.append');
 
     // Assets screen
     Route::get('/assets', function () {
@@ -270,6 +275,7 @@ Route::middleware('auth')->group(function () {
     })->name('deposit-withdraw-history');
 
     Route::get('/subordinate-system', [\App\Http\Controllers\SubordinateSystemController::class, 'index'])->name('subordinate-system');
+    Route::get('/subordinate-system/check-withdraw-status', [\App\Http\Controllers\SubordinateSystemController::class, 'checkWithdrawStatus'])->name('subordinate-system.check-withdraw-status');
     Route::post('/subordinate-system/withdraw-commission', [\App\Http\Controllers\SubordinateSystemController::class, 'withdrawCommission'])->name('subordinate-system.withdraw-commission');
 
     Route::post('/me/bank-link', [ProfileController::class, 'bankLink'])->name('me.bank.submit');

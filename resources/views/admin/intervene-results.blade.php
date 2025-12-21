@@ -35,10 +35,7 @@
                         @php
                             $gemTypes = [
                                 'thachanh' => ['name' => 'Thạch Anh', 'icon' => 'thachanh.png'],
-                                'thachanhtim' => ['name' => 'Thạch Anh Tím', 'icon' => 'thachanhtim.png'],
-                                'ngusac' => ['name' => 'Ngũ Sắc', 'icon' => 'ngusac.png'],
                                 'daquy' => ['name' => 'Đá Quý', 'icon' => 'daquy.png'],
-                                'cuoc' => ['name' => 'Cuốc', 'icon' => 'cuoc.png'],
                                 'kimcuong' => ['name' => 'Kim Cương', 'icon' => 'kimcuong.png'],
                             ];
                         @endphp
@@ -87,32 +84,6 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="thachanhtim">
-                                <img src="{{ asset('images/icons/thachanhtim.png') }}" alt="Thạch Anh Tím" class="d-inline-block" style="width: 24px; height: 24px;">
-                                Thạch Anh Tím
-                            </label>
-                            <input type="number" step="0.01" min="1" class="form-control @error('thachanhtim') is-invalid @enderror" 
-                                   id="thachanhtim" name="thachanhtim" 
-                                   value="{{ old('thachanhtim', $payoutRates['thachanhtim']) }}" required>
-                            @error('thachanhtim')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="ngusac">
-                                <img src="{{ asset('images/icons/ngusac.png') }}" alt="Ngũ Sắc" class="d-inline-block" style="width: 24px; height: 24px;">
-                                Ngũ Sắc
-                            </label>
-                            <input type="number" step="0.01" min="1" class="form-control @error('ngusac') is-invalid @enderror" 
-                                   id="ngusac" name="ngusac" 
-                                   value="{{ old('ngusac', $payoutRates['ngusac']) }}" required>
-                            @error('ngusac')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
                             <label for="daquy">
                                 <img src="{{ asset('images/icons/daquy.png') }}" alt="Đá Quý" class="d-inline-block" style="width: 24px; height: 24px;">
                                 Đá Quý
@@ -121,19 +92,6 @@
                                    id="daquy" name="daquy" 
                                    value="{{ old('daquy', $payoutRates['daquy']) }}" required>
                             @error('daquy')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="cuoc">
-                                <img src="{{ asset('images/icons/cuoc.png') }}" alt="Cuốc" class="d-inline-block" style="width: 24px; height: 24px;">
-                                Cuốc
-                            </label>
-                            <input type="number" step="0.01" min="1" class="form-control @error('cuoc') is-invalid @enderror" 
-                                   id="cuoc" name="cuoc" 
-                                   value="{{ old('cuoc', $payoutRates['cuoc']) }}" required>
-                            @error('cuoc')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -188,10 +146,7 @@
                                         @php
                                             $gemNames = [
                                                 'thachanh' => 'Thạch Anh',
-                                                'thachanhtim' => 'Thạch Anh Tím',
-                                                'ngusac' => 'Ngũ Sắc',
                                                 'daquy' => 'Đá Quý',
-                                                'cuoc' => 'Cuốc',
                                                 'kimcuong' => 'Kim Cương',
                                             ];
                                         @endphp
@@ -219,10 +174,7 @@
                                         @php
                                             $gemOptions = [
                                                 'thachanh' => ['name' => 'Thạch Anh', 'icon' => 'thachanh.png'],
-                                                'thachanhtim' => ['name' => 'Thạch Anh Tím', 'icon' => 'thachanhtim.png'],
-                                                'ngusac' => ['name' => 'Ngũ Sắc', 'icon' => 'ngusac.png'],
                                                 'daquy' => ['name' => 'Đá Quý', 'icon' => 'daquy.png'],
-                                                'cuoc' => ['name' => 'Cuốc', 'icon' => 'cuoc.png'],
                                                 'kimcuong' => ['name' => 'Kim Cương', 'icon' => 'kimcuong.png'],
                                             ];
                                         @endphp
@@ -274,10 +226,7 @@
     // Gem type names and icons
     const GEM_TYPES = {
         'thachanh': { name: 'Thạch Anh', icon: '{{ asset("images/icons/thachanh.png") }}' },
-        'thachanhtim': { name: 'Thạch Anh Tím', icon: '{{ asset("images/icons/thachanhtim.png") }}' },
-        'ngusac': { name: 'Ngũ Sắc', icon: '{{ asset("images/icons/ngusac.png") }}' },
         'daquy': { name: 'Đá Quý', icon: '{{ asset("images/icons/daquy.png") }}' },
-        'cuoc': { name: 'Cuốc', icon: '{{ asset("images/icons/cuoc.png") }}' },
         'kimcuong': { name: 'Kim Cương', icon: '{{ asset("images/icons/kimcuong.png") }}' },
     };
     

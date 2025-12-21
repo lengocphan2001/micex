@@ -93,12 +93,12 @@ class WithdrawController extends Controller
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Yêu cầu rút tiền đã được gửi thành công. Vui lòng chờ admin duyệt.',
+                    'message' => 'Yêu cầu rút tiền đã được gửi thành công. .',
                     'withdraw_request_id' => $withdrawRequest->id,
                 ]);
             }
 
-            return redirect()->route('withdraw')->with('success', 'Yêu cầu rút tiền đã được gửi thành công. Vui lòng chờ admin duyệt.');
+            return redirect()->route('withdraw')->with('success', 'Yêu cầu rút tiền đã được gửi thành công. .');
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -160,7 +160,7 @@ class WithdrawController extends Controller
     private function getStatusMessage(string $status): string
     {
         return match ($status) {
-            'pending' => 'Yêu cầu đang được xử lý. Vui lòng chờ admin duyệt.',
+            'pending' => 'Yêu cầu đang được xử lý. .',
             'approved' => 'Yêu cầu rút tiền đã được duyệt thành công!',
             'rejected' => 'Yêu cầu rút tiền đã bị từ chối.',
             default => 'Trạng thái không xác định.',

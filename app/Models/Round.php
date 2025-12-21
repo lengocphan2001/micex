@@ -45,15 +45,14 @@ class Round extends Model
     
     /**
      * Calculate round number based on BASE_TIME
-     * Round duration: 60 giây, Break time: 10 giây, Total cycle: 70 giây
+     * Round duration: 60 giây
      */
     public static function calculateRoundNumber()
     {
         $baseTime = \Carbon\Carbon::parse(self::BASE_TIME)->timestamp;
         $now = now()->timestamp;
         $elapsed = $now - $baseTime;
-        $breakTime = 10; // 10 giây break time
-        $totalCycle = 60 + $breakTime; // 70 giây mỗi cycle
+        $totalCycle = 60; // 60 giây mỗi cycle
         return floor($elapsed / $totalCycle) + 1;
     }
     
@@ -200,21 +199,71 @@ class Round extends Model
             return; // Đã finish rồi, không làm gì
         }
         
-        // Set break time: 10 seconds after round ends (để hiển thị kết quả và bets)
-        $breakUntil = now()->addSeconds(10);
-        
         $this->update([
             'status' => 'finished',
             'final_result' => $finalResult,
             'ended_at' => now(),
-            'break_until' => $breakUntil,
+            'break_until' => null,
         ]);
         
         // Refresh để đảm bảo có final_result
         $this->refresh();
         
+        // Append to signal grid (lưu vào SystemSetting để tất cả user thấy giống nhau)
+        $this->appendToSignalGrid();
+        
         // Process all bets for this round
         $this->processBets();
+    }
+    
+    /**
+     * Append round to signal grid (lưu vào SystemSetting)
+     */
+    public function appendToSignalGrid()
+    {
+        if (!$this->final_result) {
+            return;
+        }
+        
+        try {
+            // Lấy rounds hiện tại từ SystemSetting
+            $stored = \App\Models\SystemSetting::getValue('signal_grid_rounds', '[]');
+            $rounds = json_decode($stored, true);
+            
+            if (!is_array($rounds)) {
+                $rounds = [];
+            }
+            
+            // Kiểm tra xem round này đã có chưa (tránh duplicate)
+            $existingIndex = null;
+            foreach ($rounds as $index => $round) {
+                if (isset($round['round_number']) && $round['round_number'] == $this->round_number) {
+                    $existingIndex = $index;
+                    break;
+                }
+            }
+            
+            if ($existingIndex !== null) {
+                // Round đã có, cập nhật result
+                $rounds[$existingIndex]['final_result'] = $this->final_result;
+            } else {
+                // Thêm round mới vào cuối danh sách
+                $rounds[] = [
+                    'round_number' => $this->round_number,
+                    'final_result' => $this->final_result,
+                ];
+                
+                // Nếu đã có đủ 60 rounds, xóa round đầu tiên (bắt đầu lại từ đầu)
+                if (count($rounds) > 60) {
+                    $rounds = array_slice($rounds, -60);
+                }
+            }
+            
+            // Lưu lại vào SystemSetting
+            \App\Models\SystemSetting::setValue('signal_grid_rounds', json_encode($rounds), 'Signal grid rounds (60 rounds for signal tab)');
+        } catch (\Exception $e) {
+            \Log::error("Error appending round to signal grid: " . $e->getMessage());
+        }
     }
 
     /**

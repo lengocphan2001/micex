@@ -9,11 +9,11 @@
         </a>
 
         <!-- Intro -->
-        <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg w-14 text-center">
-            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <a href="{{ route('subordinate-system') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg w-14 text-center">
+            <svg class="w-6 h-6 {{ request()->routeIs('subordinate-system') ? 'text-blue-500' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <span class="text-xs whitespace-nowrap text-gray-400">Giới thiệu</span>
+            <span class="text-xs whitespace-nowrap {{ request()->routeIs('subordinate-system') ? 'text-blue-500' : 'text-gray-400' }}">Giới thiệu</span>
         </a>
 
         <!-- Explore (center item - floating) -->

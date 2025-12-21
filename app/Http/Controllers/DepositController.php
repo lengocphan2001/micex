@@ -44,12 +44,12 @@ class DepositController extends Controller
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Yêu cầu nạp tiền đã được gửi thành công. Vui lòng chờ admin duyệt.',
+                    'message' => 'Yêu cầu nạp tiền đã được gửi thành công. .',
                     'deposit_request_id' => $depositRequest->id,
                 ]);
             }
 
-            return redirect()->route('deposit.bank')->with('success', 'Yêu cầu nạp tiền đã được gửi thành công. Vui lòng chờ admin duyệt.');
+            return redirect()->route('deposit.bank')->with('success', 'Yêu cầu nạp tiền đã được gửi thành công. .');
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -114,7 +114,7 @@ class DepositController extends Controller
     private function getStatusMessage(string $status): string
     {
         return match ($status) {
-            'pending' => 'Yêu cầu đang được xử lý. Vui lòng chờ admin duyệt.',
+            'pending' => 'Yêu cầu đang được xử lý. .',
             'approved' => 'Yêu cầu nạp tiền đã được duyệt thành công!',
             'rejected' => 'Yêu cầu nạp tiền đã bị từ chối.',
             default => 'Trạng thái không xác định.',

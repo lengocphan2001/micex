@@ -256,7 +256,7 @@
 
                 if (response.ok && data.success) {
                     if (typeof showToast === 'function') {
-                        showToast(data.message || 'Yêu cầu rút tiền đã được gửi thành công. Vui lòng chờ admin duyệt.', 'success');
+                        showToast(data.message || 'Yêu cầu rút tiền đã được gửi thành công. .', 'success');
                     }
 
                     // Start polling for status updates

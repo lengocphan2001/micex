@@ -22,22 +22,16 @@ class ExploreController extends Controller
 
     // Tỉ lệ random cho mỗi loại đá (tổng = 100)
     private const GEM_RANDOM_RATES = [
-        'thachanh' => 30,      // 30%
-        'thachanhtim' => 25,   // 25%
-        'ngusac' => 20,        // 20%
-        'daquy' => 15,         // 15%
-        'cuoc' => 7,           // 7%
-        'kimcuong' => 3,       // 3%
+        'thachanh' => 40,      // 40%
+        'daquy' => 30,         // 30%
+        'kimcuong' => 30,      // 30%
     ];
 
     // Tỉ lệ ăn cho mỗi loại đá (default values, can be overridden from database)
     private const GEM_PAYOUT_RATES_DEFAULT = [
-        'thachanh' => 2.0,
-        'thachanhtim' => 2.5,
-        'ngusac' => 3.0,
-        'daquy' => 4.0,
-        'cuoc' => 5.0,
-        'kimcuong' => 5.95,
+        'thachanh' => 1.95,
+        'daquy' => 5.95,
+        'kimcuong' => 1.95,
     ];
     
     /**
@@ -47,12 +41,55 @@ class ExploreController extends Controller
     {
         return [
             'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', self::GEM_PAYOUT_RATES_DEFAULT['thachanh']),
-            'thachanhtim' => (float) SystemSetting::getValue('gem_payout_rate_thachanhtim', self::GEM_PAYOUT_RATES_DEFAULT['thachanhtim']),
-            'ngusac' => (float) SystemSetting::getValue('gem_payout_rate_ngusac', self::GEM_PAYOUT_RATES_DEFAULT['ngusac']),
             'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', self::GEM_PAYOUT_RATES_DEFAULT['daquy']),
-            'cuoc' => (float) SystemSetting::getValue('gem_payout_rate_cuoc', self::GEM_PAYOUT_RATES_DEFAULT['cuoc']),
             'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', self::GEM_PAYOUT_RATES_DEFAULT['kimcuong']),
         ];
+    }
+    
+    /**
+     * Calculate random rates based on payout rates
+     * Đảm bảo: payout rate thấp → random rate cao, payout rate cao → random rate thấp
+     * Tổng random rates = 100
+     */
+    private function calculateRandomRates()
+    {
+        $payoutRates = $this->getPayoutRates();
+        
+        // Tính nghịch đảo của payout rate (payout cao → giá trị thấp, payout thấp → giá trị cao)
+        $inverseValues = [];
+        $totalInverse = 0;
+        
+        foreach ($payoutRates as $type => $payoutRate) {
+            // Nghịch đảo: 1 / payout_rate
+            // Payout rate càng cao → inverse càng thấp → random rate càng thấp
+            $inverseValues[$type] = 1 / $payoutRate;
+            $totalInverse += $inverseValues[$type];
+        }
+        
+        // Chuyển đổi thành tỉ lệ phần trăm (tổng = 100)
+        $randomRates = [];
+        foreach ($inverseValues as $type => $inverseValue) {
+            $randomRates[$type] = round(($inverseValue / $totalInverse) * 100, 2);
+        }
+        
+        // Đảm bảo tổng = 100 (điều chỉnh giá trị cuối cùng nếu cần)
+        $sum = array_sum($randomRates);
+        if ($sum != 100) {
+            $diff = 100 - $sum;
+            // Điều chỉnh giá trị đầu tiên
+            $firstType = array_key_first($randomRates);
+            $randomRates[$firstType] += $diff;
+        }
+        
+        return $randomRates;
+    }
+    
+    /**
+     * Get random rates (calculated from payout rates)
+     */
+    private function getRandomRates()
+    {
+        return $this->calculateRandomRates();
     }
 
     /**
@@ -77,9 +114,8 @@ class ExploreController extends Controller
         // Không auto-start round ở đây vì ProcessRoundTimer đã xử lý
         
         // Calculate current phase based on started_at
-        $phase = 'break'; // break, betting, result
+        $phase = 'betting'; // betting, result
         $currentSecond = 0;
-        $isInBreak = false;
         
         if ($round->status === 'running' && $round->started_at) {
             $elapsedSeconds = now()->diffInSeconds($round->started_at);
@@ -91,8 +127,7 @@ class ExploreController extends Controller
                 $phase = 'result';
             }
         } elseif ($round->status === 'finished') {
-            $phase = 'break';
-            $isInBreak = $round->break_until && now()->lt($round->break_until);
+            $phase = 'result';
         }
         
         return response()->json([
@@ -106,8 +141,6 @@ class ExploreController extends Controller
                 'final_result' => $round->final_result,
                 'admin_set_result' => $round->admin_set_result, // Kết quả admin đặt (nếu có)
                 'started_at' => $round->started_at?->toIso8601String(),
-                'break_until' => $round->break_until?->toIso8601String(),
-                'is_in_break' => $isInBreak,
             ],
             'gem_types' => $this->getGemTypes(),
         ]);
@@ -247,8 +280,10 @@ class ExploreController extends Controller
         // Convert to 1-100 range with better distribution
         $rand = (abs($hash) % 10000) % 100 + 1;
         
+        // Sử dụng random rates được tính từ payout rates
+        $randomRates = $this->getRandomRates();
         $cumulative = 0;
-        foreach (self::GEM_RANDOM_RATES as $type => $rate) {
+        foreach ($randomRates as $type => $rate) {
             $cumulative += $rate;
             if ($rand <= $cumulative) {
                 return $type;
@@ -269,7 +304,7 @@ class ExploreController extends Controller
         }
 
         $validated = $request->validate([
-            'gem_type' => 'required|in:thachanh,thachanhtim,ngusac,daquy,cuoc,kimcuong',
+            'gem_type' => 'required|in:thachanh,daquy,kimcuong',
             'amount' => 'required|numeric|min:0.01',
         ]);
 
@@ -430,6 +465,132 @@ class ExploreController extends Controller
     }
 
     /**
+     * Get round result (admin_set_result or final_result)
+     * Client sẽ gọi API này khi round finish để lấy kết quả
+     */
+    public function getRoundResult(Request $request)
+    {
+        $validated = $request->validate([
+            'round_number' => 'required|integer',
+        ]);
+        
+        $round = Round::where('round_number', $validated['round_number'])
+            ->where('seed', 'round_' . $validated['round_number'])
+            ->first();
+        
+        if (!$round) {
+            return response()->json([
+                'result' => null,
+                'message' => 'Round not found',
+            ], 404);
+        }
+        
+        // Ưu tiên admin_set_result, nếu không có thì dùng final_result
+        // Nếu không có cả hai, tính random từ seed (giây 60)
+        $result = null;
+        if ($round->admin_set_result) {
+            $result = $round->admin_set_result;
+        } else if ($round->final_result) {
+            $result = $round->final_result;
+        } else {
+            // Tính random từ seed (giây 60)
+            $result = $this->getGemForSecond($round->seed, 60, $round);
+        }
+        
+        return response()->json([
+            'round_number' => $round->round_number,
+            'result' => $result,
+            'admin_set_result' => $round->admin_set_result,
+            'final_result' => $round->final_result,
+        ]);
+    }
+    
+    /**
+     * Get recent finished rounds (for signal tab)
+     */
+    public function getRecentRounds()
+    {
+        $rounds = Round::where('status', 'finished')
+            ->whereNotNull('final_result')
+            ->orderBy('round_number', 'desc')
+            ->limit(60)
+            ->get(['round_number', 'final_result', 'admin_set_result', 'ended_at']);
+        
+        return response()->json($rounds);
+    }
+    
+    /**
+     * Get signal grid rounds (60 rounds for signal tab)
+     * Lưu trong SystemSetting để tất cả user thấy giống nhau
+     */
+    public function getSignalGridRounds()
+    {
+        $stored = SystemSetting::getValue('signal_grid_rounds', '[]');
+        $rounds = json_decode($stored, true);
+        
+        if (!is_array($rounds)) {
+            $rounds = [];
+        }
+        
+        // Đảm bảo không vượt quá 60 rounds
+        if (count($rounds) > 60) {
+            $rounds = array_slice($rounds, -60);
+        }
+        
+        return response()->json($rounds);
+    }
+    
+    /**
+     * Append round to signal grid (called when round finishes)
+     * Lưu vào SystemSetting để tất cả user thấy giống nhau
+     */
+    public function appendSignalGridRound(Request $request)
+    {
+        $request->validate([
+            'round_number' => 'required|integer',
+            'final_result' => 'required|in:thachanh,daquy,kimcuong',
+        ]);
+        
+        // Lấy rounds hiện tại từ SystemSetting
+        $stored = SystemSetting::getValue('signal_grid_rounds', '[]');
+        $rounds = json_decode($stored, true);
+        
+        if (!is_array($rounds)) {
+            $rounds = [];
+        }
+        
+        // Kiểm tra xem round này đã có chưa (tránh duplicate)
+        $existingIndex = null;
+        foreach ($rounds as $index => $round) {
+            if (isset($round['round_number']) && $round['round_number'] == $request->round_number) {
+                $existingIndex = $index;
+                break;
+            }
+        }
+        
+        if ($existingIndex !== null) {
+            // Round đã có, cập nhật result
+            $rounds[$existingIndex]['final_result'] = $request->final_result;
+        } else {
+            // Thêm round mới vào cuối danh sách
+            $rounds[] = [
+                'round_number' => $request->round_number,
+                'final_result' => $request->final_result,
+            ];
+            
+            // Nếu đã có đủ 60 rounds, xóa round đầu tiên (bắt đầu lại từ đầu)
+            if (count($rounds) > 60) {
+                $rounds = array_slice($rounds, -60);
+            }
+        }
+        
+        // Lưu lại vào SystemSetting
+        SystemSetting::setValue('signal_grid_rounds', json_encode($rounds), 'Signal grid rounds (60 rounds for signal tab)');
+        
+        return response()->json(['success' => true, 'rounds' => $rounds]);
+    }
+
+    /**
      * Get bet amounts for current round (for realtime display)
      */
     public function getBetAmounts()
@@ -452,10 +613,7 @@ class ExploreController extends Controller
         // Initialize all gem types with 0
         $allBetAmounts = [
             'thachanh' => isset($betAmounts['thachanh']) ? (float) $betAmounts['thachanh'] : 0,
-            'thachanhtim' => isset($betAmounts['thachanhtim']) ? (float) $betAmounts['thachanhtim'] : 0,
-            'ngusac' => isset($betAmounts['ngusac']) ? (float) $betAmounts['ngusac'] : 0,
             'daquy' => isset($betAmounts['daquy']) ? (float) $betAmounts['daquy'] : 0,
-            'cuoc' => isset($betAmounts['cuoc']) ? (float) $betAmounts['cuoc'] : 0,
             'kimcuong' => isset($betAmounts['kimcuong']) ? (float) $betAmounts['kimcuong'] : 0,
         ];
         
@@ -533,26 +691,58 @@ class ExploreController extends Controller
     public function getGemTypes()
     {
         $payoutRates = $this->getPayoutRates();
+        $randomRates = $this->getRandomRates(); // Tính random rates từ payout rates
         $gemTypes = [];
-        foreach (self::GEM_RANDOM_RATES as $type => $rate) {
+        foreach ($payoutRates as $type => $payoutRate) {
             $gemTypes[] = [
                 'type' => $type,
-                'random_rate' => $rate,
-                'payout_rate' => $payoutRates[$type],
+                'random_rate' => $randomRates[$type] ?? 33.33, // Fallback nếu không có
+                'payout_rate' => $payoutRate,
             ];
         }
-        return $gemTypes;
+        return response()->json($gemTypes);
     }
 
     /**
-     * Random a gem type based on rates
+     * Random a gem type based on rates (static method for use in models)
      */
     public static function randomGemType()
     {
         $rand = mt_rand(1, 100);
-        $cumulative = 0;
         
-        foreach (self::GEM_RANDOM_RATES as $type => $rate) {
+        // Get payout rates from database
+        $payoutRates = [
+            'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', self::GEM_PAYOUT_RATES_DEFAULT['thachanh']),
+            'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', self::GEM_PAYOUT_RATES_DEFAULT['daquy']),
+            'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', self::GEM_PAYOUT_RATES_DEFAULT['kimcuong']),
+        ];
+        
+        // Calculate random rates from payout rates (inverse relationship)
+        $inverseValues = [];
+        $totalInverse = 0;
+        
+        foreach ($payoutRates as $type => $payoutRate) {
+            $inverseValues[$type] = 1 / $payoutRate;
+            $totalInverse += $inverseValues[$type];
+        }
+        
+        // Convert to percentages (total = 100)
+        $randomRates = [];
+        foreach ($inverseValues as $type => $inverseValue) {
+            $randomRates[$type] = round(($inverseValue / $totalInverse) * 100, 2);
+        }
+        
+        // Ensure total = 100
+        $sum = array_sum($randomRates);
+        if ($sum != 100) {
+            $diff = 100 - $sum;
+            $firstType = array_key_first($randomRates);
+            $randomRates[$firstType] += $diff;
+        }
+        
+        // Use random rates to determine gem type
+        $cumulative = 0;
+        foreach ($randomRates as $type => $rate) {
             $cumulative += $rate;
             if ($rand <= $cumulative) {
                 return $type;

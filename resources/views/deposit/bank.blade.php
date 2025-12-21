@@ -314,7 +314,7 @@
         .then(data => {
             // Show success toast
             if (typeof showToast === 'function') {
-                showToast(data.message || 'Yêu cầu nạp tiền đã được gửi thành công. Vui lòng chờ admin duyệt.', 'success');
+                showToast(data.message || 'Yêu cầu nạp tiền đã được gửi thành công. .', 'success');
             }
             
             // Start long polling if deposit_request_id is returned

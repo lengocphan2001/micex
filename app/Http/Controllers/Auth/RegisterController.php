@@ -45,7 +45,7 @@ class RegisterController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'phone_number' => ['required', 'string', 'regex:/^\+84[0-9]{9,10}$/', 'unique:users,phone_number'],
+            'phone_number' => ['required', 'string', 'regex:/^0[0-9]{9,10}$/', 'unique:users,phone_number'],
             'email' => ['required', 'email', 'unique:users,email'],
             'display_name' => ['required', 'string', 'max:255', 'min:3'],
             'password' => ['required', 'confirmed', Password::min(8)],
@@ -62,7 +62,7 @@ class RegisterController extends Controller
             'terms' => ['required', 'accepted'],
         ], [
             'phone_number.required' => 'Vui lòng nhập số điện thoại.',
-            'phone_number.regex' => 'Số điện thoại không hợp lệ. Vui lòng nhập đúng định dạng +84xxxxxxxxx',
+            'phone_number.regex' => 'Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại bắt đầu từ số 0 (ví dụ: 0123456789)',
             'phone_number.unique' => 'Số điện thoại này đã được sử dụng.',
             'email.required' => 'Vui lòng nhập email.',
             'email.email' => 'Email không hợp lệ.',

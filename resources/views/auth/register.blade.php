@@ -63,14 +63,14 @@
                     <!-- Phone Number -->
                     <div>
                         <label for="phone_number" class="block text-white text-sm font-medium mb-2">
-                            Số điện thoại (+84)
+                            Số điện thoại
                         </label>
                         <input 
                             type="tel" 
                             id="phone_number" 
                             name="phone_number" 
                             value="{{ old('phone_number') }}"
-                            placeholder="Nhập số điện thoại"
+                            placeholder="Nhập số điện thoại (bắt đầu từ 0)"
                             class="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('phone_number') border border-red-500 @enderror"
                             required
                         >
@@ -209,6 +209,29 @@
             </div>
         </main>
     </div>
+
+    <script>
+        // Auto-fill referral code from URL query parameter
+        document.addEventListener('DOMContentLoaded', function() {
+            const referralCodeInput = document.getElementById('referral_code');
+            
+            if (referralCodeInput) {
+                // Check if there's already a value from old() (form validation error)
+                const existingValue = referralCodeInput.value.trim();
+                
+                // Only auto-fill if input is empty and URL has 'r' parameter
+                if (!existingValue) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const referralCode = urlParams.get('r');
+                    
+                    if (referralCode) {
+                        // Trim and uppercase the referral code
+                        referralCodeInput.value = referralCode.trim().toUpperCase();
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>
 

@@ -50,6 +50,15 @@ class SubordinateSystemController extends Controller
             ->limit(10)
             ->get();
 
+        // Get referral list with level, transaction volume, and commission
+        $referralList = $this->getReferralList($user, $downlineStats);
+        
+        // Calculate total traders (sum of all levels)
+        $totalTraders = array_sum(array_column($downlineStats, 'count'));
+        
+        // Get referrer info
+        $referrer = $user->referrer;
+
         return view('subordinate-system', compact(
             'user', 
             'downlineStats', 
@@ -58,7 +67,10 @@ class SubordinateSystemController extends Controller
             'totalCommission',
             'withdrawnCommission',
             'commissionByLevel',
-            'recentCommissions'
+            'recentCommissions',
+            'referralList',
+            'totalTraders',
+            'referrer'
         ));
     }
 
@@ -71,6 +83,26 @@ class SubordinateSystemController extends Controller
         
         if (!$user) {
             return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Check if user can withdraw (must be at least 1 hour since last withdrawal)
+        $lastWithdraw = UserCommission::where('user_id', $user->id)
+            ->where('status', 'withdrawn')
+            ->whereNotNull('withdrawn_at')
+            ->orderBy('withdrawn_at', 'desc')
+            ->first();
+        
+        if ($lastWithdraw && $lastWithdraw->withdrawn_at) {
+            $timeSinceLastWithdraw = now()->diffInSeconds($lastWithdraw->withdrawn_at);
+            $oneHourInSeconds = 3600;
+            
+            if ($timeSinceLastWithdraw < $oneHourInSeconds) {
+                $remainingSeconds = $oneHourInSeconds - $timeSinceLastWithdraw;
+                $remainingMinutes = ceil($remainingSeconds / 60);
+                return response()->json([
+                    'error' => "Bạn chỉ có thể rút hoa hồng mỗi tiếng. Vui lòng thử lại sau {$remainingMinutes} phút.",
+                ], 400);
+            }
         }
 
         $availableCommission = UserCommission::getAvailableCommission($user->id);
@@ -111,6 +143,30 @@ class SubordinateSystemController extends Controller
                 'error' => 'Có lỗi xảy ra khi rút hoa hồng: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Check withdraw status (for frontend countdown)
+     */
+    public function checkWithdrawStatus()
+    {
+        $user = Auth::guard('web')->user();
+        
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $lastWithdraw = UserCommission::where('user_id', $user->id)
+            ->where('status', 'withdrawn')
+            ->whereNotNull('withdrawn_at')
+            ->orderBy('withdrawn_at', 'desc')
+            ->first();
+        
+        return response()->json([
+            'last_withdraw_time' => $lastWithdraw && $lastWithdraw->withdrawn_at 
+                ? $lastWithdraw->withdrawn_at->toIso8601String() 
+                : null,
+        ]);
     }
 
     /**
@@ -219,6 +275,48 @@ class SubordinateSystemController extends Controller
         }, ARRAY_FILTER_USE_KEY));
 
         return $volumes;
+    }
+
+    /**
+     * Get referral list with level, transaction volume, and commission
+     */
+    private function getReferralList(User $user, array $downlineStats)
+    {
+        $list = [];
+        
+        // Get users from each level with their stats
+        foreach ($downlineStats as $level => $stats) {
+            if ($stats['count'] > 0 && !empty($stats['users'])) {
+                foreach ($stats['users'] as $downlineUser) {
+                    // Get transaction volume for this user
+                    $userVolume = Bet::where('user_id', $downlineUser->id)->sum('amount');
+                    
+                    // Get commission received from this user
+                    $userCommission = UserCommission::where('user_id', $user->id)
+                        ->where('from_user_id', $downlineUser->id)
+                        ->sum('commission_amount');
+                    
+                    $list[] = [
+                        'user' => $downlineUser,
+                        'level' => $level,
+                        'transaction_volume' => $userVolume,
+                        'commission' => $userCommission,
+                    ];
+                }
+            }
+        }
+        
+        // Sort by level (F1, F2, F3...) then by transaction volume desc
+        usort($list, function($a, $b) {
+            $levelOrder = ['F1' => 1, 'F2' => 2, 'F3' => 3, 'F4' => 4, 'F5' => 5, 'F6' => 6];
+            $levelCompare = ($levelOrder[$a['level']] ?? 999) <=> ($levelOrder[$b['level']] ?? 999);
+            if ($levelCompare !== 0) {
+                return $levelCompare;
+            }
+            return $b['transaction_volume'] <=> $a['transaction_volume'];
+        });
+        
+        return $list;
     }
 }
 

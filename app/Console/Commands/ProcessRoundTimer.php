@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Round;
+use App\Models\SystemSetting;
 use App\Http\Controllers\ExploreController;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
@@ -33,30 +34,24 @@ class ProcessRoundTimer extends Command
     /**
      * Calculate round number based on BASE_TIME
      * Round duration: 60 giây
-     * Break time: 10 giây
-     * Total cycle: 70 giây (60 + 10)
      */
     private function calculateRoundNumber()
     {
         $baseTime = Carbon::parse(self::BASE_TIME)->timestamp;
         $now = now()->timestamp;
         $elapsed = $now - $baseTime;
-        $breakTime = 10; // 10 giây break time
-        $totalCycle = self::ROUND_DURATION + $breakTime; // 70 giây mỗi cycle
+        $totalCycle = self::ROUND_DURATION; // 60 giây mỗi cycle
         return floor($elapsed / $totalCycle) + 1;
     }
     
     /**
      * Calculate round deadline
      * Round duration: 60 giây
-     * Break time: 10 giây
-     * Total cycle: 70 giây (60 + 10)
      */
     private function calculateRoundDeadline($roundNumber)
     {
         $baseTime = Carbon::parse(self::BASE_TIME)->timestamp;
-        $breakTime = 10; // 10 giây break time
-        $totalCycle = self::ROUND_DURATION + $breakTime; // 70 giây mỗi cycle
+        $totalCycle = self::ROUND_DURATION; // 60 giây mỗi cycle
         
         // Round start time = baseTime + (roundNumber - 1) * totalCycle
         $roundStartTime = $baseTime + (($roundNumber - 1) * $totalCycle);
@@ -180,6 +175,56 @@ class ProcessRoundTimer extends Command
     }
     
     /**
+     * Get payout rates from database or use defaults
+     */
+    private function getPayoutRates()
+    {
+        return [
+            'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', 1.95),
+            'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', 5.95),
+            'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', 1.95),
+        ];
+    }
+    
+    /**
+     * Calculate random rates based on payout rates
+     * Đảm bảo: payout rate thấp → random rate cao, payout rate cao → random rate thấp
+     * Tổng random rates = 100
+     */
+    private function calculateRandomRates()
+    {
+        $payoutRates = $this->getPayoutRates();
+        
+        // Tính nghịch đảo của payout rate (payout cao → giá trị thấp, payout thấp → giá trị cao)
+        $inverseValues = [];
+        $totalInverse = 0;
+        
+        foreach ($payoutRates as $type => $payoutRate) {
+            // Nghịch đảo: 1 / payout_rate
+            // Payout rate càng cao → inverse càng thấp → random rate càng thấp
+            $inverseValues[$type] = 1 / $payoutRate;
+            $totalInverse += $inverseValues[$type];
+        }
+        
+        // Chuyển đổi thành tỉ lệ phần trăm (tổng = 100)
+        $randomRates = [];
+        foreach ($inverseValues as $type => $inverseValue) {
+            $randomRates[$type] = round(($inverseValue / $totalInverse) * 100, 2);
+        }
+        
+        // Đảm bảo tổng = 100 (điều chỉnh giá trị cuối cùng nếu cần)
+        $sum = array_sum($randomRates);
+        if ($sum != 100) {
+            $diff = 100 - $sum;
+            // Điều chỉnh giá trị đầu tiên
+            $firstType = array_key_first($randomRates);
+            $randomRates[$firstType] += $diff;
+        }
+        
+        return $randomRates;
+    }
+    
+    /**
      * Get gem type for a specific second based on seed
      * Must match client-side logic exactly
      */
@@ -202,20 +247,13 @@ class ProcessRoundTimer extends Command
         // Convert to 1-100 range with better distribution
         $rand = (abs($hash) % 10000) % 100 + 1;
         
-        $rates = [
-            ['type' => 'thachanh', 'rate' => 30],
-            ['type' => 'thachanhtim', 'rate' => 25],
-            ['type' => 'ngusac', 'rate' => 20],
-            ['type' => 'daquy', 'rate' => 15],
-            ['type' => 'cuoc', 'rate' => 7],
-            ['type' => 'kimcuong', 'rate' => 3],
-        ];
-        
+        // Sử dụng random rates được tính từ payout rates
+        $randomRates = $this->calculateRandomRates();
         $cumulative = 0;
-        foreach ($rates as $item) {
-            $cumulative += $item['rate'];
+        foreach ($randomRates as $type => $rate) {
+            $cumulative += $rate;
             if ($rand <= $cumulative) {
-                return $item['type'];
+                return $type;
             }
         }
         

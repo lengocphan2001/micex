@@ -15,12 +15,32 @@
         background: rgba(59, 130, 246, 0.1);
     }
     
-    /* Result Popup Animation */
+    /* Result Popup Animation - Bottom Slide Up */
+    #resultPopup {
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 0;
+    }
+    
     #resultPopup.show {
         display: flex !important;
     }
     
-    #resultPopup.show > div:last-child {
+    #resultPopup .popup-content {
+        transform: translateY(100%);
+        opacity: 0;
+        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease-out;
+        width: calc(100% - 32px);
+        max-width: 419px;
+    }
+    
+    @media (min-width: 768px) {
+        #resultPopup .popup-content {
+            max-width: 419px;
+        }
+    }
+    
+    #resultPopup.show .popup-content {
         transform: translateY(0);
         opacity: 1;
     }
@@ -29,7 +49,7 @@
 
 @section('header')
 <header class="w-full px-4 py-4 flex items-center justify-center bg-gray-900 border-b border-gray-800">
-    <h1 class="text-white text-base font-semibold">Trò Chơi</h1>
+        <h1 class="text-white text-base font-semibold">Trò Chơi</h1>
 </header>
 @endsection
 
@@ -100,8 +120,8 @@
                 <img src="{{ asset('images/icons/thachanh.png') }}" alt="Kết quả" class="w-10 h-10 object-contain flex-shrink-0" id="finalResultIcon" style="display: block;">
                 <!-- Chữ "Chờ kết quả..." (ở dưới) -->
                 <div class="text-center min-h-[40px] flex flex-col items-center justify-center">
-                    <p class="text-white font-semibold" id="finalResultName">Chờ kết quả...</p>
-                    <p class="text-blue-400 text-sm" id="finalResultPayout"></p>
+                        <p class="text-white font-semibold" id="finalResultName">Chờ kết quả...</p>
+                        <p class="text-blue-400 text-sm" id="finalResultPayout"></p>
                 </div>
             </div>
         </div>
@@ -138,33 +158,38 @@
     
     <!-- Tab Content: Signal -->
     <div id="tab-content-signal" class="tab-content hidden">
-        <!-- Signal Grid: 3 cột, mỗi cột 4 hàng, mỗi hàng 5 items (tổng 60 icon) -->
-        <div id="signalGrid" class="grid grid-cols-3 gap-1">
-            <!-- 3 cột sẽ được tạo động -->
+        <!-- Signal Grid: Hiển thị 30 rounds gần nhất, mỗi round là 1 icon -->
+        <div id="signalGrid" class="grid grid-cols-3 gap-0.5">
+            <!-- Sẽ được tạo động từ API -->
         </div>
     </div>
 </div>
 
-<!-- Result Popup (Modal Center) -->
-<div id="resultPopup" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+<!-- Result Popup (Modal Bottom) -->
+<div id="resultPopup" class="fixed inset-0 z-[100] flex items-end justify-center hidden">
     <!-- Backdrop -->
     <div class="absolute inset-0 bg-black/50" onclick="closeResultPopup()"></div>
     
     <!-- Popup Content -->
-    <div class="relative bg-[#1e3a8a] rounded-3xl shadow-2xl pb-8 w-full max-w-[419px] mx-4 transform translate-y-4 opacity-0 transition-all duration-300 ease-out">
+    <div class="popup-content relative bg-gradient-to-b from-[#2d1b69] to-[#1a0f3d] rounded-t-3xl shadow-2xl mb-6">
+        <!-- Top Right Payout Rate Badge -->
+        <div class="absolute top-4 right-4 bg-blue-500/80 rounded-lg px-3 py-1">
+            <span id="resultPayoutRate" class="text-white text-sm font-semibold">1.95x</span>
+        </div>
+        
         <!-- Miner Character -->
         <div class="flex justify-center -mt-16 mb-4">
             <img src="{{ asset('images/result_image.png') }}" alt="Miner" class="w-32 h-32 object-contain">
         </div>
         
         <!-- Content -->
-        <div class="px-6 text-center">
-            <h2 id="resultTitle" class="text-white text-lg font-semibold mb-2">Chúc mừng bạn !</h2>
-            <p id="resultAmount" class="text-green-400 text-3xl font-bold mb-4">+0 USDT</p>
-            <p id="resultMessage" class="text-white text-sm mb-6">Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.</p>
+        <div class="px-6 pt-4 pb-6 text-center">
+            <h2 id="resultTitle" class="text-white text-xl font-bold mb-3">Chúc mừng bạn !</h2>
+            <p id="resultAmount" class="text-green-400 text-3xl font-bold mb-3">+0 USDT</p>
+            <p id="resultMessage" class="text-white/90 text-sm mb-6 leading-relaxed">Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.</p>
             
             <!-- Confirm Button -->
-            <button onclick="closeResultPopup()" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-xl w-full">
+            <button onclick="closeResultPopup()" class="bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white font-semibold px-8 py-3 rounded-xl w-full transition-colors">
                 Xác nhận
             </button>
         </div>
@@ -176,20 +201,18 @@
 <script>
     // Gem types configuration - payout rates will be updated from API
     const GEM_TYPES = {
-        'thachanh': { name: 'Thạch Anh', icon: '{{ asset("images/icons/thachanh.png") }}', randomRate: 30, payoutRate: 2.0 },
-        'thachanhtim': { name: 'Thạch Anh Tím', icon: '{{ asset("images/icons/thachanhtim.png") }}', randomRate: 25, payoutRate: 2.5 },
-        'ngusac': { name: 'Ngũ Sắc', icon: '{{ asset("images/icons/ngusac.png") }}', randomRate: 20, payoutRate: 3.0 },
-        'daquy': { name: 'Đá Quý', icon: '{{ asset("images/icons/daquy.png") }}', randomRate: 15, payoutRate: 4.0 },
-        'cuoc': { name: 'Cuốc', icon: '{{ asset("images/icons/cuoc.png") }}', randomRate: 7, payoutRate: 5.0 },
-        'kimcuong': { name: 'Kim Cương', icon: '{{ asset("images/icons/kimcuong.png") }}', randomRate: 3, payoutRate: 5.95 },
+        'thachanh': { name: 'Thạch Anh', icon: '{{ asset("images/icons/thachanh.png") }}', randomRate: 40, payoutRate: 1.95 },
+        'daquy': { name: 'Đá Quý', icon: '{{ asset("images/icons/daquy.png") }}', randomRate: 30, payoutRate: 5.95 },
+        'kimcuong': { name: 'Kim Cương', icon: '{{ asset("images/icons/kimcuong.png") }}', randomRate: 30, payoutRate: 1.95 },
     };
     
-    // Update payout rates from API response
+    // Update payout rates and random rates from API response
     function updatePayoutRates(gemTypes) {
         if (gemTypes && Array.isArray(gemTypes)) {
             gemTypes.forEach(gem => {
                 if (GEM_TYPES[gem.type]) {
                     GEM_TYPES[gem.type].payoutRate = parseFloat(gem.payout_rate);
+                    GEM_TYPES[gem.type].randomRate = parseFloat(gem.random_rate); // Cập nhật random rate từ API
                 }
             });
             // Update UI with new payout rates
@@ -217,9 +240,17 @@
     let clientTimerInterval = null;
     let roundResults = []; // Mảng lưu tất cả kết quả random từ giây 1-60 (chỉ để hiển thị)
     let isPollingBet = false; // Flag để tránh polling bet nhiều lần
+    let clientBetInfo = null; // Lưu thông tin bet ở client để hiển thị kết quả ngay lập tức
+    let resultPopupShownForRound = null; // Track round number đã hiển thị popup để tránh hiển thị lại
+    let signalGridRounds = []; // Lưu 60 rounds để hiển thị trong grid Signal (chỉ ở client)
+    let signalTabLoaded = false; // Flag để biết tab Signal đã load chưa
+    
 
     // Initialize
     document.addEventListener('DOMContentLoaded', async function() {
+        // Load payout rates from API first
+        await loadPayoutRates();
+        
         initializeGemCards();
         
         // Khởi tạo round với seed tính từ round_number (không cần gọi API)
@@ -230,15 +261,17 @@
             round_number: clientRoundNumber,
             seed: seed,
             status: 'pending',
-            phase: 'break',
+            phase: 'betting',
             current_second: 0,
             final_result: null,
             admin_set_result: null,
             deadline: calculateRoundDeadline(clientRoundNumber),
         };
         
-        // Load bet để lấy final_result nếu có
-        await loadMyBet();
+        // Chỉ load bet khi khởi tạo nếu có thể có bet từ round trước
+        // (không cần thiết nếu round mới, nhưng để đảm bảo hiển thị bet cũ nếu có)
+        // Chỉ load 1 lần khi trang load, không load lại mỗi giây
+        loadMyBet(true);
         
         // Update final result card để hiển thị animation nếu cần
         updateFinalResultCard();
@@ -249,6 +282,22 @@
         // Update immediately
         updateClientTimer();
     });
+    
+    // Load payout rates from API
+    async function loadPayoutRates() {
+        try {
+            const response = await fetch('{{ route("explore.gem-types") }}');
+            const gemTypes = await response.json();
+            
+            if (gemTypes && Array.isArray(gemTypes)) {
+                updatePayoutRates(gemTypes);
+                console.log('Payout rates loaded from API:', gemTypes);
+            }
+        } catch (error) {
+            console.error('Error loading payout rates:', error);
+            // Sử dụng default rates nếu API fail
+        }
+    }
 
     // Initialize gem cards
     function initializeGemCards() {
@@ -289,20 +338,18 @@
     // Mặc định: 2025-01-01 00:00:00 UTC (có thể lấy từ server nếu cần)
     const BASE_TIME = new Date('2025-01-01T00:00:00Z').getTime();
     const ROUND_DURATION = 60; // 60 giây mỗi round
-    const BREAK_TIME = 10; // 10 giây break time giữa các phiên
-    const TOTAL_CYCLE = ROUND_DURATION + BREAK_TIME; // 70 giây mỗi cycle (60 + 10)
     
     // Tính round number dựa trên base time
     function calculateRoundNumber() {
         const now = Date.now();
         const elapsed = Math.floor((now - BASE_TIME) / 1000); // Elapsed seconds
-        return Math.floor(elapsed / TOTAL_CYCLE) + 1;
+        return Math.floor(elapsed / ROUND_DURATION) + 1;
     }
     
     // Tính deadline cho round hiện tại
     function calculateRoundDeadline(roundNumber) {
-        // Round start time = BASE_TIME + (roundNumber - 1) * TOTAL_CYCLE
-        const roundStartTime = BASE_TIME + ((roundNumber - 1) * TOTAL_CYCLE * 1000);
+        // Round start time = BASE_TIME + (roundNumber - 1) * ROUND_DURATION
+        const roundStartTime = BASE_TIME + ((roundNumber - 1) * ROUND_DURATION * 1000);
         // Deadline = roundStartTime + ROUND_DURATION (60 giây)
         return roundStartTime + (ROUND_DURATION * 1000);
     }
@@ -317,39 +364,46 @@
             round_number: roundNumber,
             seed: seed,
             status: 'pending',
-            phase: 'break',
+            phase: 'betting',
             current_second: 0,
             final_result: null,
             admin_set_result: null,
             deadline: calculateRoundDeadline(roundNumber),
         };
-        
-        // Reset results array và flag khi load round mới
+                
+                // Reset results array và flag khi load round mới
         if (previousRoundNumber !== roundNumber) {
-            roundResults = [];
+                    roundResults = [];
             isPollingBet = false;
             
             // Reset checking bet result flag khi round mới bắt đầu
             if (currentRound._checkingBetResult) {
                 currentRound._checkingBetResult = false;
             }
+                    
+                    // Reset bet info khi chuyển sang round mới
+                    myBet = null;
+            previousBetStatus = null;
+            clientBetInfo = null; // Reset client bet info khi round mới
+            resultPopupShownForRound = null; // Reset popup shown flag khi round mới
+                    hideMyBet();
+                    clearBetAmount();
+                    selectedGemType = null;
             
-            // Reset bet info khi chuyển sang round mới
-            myBet = null;
-            hideMyBet();
-            clearBetAmount();
-            selectedGemType = null;
-            
-            // Clear gem card selection
-            document.querySelectorAll('.gem-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            // Clear signal grid
-            const signalGrid = document.getElementById('signalGrid');
-            if (signalGrid) {
-                signalGrid.innerHTML = '';
+            // Hiển thị lại button khi round mới bắt đầu
+            const confirmBtn = document.getElementById('confirmBetBtn');
+            if (confirmBtn) {
+                confirmBtn.style.display = '';
+                confirmBtn.disabled = false;
             }
+                    
+                    // Clear gem card selection
+                    document.querySelectorAll('.gem-card').forEach(card => {
+                        card.classList.remove('selected');
+                    });
+                    
+                    // KHÔNG clear signal grid khi round mới bắt đầu
+                    // Signal grid sẽ được append kết quả mới khi round finish
             
             // Reset final result về null khi round mới bắt đầu
             currentRound.final_result = null;
@@ -358,8 +412,8 @@
             // Reset final result card về "Chờ kết quả..." khi round mới bắt đầu
             updateFinalResultCard();
             
-            // Load bet của round mới
-            loadMyBet();
+            // Không cần load bet khi round mới bắt đầu (round mới chưa có bet)
+            // Chỉ load bet khi user đặt cược hoặc khi round finish
         }
     }
 
@@ -390,7 +444,7 @@
         
         // Tính current second từ countdown
         let currentSecond = 0;
-        let phase = 'break';
+        let phase = 'betting';
         
         if (countdown > 0 && countdown <= ROUND_DURATION) {
             // Round đang chạy
@@ -430,151 +484,101 @@
                     
                     // Đợi một chút để server xử lý xong round finish
                     setTimeout(async () => {
-                        // Call API để lấy admin_set_result từ server
+                        // Gọi API để lấy kết quả round (admin_set_result hoặc random)
                         try {
-                            const response = await fetch('/api/explore/current-round', {
-                                method: 'GET',
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                    'Accept': 'application/json',
-                                },
-                            });
+                            const response = await fetch(`{{ route("explore.round-result") }}?round_number=${currentRound.round_number}`);
+                            const data = await response.json();
                             
-                            if (response.ok) {
-                                const data = await response.json();
-                                if (data.round) {
-                                    // Cập nhật admin_set_result và final_result từ server
-                                    if (data.round.admin_set_result !== undefined) {
-                                        currentRound.admin_set_result = data.round.admin_set_result;
-                                    }
-                                    if (data.round.final_result !== undefined) {
-                                        currentRound.final_result = data.round.final_result;
+                            if (data.result) {
+                                // Cập nhật final_result từ server
+                                currentRound.final_result = data.result;
+                                if (data.admin_set_result) {
+                                    currentRound.admin_set_result = data.admin_set_result;
+                                }
+                                
+                                // Update final result card
+                                updateFinalResultCard();
+                                
+                                // Append kết quả mới vào signal grid (không cần gọi API)
+                                appendRoundToSignalGrid(currentRound.round_number, data.result);
+                                
+                                // Nếu user đã đặt cược, hiển thị popup ngay lập tức
+                                if (clientBetInfo && clientBetInfo.round_number === currentRound.round_number && 
+                                    resultPopupShownForRound !== currentRound.round_number) {
+                                    console.log('Round finished - Showing result from API, Round:', currentRound.round_number);
+                                    const isWin = clientBetInfo.gem_type === data.result;
+                                    const result = isWin ? 'won' : 'lost';
+                                    const amount = isWin ? (clientBetInfo.amount * clientBetInfo.payout_rate) : clientBetInfo.amount;
+                                    
+                                    // Hiển thị modal ngay lập tức
+                                    showResultPopup(result, amount, clientBetInfo.payout_rate);
+                                    
+                                    // Đánh dấu đã hiển thị
+                                    resultPopupShownForRound = currentRound.round_number;
+                                    if (!myBet) {
+                                        myBet = { _popupShown: true };
+                                    } else {
+                                        myBet._popupShown = true;
                                     }
                                     
-                                    // Nếu có admin_set_result, dùng admin_set_result
-                                    // Nếu không có admin_set_result, dùng final_result hoặc tính random
-                                    if (currentRound.admin_set_result) {
-                                        currentRound.final_result = currentRound.admin_set_result;
-                                    } else if (!currentRound.final_result) {
-                                        // Không có admin_set_result và final_result, tính random từ seed
-                                        currentRound.final_result = getGemForSecond(currentRound.seed, 60);
+                                    console.log('Result popup shown from API result:', result, amount);
+                                }
+                            } else {
+                                // Nếu API không trả về result, tính từ seed
+                                currentRound.final_result = getGemForSecond(currentRound.seed, 60);
+                                updateFinalResultCard();
+                                
+                                // Hiển thị popup nếu có bet
+                                if (clientBetInfo && clientBetInfo.round_number === currentRound.round_number && 
+                                    resultPopupShownForRound !== currentRound.round_number) {
+                                    const isWin = clientBetInfo.gem_type === currentRound.final_result;
+                                    const result = isWin ? 'won' : 'lost';
+                                    const amount = isWin ? (clientBetInfo.amount * clientBetInfo.payout_rate) : clientBetInfo.amount;
+                                    
+                                    showResultPopup(result, amount, clientBetInfo.payout_rate);
+                                    resultPopupShownForRound = currentRound.round_number;
+                                    if (!myBet) {
+                                        myBet = { _popupShown: true };
+                                    } else {
+                                        myBet._popupShown = true;
                                     }
                                 }
                             }
                         } catch (error) {
                             console.error('Error fetching round result:', error);
-                            // Nếu call API lỗi, dùng random
-                            if (!currentRound.final_result) {
-                                currentRound.final_result = getGemForSecond(currentRound.seed, 60);
-                            }
-                        }
-                        
-                        // Update final result card
-                        updateFinalResultCard();
-                        
-                        // Check bet result của round vừa finish
-                        if (!isPollingBet && myBet && myBet.status === 'pending') {
-                            isPollingBet = true;
+                            // Nếu API lỗi, tính từ seed
+                            currentRound.final_result = getGemForSecond(currentRound.seed, 60);
+                            updateFinalResultCard();
                             
-                            // Poll để check bet result cho đến khi có kết quả
-                            let pollCount = 0;
-                            const maxPolls = 10; // Poll tối đa 10 lần (20 giây)
+                            // Append kết quả mới vào signal grid
+                            appendRoundToSignalGrid(currentRound.round_number, currentRound.final_result);
                             
-                            const pollInterval = setInterval(async () => {
-                                pollCount++;
+                            // Hiển thị popup nếu có bet
+                            if (clientBetInfo && clientBetInfo.round_number === currentRound.round_number && 
+                                resultPopupShownForRound !== currentRound.round_number) {
+                                const isWin = clientBetInfo.gem_type === currentRound.final_result;
+                                const result = isWin ? 'won' : 'lost';
+                                const amount = isWin ? (clientBetInfo.amount * clientBetInfo.payout_rate) : clientBetInfo.amount;
                                 
-                                // Load bet để check status và lấy final_result từ server
-                                await loadMyBet(true);
-                                
-                                // Nếu bet đã có kết quả (won/lost), dừng poll
-                                if (myBet && (myBet.status === 'won' || myBet.status === 'lost')) {
-                                    clearInterval(pollInterval);
-                                    isPollingBet = false;
-                                    currentRound._checkingBetResult = false;
-                                    
-                                    // Cập nhật final_result và admin_set_result từ myBet nếu có
-                                    if (myBet.round && currentRound) {
-                                        // Cập nhật admin_set_result
-                                        if (myBet.round.admin_set_result !== undefined) {
-                                            const previousAdminSetResult = currentRound.admin_set_result;
-                                            currentRound.admin_set_result = myBet.round.admin_set_result;
-                                            
-                                            // Nếu admin_set_result thay đổi và round đang chạy, cập nhật lại roundResults[59] (giây 60)
-                                            if (previousAdminSetResult !== currentRound.admin_set_result) {
-                                                roundResults[59] = currentRound.admin_set_result; // Index 59 = giây 60
-                                            }
-                                        }
-                                        // Cập nhật final_result (ưu tiên admin_set_result nếu có)
-                                        if (myBet.round.final_result) {
-                                            currentRound.final_result = myBet.round.final_result;
-                                        } else if (currentRound.admin_set_result && !currentRound.final_result) {
-                                            // Nếu có admin_set_result nhưng chưa có final_result, dùng admin_set_result
-                                            currentRound.final_result = currentRound.admin_set_result;
-                                        }
-                                        updateFinalResultCard();
-                                    }
-                                    
-                                    // Hiển thị result popup
-                                    if (myBet.status === 'won') {
-                                        showResultPopup('won', myBet.payout_amount || (myBet.amount * myBet.payout_rate));
-                                    } else if (myBet.status === 'lost') {
-                                        showResultPopup('lost', myBet.amount);
-                                    }
-                                } else if (pollCount >= maxPolls) {
-                                    // Đã poll đủ số lần, dừng
-                                    clearInterval(pollInterval);
-                                    isPollingBet = false;
-                                    currentRound._checkingBetResult = false;
-                                }
-                            }, 2000); // Poll mỗi 2 giây
-                        } else {
-                            // Không có bet hoặc bet đã có kết quả
-                            currentRound._checkingBetResult = false;
-                            
-                            // Nếu có bet và đã có kết quả, hiển thị popup
-                            if (myBet && (myBet.status === 'won' || myBet.status === 'lost')) {
-                                // Cập nhật final_result và admin_set_result từ myBet nếu có
-                                if (myBet.round && currentRound) {
-                                    // Cập nhật admin_set_result
-                                    if (myBet.round.admin_set_result !== undefined) {
-                                        const previousAdminSetResult = currentRound.admin_set_result;
-                                        currentRound.admin_set_result = myBet.round.admin_set_result;
-                                        
-                                        // Nếu admin_set_result thay đổi và round đang chạy, cập nhật lại roundResults[59] (giây 60)
-                                        if (previousAdminSetResult !== currentRound.admin_set_result) {
-                                            roundResults[59] = currentRound.admin_set_result; // Index 59 = giây 60
-                                        }
-                                    }
-                                    // Cập nhật final_result (ưu tiên admin_set_result nếu có)
-                                    if (myBet.round.final_result) {
-                                        currentRound.final_result = myBet.round.final_result;
-                                    } else if (currentRound.admin_set_result && !currentRound.final_result) {
-                                        // Nếu có admin_set_result nhưng chưa có final_result, dùng admin_set_result
-                                        currentRound.final_result = currentRound.admin_set_result;
-                                    }
-                                    updateFinalResultCard();
-                                }
-                                
-                                if (myBet.status === 'won') {
-                                    showResultPopup('won', myBet.payout_amount || (myBet.amount * myBet.payout_rate));
-                                } else if (myBet.status === 'lost') {
-                                    showResultPopup('lost', myBet.amount);
+                                showResultPopup(result, amount, clientBetInfo.payout_rate);
+                                resultPopupShownForRound = currentRound.round_number;
+                                if (!myBet) {
+                                    myBet = { _popupShown: true };
+                                } else {
+                                    myBet._popupShown = true;
                                 }
                             }
                         }
+                        
+                        currentRound._checkingBetResult = false;
                     }, 1000);
                 }
-                return;
-            }
-        } else if (countdown > ROUND_DURATION) {
-            // Chưa đến thời gian round này (break time)
-            phase = 'break';
-            currentSecond = 0;
+            return;
+        }
         } else {
-            // Round đã finish, đang trong break time (10 giây)
-            phase = 'break';
-            currentSecond = 0;
-            // Không cần load lại round ở đây vì đã xử lý ở trên (dòng 422-480)
+            // Round đã finish, chuyển sang round tiếp theo
+            phase = 'result';
+            currentSecond = 60;
         }
         
         // Update current second in round object
@@ -582,17 +586,13 @@
         currentRound.phase = phase;
         
         // Update display
-        updateRoundDisplay(currentSecond, phase, countdown > ROUND_DURATION ? countdown - ROUND_DURATION : 0);
+        updateRoundDisplay(currentSecond, phase, 0);
         
         // Update radar result (random based on seed - giống nhau trên tất cả thiết bị)
         if (phase === 'betting' || phase === 'result') {
             updateRadarResult(currentSecond);
-            // Update signal grid
-            updateSignalGrid(currentSecond, phase);
-        } else if (phase === 'break') {
-            // Trong 10 giây break time, chỉ hiển thị "Chờ kết quả...", không hiển thị kết quả
-            // Vẫn hiển thị signal grid với đủ 60 items (icon thứ 60 sẽ hiển thị radar nếu chưa có kết quả)
-            updateSignalGrid(60, 'break');
+            // Không cần update signal grid ở đây nữa, vì signal grid hiển thị 30 rounds gần nhất
+            // Chỉ update khi chuyển tab
         }
     }
 
@@ -616,10 +616,7 @@
         
         // Update countdown - tính từ deadline
         let remainingSeconds = 0;
-        if (ph === 'break' && breakRemaining !== null) {
-            // Break time remaining
-            remainingSeconds = breakRemaining;
-        } else if (ph === 'betting' || ph === 'result') {
+        if (ph === 'betting' || ph === 'result') {
             // Tính countdown từ deadline
             const now = Date.now();
             const clientRoundNumber = calculateRoundNumber();
@@ -643,18 +640,12 @@
         // Update bet button based on phase
         const confirmBtn = document.getElementById('confirmBetBtn');
         if (confirmBtn) {
-            if (ph === 'break') {
+            if (ph === 'result' || sec > 30) {
                 confirmBtn.disabled = true;
-                confirmBtn.textContent = 'Đang nghỉ giữa các phiên';
-            } else if (ph === 'result' || sec > 30) {
+            } else if (myBet || clientBetInfo) {
                 confirmBtn.disabled = true;
-                confirmBtn.textContent = 'Hết thời gian đặt cược';
-            } else if (myBet) {
-                confirmBtn.disabled = true;
-                confirmBtn.textContent = 'Đã đặt cược';
             } else {
                 confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Xác nhận';
             }
         }
     }
@@ -685,14 +676,15 @@
         // Convert to 1-100 range with better distribution
         const rand = (Math.abs(hash) % 10000) % 100 + 1;
         
-        const rates = [
-            { type: 'thachanh', rate: 30 },
-            { type: 'thachanhtim', rate: 25 },
-            { type: 'ngusac', rate: 20 },
-            { type: 'daquy', rate: 15 },
-            { type: 'cuoc', rate: 7 },
-            { type: 'kimcuong', rate: 3 },
-        ];
+        // Sử dụng random rates từ GEM_TYPES (đã được cập nhật từ API)
+        // Đảm bảo sắp xếp theo thứ tự để tổng = 100
+        const rates = [];
+        Object.keys(GEM_TYPES).forEach(type => {
+            rates.push({
+                type: type,
+                rate: GEM_TYPES[type].randomRate || 33.33 // Fallback nếu chưa có
+            });
+        });
         
         let cumulative = 0;
         for (const item of rates) {
@@ -713,10 +705,10 @@
         }
         
         const sec = currentSecond !== null ? currentSecond : (currentRound.current_second || 0);
-        const phase = currentRound.phase || 'break';
+        const phase = currentRound.phase || 'betting';
         
-        const icon = document.getElementById('currentGemIcon');
-        const percent = document.getElementById('currentGemPercent');
+            const icon = document.getElementById('currentGemIcon');
+            const percent = document.getElementById('currentGemPercent');
         
         // 30 giây đầu: chỉ hiển thị radar cố định (không random)
         if (sec <= 30 && phase === 'betting') {
@@ -777,140 +769,24 @@
     
     // Update signal grid - 3 cột, mỗi cột 4 hàng, mỗi hàng 5 items (tổng 60 icon)
     // Hiển thị theo hàng ngang: hàng 1 của cả 3 cột, rồi hàng 2 của cả 3 cột, ...
+    // Function cũ - không dùng nữa, tab Signal giờ hiển thị 30 rounds gần nhất
+    // Đã thay thế bằng updateSignalGridWithRounds()
+    // Function cũ - không dùng nữa, tab Signal giờ hiển thị 30 rounds gần nhất
+    // Đã thay thế bằng updateSignalGridWithRounds()
     function updateSignalGrid(currentSecond, phase) {
-        if (!currentRound) return;
-        
-        const signalGrid = document.getElementById('signalGrid');
-        if (!signalGrid) return;
-        
-        // Tính số giây cần hiển thị
-        // Nếu round đã finish hoặc currentSecond >= 60, hiển thị đủ 60 items
-        // Nếu round đang chạy, hiển thị từ 1 đến currentSecond
-        let sec = currentSecond || 0;
-        
-        // Kiểm tra xem round đã finish chưa (dựa trên countdown)
-        const clientRoundNumber = calculateRoundNumber();
-        const deadline = calculateRoundDeadline(clientRoundNumber);
-        const now = Date.now();
-        const countdown = Math.max(0, Math.floor((deadline - now) / 1000));
-        const isRoundFinished = countdown === 0 || countdown > ROUND_DURATION || (currentRound && currentRound.final_result);
-        
-        // Nếu round đã finish, hiển thị đủ 60 items
-        if (isRoundFinished || sec >= 60) {
-            sec = 60;
-        }
-        
-        // Clear grid và rebuild từ đầu
-        signalGrid.innerHTML = '';
-        
-        // Tạo 3 cột
-        const columns = [];
-        for (let col = 0; col < 3; col++) {
-            const columnDiv = document.createElement('div');
-            columnDiv.className = 'flex flex-col gap-0.5';
-            columns.push(columnDiv);
-            signalGrid.appendChild(columnDiv);
-        }
-        
-        // Mỗi cột có 5 hàng, mỗi hàng có 4 items
-        // Tổng: 3 cột x 5 hàng x 4 items = 60 items
-        // Hiển thị theo hàng ngang: item 0-11 (hàng 1), item 12-23 (hàng 2), ...
-        // Hiển thị tất cả 60 items (i từ 0 đến 59, tương ứng giây 1 đến 60)
-        const maxItems = Math.min(sec, 60);
-        for (let i = 0; i < maxItems; i++) {
-            // Tính toán vị trí theo hàng ngang
-            const rowIndex = Math.floor(i / 12); // Hàng ngang (0-4): mỗi hàng có 12 items (4 items x 3 cột)
-            const itemInRow = i % 12; // Item trong hàng ngang (0-11)
-            const colIndex = Math.floor(itemInRow / 4); // Cột (0-2): mỗi cột 4 items trong hàng
-            const itemInColRow = itemInRow % 4; // Item trong hàng của cột (0-3)
-            
-            // Tạo hàng trong cột nếu chưa có
-            let rowDiv = columns[colIndex].children[rowIndex];
-            if (!rowDiv) {
-                rowDiv = document.createElement('div');
-                rowDiv.className = 'grid grid-cols-4 gap-0.5';
-                columns[colIndex].appendChild(rowDiv);
-            }
-            
-            // Tạo item trong hàng
-            const iconDiv = document.createElement('div');
-            
-            let iconSrc = '';
-            let iconAlt = '';
-            
-            if (i < 30) {
-                // 30 giây đầu: hiển thị icon radar
-                iconSrc = '{{ asset("images/icons/rada.png") }}';
-                iconAlt = 'Radar';
-            } else if (i < 59) {
-                // Giây 31-59: hiển thị random bình thường
-                let gemType;
-                if (roundResults[i]) {
-                    // Dùng kết quả đã lưu trong roundResults
-                    gemType = roundResults[i];
-                } else {
-                    // Tính từ seed nếu chưa có trong roundResults
-                    gemType = getGemForSecond(currentRound.seed, i + 1);
-                }
-                
-                const gem = GEM_TYPES[gemType];
-                if (gem) {
-                    iconSrc = gem.icon;
-                    iconAlt = gem.name;
-                } else {
-                    iconSrc = '{{ asset("images/icons/thachanh.png") }}';
-                    iconAlt = 'Thạch Anh';
-                }
-            } else {
-                // Icon thứ 60 (i === 59): Ưu tiên admin_set_result, nếu không có thì dùng final_result
-                // KHÔNG hiển thị random cho icon này, đợi kết quả từ server
-                const resultToShow = currentRound.admin_set_result || currentRound.final_result;
-                if (resultToShow) {
-                    const gem = GEM_TYPES[resultToShow];
-                    if (gem) {
-                        iconSrc = gem.icon;
-                        iconAlt = gem.name;
-                    } else {
-                        iconSrc = '{{ asset("images/icons/thachanh.png") }}';
-                        iconAlt = 'Thạch Anh';
-                    }
-                } else {
-                    // Chưa có kết quả, hiển thị radar icon
-                    iconSrc = '{{ asset("images/icons/rada.png") }}';
-                    iconAlt = 'Radar';
-                }
-            }
-            
-            // Thêm background gray và rounded-full cho icon container
-            // Tăng kích cỡ cho icon rada (30 giây đầu)
-            const isRadaIcon = iconSrc && iconSrc.includes('rada.png');
-            const containerSize = 'w-8 h-8';
-            iconDiv.className = `flex items-center justify-center bg-gray-700 rounded-full ${containerSize} p-0.5`;
-            
-            const iconImg = document.createElement('img');
-            iconImg.src = iconSrc;
-            iconImg.alt = iconAlt;
-            // Tăng kích cỡ icon rada
-            const iconSize = isRadaIcon ? 'w-8 h-8' : 'w-6 h-6';
-            iconImg.className = `${iconSize} object-contain`;
-            
-            iconDiv.appendChild(iconImg);
-            rowDiv.appendChild(iconDiv);
-        }
+        // Không làm gì - tab Signal giờ dùng updateSignalGridWithRounds()
+        return;
     }
     
     // Animation nhấp nháy các loại đá khi chờ kết quả
     let gemBlinkInterval = null;
     let currentBlinkGemIndex = 0;
-    const gemTypesArray = ['thachanh', 'thachanhtim', 'ngusac', 'daquy', 'cuoc', 'kimcuong'];
+    const gemTypesArray = ['thachanh', 'daquy', 'kimcuong'];
     
     // Màu sắc cho mỗi loại đá (để tạo hiệu ứng nhấp nháy)
     const gemColors = {
         'thachanh': 'rgba(255, 255, 255, 0.8)',
-        'thachanhtim': 'rgba(138, 43, 226, 0.8)', // Purple
-        'ngusac': 'rgba(255, 215, 0, 0.8)', // Gold
         'daquy': 'rgba(0, 191, 255, 0.8)', // Deep Sky Blue
-        'cuoc': 'rgba(255, 20, 147, 0.8)', // Deep Pink
         'kimcuong': 'rgba(255, 255, 255, 1)', // White (diamond)
     };
     
@@ -1047,11 +923,7 @@
         const deadline = calculateRoundDeadline(clientRoundNumber);
         const now = Date.now();
         const countdown = Math.max(0, Math.floor((deadline - now) / 1000));
-        const isRoundFinished = countdown === 0 || countdown > ROUND_DURATION;
-        
-        // Kiểm tra xem có đang trong break time không (10 giây sau khi round finish)
-        // Break time: khi countdown > ROUND_DURATION (tức là đã qua 60 giây của round, đang trong 10 giây break)
-        const isInBreakTime = countdown > ROUND_DURATION && countdown <= TOTAL_CYCLE;
+        const isRoundFinished = countdown === 0;
         
         // Xác định kết quả cần hiển thị:
         // 1. Ưu tiên admin_set_result nếu có
@@ -1073,18 +945,8 @@
             }
         }
         
-        // Nếu đang trong break time (10 giây đầu sau khi round finish), chỉ hiển thị "Chờ kết quả..." với animation nhấp nháy
-        // Nếu đã qua break time hoặc round đang chạy và có kết quả, hiển thị kết quả
-        if (isInBreakTime) {
-            // Trong 10 giây break time, hiển thị animation nhấp nháy các loại đá
-            startGemBlinkAnimation();
-            if (finalResultName) {
-                finalResultName.textContent = 'Chờ kết quả...';
-            }
-            if (finalResultPayout) {
-                finalResultPayout.textContent = '';
-            }
-        } else if (resultToShow) {
+        // Hiển thị kết quả nếu có
+        if (resultToShow) {
             // Có kết quả và không trong break time, hiển thị kết quả với animation nhấp nháy
             const gem = GEM_TYPES[resultToShow];
             if (gem) {
@@ -1095,8 +957,8 @@
                 }
                 if (finalResultPayout) {
                     finalResultPayout.textContent = `${gem.payoutRate}x`;
-                }
-            } else {
+            }
+        } else {
                 console.warn('Gem type not found:', resultToShow);
                 // Nếu không tìm thấy gem type, hiển thị animation nhấp nháy tất cả các loại đá
                 startGemBlinkAnimation();
@@ -1164,16 +1026,37 @@
             
             if (data.bet) {
                 const newStatus = data.bet.status;
+                const oldStatus = previousBetStatus;
                 
-                // Check if status changed from pending to won/lost
-                if (previousBetStatus === 'pending' && (newStatus === 'won' || newStatus === 'lost')) {
-                    // Status just changed, show popup
+                // Update myBet - preserve _popupShown flag nếu status không đổi và đã hiển thị
+                const wasPopupShown = (myBet && myBet._popupShown) || false;
+                const shouldPreserveFlag = wasPopupShown && oldStatus === newStatus && (newStatus === 'won' || newStatus === 'lost');
+                
                     myBet = data.bet;
+                // Chỉ giữ flag nếu status không đổi và đã hiển thị trước đó
+                myBet._popupShown = shouldPreserveFlag;
+                
+                // Display bet info
                     displayMyBet();
-                } else {
-                    // Normal update
-                    myBet = data.bet;
-                    displayMyBet();
+                
+                // LUÔN hiển thị popup nếu bet có kết quả và chưa hiển thị
+                // Đảm bảo tất cả users đều thấy popup, không chỉ user đầu tiên
+                // Chỉ hiển thị nếu chưa hiển thị cho round này
+                if ((newStatus === 'won' || newStatus === 'lost') && !myBet._popupShown && resultPopupShownForRound !== currentRound?.round_number) {
+                    // Show popup immediately
+                    console.log('loadMyBet: Showing result popup for user, status:', newStatus, 'Round:', currentRound?.round_number, 'Bet ID:', myBet.id);
+                    // Chỉ hiển thị popup khi thắng
+                    if (newStatus === 'won') {
+                        showResultPopup('won', myBet.payout_amount || (myBet.amount * myBet.payout_rate), myBet.payout_rate);
+                    }
+                    // Không hiển thị popup khi thua
+                    // Mark as shown
+                    myBet._popupShown = true;
+                    resultPopupShownForRound = currentRound?.round_number;
+                    // Xóa client bet info vì đã có kết quả từ server
+                    if (clientBetInfo && clientBetInfo.round_number === currentRound?.round_number) {
+                        clientBetInfo = null;
+                    }
                 }
                 
                 previousBetStatus = newStatus;
@@ -1258,59 +1141,75 @@
             const statusEl = document.createElement('p');
             statusEl.className = 'mt-2 text-green-400';
             statusEl.textContent = '🎉 Bạn đã thắng!';
-            betInfo.appendChild(statusEl);
+        betInfo.appendChild(statusEl);
         }
         
         // Update previousBetStatus để track changes
         const currentStatus = myBet.status;
         
-        // Show result popup chỉ khi status thay đổi từ pending sang won/lost
-        // Hoặc khi load bet và đã có kết quả (won/lost) nhưng chưa hiển thị popup
-        if ((previousBetStatus === 'pending' && (currentStatus === 'won' || currentStatus === 'lost')) ||
-            ((currentStatus === 'won' || currentStatus === 'lost') && !myBet._popupShown)) {
-            
+        // Show result popup khi status là won/lost và chưa hiển thị popup
+        // Đảm bảo hiển thị cho tất cả users, không chỉ user đầu tiên
+        // Chỉ hiển thị nếu chưa hiển thị cho round này
+        if ((currentStatus === 'won' || currentStatus === 'lost') && !myBet._popupShown && resultPopupShownForRound !== currentRound?.round_number) {
+            console.log('DisplayMyBet: Showing popup for status:', currentStatus, 'Round:', currentRound?.round_number, 'Bet ID:', myBet.id);
+            // Chỉ hiển thị nếu chưa hiển thị trước đó
+            // Chỉ hiển thị popup khi thắng
             if (currentStatus === 'won') {
-                showResultPopup('won', myBet.payout_amount || (myBet.amount * myBet.payout_rate));
+                showResultPopup('won', myBet.payout_amount || (myBet.amount * myBet.payout_rate), myBet.payout_rate);
                 myBet._popupShown = true; // Đánh dấu đã hiển thị popup
-            } else if (currentStatus === 'lost') {
-                showResultPopup('lost', myBet.amount);
-                myBet._popupShown = true; // Đánh dấu đã hiển thị popup
+                resultPopupShownForRound = currentRound?.round_number;
             }
+            // Không hiển thị popup khi thua
         }
-        
-        // Update previousBetStatus
-        previousBetStatus = currentStatus;
     }
     
     // Show result popup
-    function showResultPopup(result, amount) {
+    function showResultPopup(result, amount, payoutRate = null) {
+        console.log('showResultPopup called:', result, amount, payoutRate);
         const popup = document.getElementById('resultPopup');
         const titleEl = document.getElementById('resultTitle');
         const amountEl = document.getElementById('resultAmount');
         const messageEl = document.getElementById('resultMessage');
+        const payoutRateEl = document.getElementById('resultPayoutRate');
         
-        if (!popup || !titleEl || !amountEl || !messageEl) return;
+        if (!popup) {
+            console.error('resultPopup element not found!');
+            return;
+        }
+        if (!titleEl || !amountEl || !messageEl) {
+            console.error('Result popup elements not found!', {titleEl, amountEl, messageEl});
+            return;
+        }
         
-        if (result === 'won') {
-            titleEl.textContent = 'Chúc mừng bạn !';
-            amountEl.textContent = `+${parseFloat(amount).toFixed(2)} USDT`;
-            amountEl.className = 'text-green-400 text-3xl font-bold mb-4';
-            messageEl.textContent = 'Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.';
-        } else if (result === 'lost') {
-            titleEl.textContent = 'Rất tiếc !';
-            amountEl.textContent = `-${parseFloat(amount).toFixed(2)} USDT`;
-            amountEl.className = 'text-red-400 text-3xl font-bold mb-4';
-            messageEl.textContent = 'Bạn đã thua cược. Chúc may mắn lần sau!';
+        console.log('Setting popup content...');
+        
+        // Chỉ hiển thị popup khi thắng
+        if (result !== 'won') {
+            return; // Không hiển thị popup khi thua
+        }
+        
+        titleEl.textContent = 'Chúc mừng bạn !';
+        amountEl.textContent = `+${parseFloat(amount).toFixed(2)} USDT`;
+        amountEl.className = 'text-green-400 text-3xl font-bold mb-3';
+        messageEl.textContent = 'Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.';
+        
+        // Hiển thị payout rate nếu có
+        if (payoutRateEl && payoutRate) {
+            payoutRateEl.textContent = `${parseFloat(payoutRate).toFixed(2)}x`;
+        } else if (payoutRateEl && clientBetInfo && clientBetInfo.payout_rate) {
+            payoutRateEl.textContent = `${parseFloat(clientBetInfo.payout_rate).toFixed(2)}x`;
         }
         
         // Show popup - remove hidden class first
+        console.log('Showing popup...');
         popup.classList.remove('hidden');
         // Trigger animation by adding show class after a small delay
         setTimeout(() => {
             popup.classList.add('show');
+            console.log('Popup show class added');
         }, 10);
         
-        // Auto hide after 10 seconds (để hiển thị kết quả trong break time)
+        // Auto hide after 10 seconds
         setTimeout(() => {
             closeResultPopup();
         }, 10000);
@@ -1341,12 +1240,18 @@
 
     // Place bet
     async function placeBet() {
+        const confirmBtn = document.getElementById('confirmBetBtn');
+        
+        // Disable button ngay lập tức khi click, trước khi call API
+        confirmBtn.disabled = true;
+        
         if (!selectedGemType) {
             if (typeof showToast === 'function') {
                 showToast('Vui lòng chọn loại đá quý để đặt cược', 'error');
             } else {
                 alert('Vui lòng chọn loại đá quý để đặt cược');
             }
+            confirmBtn.disabled = false;
             return;
         }
         
@@ -1357,15 +1262,26 @@
             } else {
                 alert('Vui lòng nhập số lượng đá quý hợp lệ');
             }
+            confirmBtn.disabled = false;
             return;
         }
         
-        const confirmBtn = document.getElementById('confirmBetBtn');
-        confirmBtn.disabled = true;
-        confirmBtn.textContent = 'Đang xử lý...';
+        // Lưu thông tin bet ở client để hiển thị kết quả ngay lập tức
+        if (currentRound) {
+            const gem = GEM_TYPES[selectedGemType];
+            clientBetInfo = {
+                round_number: currentRound.round_number,
+                gem_type: selectedGemType,
+                gem_name: gem ? gem.name : selectedGemType,
+                amount: amount,
+                payout_rate: gem ? gem.payoutRate : 1.95,
+                placed_at: Date.now()
+            };
+            console.log('Client bet info saved:', clientBetInfo);
+        }
         
-        try {
-            const response = await fetch('{{ route("explore.bet") }}', {
+        // Call API ở background (không await để không block UI)
+        const apiCall = fetch('{{ route("explore.bet") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1377,17 +1293,10 @@
                     gem_type: selectedGemType,
                     amount: amount,
                 }),
-            });
-            
+        }).then(async (response) => {
             const data = await response.json();
             
             if (response.ok && data.success) {
-                if (typeof showToast === 'function') {
-                    showToast(data.message, 'success');
-                } else {
-                    alert(data.message);
-                }
-                
                 // Update balance
                 if (data.new_balance !== undefined) {
                     document.getElementById('userBalance').textContent = parseFloat(data.new_balance).toLocaleString('vi-VN') + '$';
@@ -1396,24 +1305,28 @@
                 // Reload my bet (immediate call after bet)
                 loadMyBet(true);
             } else {
+                // Nếu API call fail, xóa client bet info
+                clientBetInfo = null;
+                confirmBtn.disabled = false;
                 if (typeof showToast === 'function') {
                     showToast(data.error || 'Có lỗi xảy ra khi đặt cược', 'error');
                 } else {
                     alert(data.error || 'Có lỗi xảy ra khi đặt cược');
                 }
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Xác nhận';
             }
-        } catch (error) {
+        }).catch((error) => {
             console.error('Error placing bet:', error);
+            // Nếu API call fail, xóa client bet info
+            clientBetInfo = null;
+            confirmBtn.disabled = false;
             if (typeof showToast === 'function') {
                 showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'error');
             } else {
                 alert('Có lỗi xảy ra. Vui lòng thử lại.');
             }
-            confirmBtn.disabled = false;
-            confirmBtn.textContent = 'Xác nhận';
-        }
+        });
+        
+        // Không cần await, để API chạy ở background
     }
 
     // Tab switching function
@@ -1436,6 +1349,190 @@
         const activeTab = document.getElementById('tab-' + tabName);
         activeTab.classList.remove('text-gray-400');
         activeTab.classList.add('text-white', 'border-b-2', 'border-blue-500');
+        
+        // Nếu chuyển sang tab Signal, chỉ load lần đầu nếu chưa có data
+        if (tabName === 'signal') {
+            if (!signalTabLoaded) {
+                loadRecentRounds();
+                signalTabLoaded = true;
+            } else {
+                // Nếu đã load rồi, chỉ update grid với data hiện có
+                updateSignalGridWithRounds();
+            }
+        }
+    }
+    
+    // Load recent rounds for signal tab (chỉ gọi 1 lần khi mở tab lần đầu)
+    // Load từ server để tất cả user thấy giống nhau
+    async function loadRecentRounds() {
+        try {
+            const response = await fetch('{{ route("explore.signal-grid-rounds") }}');
+            const rounds = await response.json();
+            
+            if (rounds && Array.isArray(rounds)) {
+                signalGridRounds = rounds;
+                updateSignalGridWithRounds();
+            }
+        } catch (error) {
+            console.error('Error loading signal grid rounds:', error);
+            signalGridRounds = [];
+            updateSignalGridWithRounds();
+        }
+    }
+    
+    // Append round result mới vào signal grid (lưu vào server)
+    async function appendRoundToSignalGrid(roundNumber, result) {
+        if (!result) return;
+        
+        try {
+            // Lấy CSRF token từ meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                return;
+            }
+            
+            // Gọi API để append vào server
+            const response = await fetch('{{ route("explore.signal-grid-rounds.append") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    round_number: roundNumber,
+                    final_result: result,
+                }),
+            });
+            
+            // Kiểm tra response status
+            if (!response.ok) {
+                // Nếu lỗi 419 (CSRF token mismatch), không làm gì
+                if (response.status === 419) {
+                    console.warn('CSRF token mismatch, skipping append to signal grid');
+                    return;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            // Kiểm tra content-type trước khi parse JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('Response is not JSON:', contentType);
+                return;
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.rounds) {
+                // Cập nhật signalGridRounds từ server response
+                signalGridRounds = data.rounds;
+                // LUÔN update grid ngay lập tức (không cần check tab)
+                updateSignalGridWithRounds();
+            }
+        } catch (error) {
+            console.error('Error appending round to signal grid:', error);
+            // Fallback: update local nếu API fail (chỉ khi không phải lỗi 419)
+            if (!error.message || !error.message.includes('419')) {
+                const existingIndex = signalGridRounds.findIndex(r => r.round_number === roundNumber);
+                if (existingIndex !== -1) {
+                    signalGridRounds[existingIndex].final_result = result;
+                } else {
+                    signalGridRounds.push({
+                        round_number: roundNumber,
+                        final_result: result,
+                    });
+                    if (signalGridRounds.length > 60) {
+                        signalGridRounds.shift();
+                    }
+                }
+                updateSignalGridWithRounds();
+            }
+        }
+    }
+    
+    // Update signal grid với 60 rounds (chỉ ở client)
+    // Layout: 3 cột, mỗi cột 5 hàng x 4 items = 20 items/cột = 60 items tổng
+    // Fill dọc trước (từ trên xuống), ngang sau (từ trái qua phải):
+    // - Cột 1, hàng 1: rounds[0-3]
+    // - Cột 1, hàng 2: rounds[4-7]
+    // - Cột 1, hàng 3: rounds[8-11]
+    // - Cột 1, hàng 4: rounds[12-15]
+    // - Cột 1, hàng 5: rounds[16-19]
+    // - Cột 2, hàng 1: rounds[20-23]
+    // - Cột 2, hàng 2: rounds[24-27]
+    // - ...
+    // - Cột 3, hàng 5: rounds[56-59]
+    function updateSignalGridWithRounds() {
+        const signalGrid = document.getElementById('signalGrid');
+        if (!signalGrid) return;
+        
+        // Clear grid
+        signalGrid.innerHTML = '';
+        
+        // Tạo 3 cột
+        const columns = [];
+        for (let col = 0; col < 3; col++) {
+            const columnDiv = document.createElement('div');
+            columnDiv.className = 'flex flex-col gap-1';
+            columns.push(columnDiv);
+            signalGrid.appendChild(columnDiv);
+        }
+        
+        // Tạo 3 cột, mỗi cột có 4 hàng, mỗi hàng 5 items = 20 items/cột
+        // Fill dọc trước (từ trên xuống trong mỗi cột), ngang sau (từ cột 1 sang cột 2, rồi cột 3)
+        for (let colIndex = 0; colIndex < 3; colIndex++) {
+            // Tạo 4 hàng cho mỗi cột
+            for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
+                // Tạo hàng nếu chưa có
+                let rowDiv = columns[colIndex].children[rowIndex];
+                if (!rowDiv) {
+                    rowDiv = document.createElement('div');
+                    rowDiv.className = 'flex gap-0.5';
+                    columns[colIndex].appendChild(rowDiv);
+                }
+                
+                // Tạo 5 items cho mỗi hàng
+                for (let itemInRow = 0; itemInRow < 5; itemInRow++) {
+                    // Tính index trong mảng signalGridRounds
+                    // Fill dọc trước (từ trên xuống trong mỗi cột), ngang sau (từ cột 1 sang cột 2, rồi cột 3)
+                    // Cột 1: rounds[0-19] (hàng 1: 0-4, hàng 2: 5-9, hàng 3: 10-14, hàng 4: 15-19)
+                    // Cột 2: rounds[20-39] (hàng 1: 20-24, hàng 2: 25-29, ...)
+                    // Cột 3: rounds[40-59] (hàng 1: 40-44, hàng 2: 45-49, ...)
+                    // roundIndex = colIndex * 20 + rowIndex * 5 + itemInRow
+                    const roundIndex = colIndex * 20 + rowIndex * 5 + itemInRow;
+                    
+                    // Tạo item
+                    const iconDiv = document.createElement('div');
+                    iconDiv.className = 'flex items-center justify-center bg-gray-700 rounded-full w-6 h-6 p-0.5';
+                    
+                    // Nếu có round tại vị trí này, hiển thị icon đá
+                    if (roundIndex < signalGridRounds.length && signalGridRounds[roundIndex] && signalGridRounds[roundIndex].final_result) {
+                        const gem = GEM_TYPES[signalGridRounds[roundIndex].final_result];
+                        if (gem) {
+                            const iconImg = document.createElement('img');
+                            iconImg.src = gem.icon;
+                            iconImg.alt = gem.name;
+                            iconImg.className = 'w-6 h-6 object-contain';
+                            iconDiv.appendChild(iconImg);
+                        } else {
+                            // Fallback
+                            const iconImg = document.createElement('img');
+                            iconImg.src = '{{ asset("images/icons/thachanh.png") }}';
+                            iconImg.alt = 'Thạch Anh';
+                            iconImg.className = 'w-6 h-6 object-contain';
+                            iconDiv.appendChild(iconImg);
+                        }
+                    }
+                    // Nếu không có round, chỉ hiển thị background (không có icon)
+                    
+                    rowDiv.appendChild(iconDiv);
+                }
+            }
+        }
     }
 
     // Cleanup on page unload
