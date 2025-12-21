@@ -292,7 +292,7 @@ server {
     error_log /var/log/nginx/micex-error.log;
 
     # Max upload size
-    client_max_body_size 20M;
+    client_max_body_size 50M;
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;

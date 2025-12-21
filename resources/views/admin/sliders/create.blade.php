@@ -42,7 +42,7 @@
                     @error('image')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
-                    <small class="form-text text-muted">Định dạng: JPEG, PNG, JPG, GIF. Tối đa 10MB</small>
+                    <small class="form-text text-muted">Định dạng: JPEG, PNG, JPG, GIF. Tối đa 50MB</small>
                 </div>
 
                 <div class="form-group">
