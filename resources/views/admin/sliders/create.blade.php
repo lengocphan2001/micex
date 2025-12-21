@@ -13,30 +13,6 @@
                 @csrf
 
                 <div class="form-group">
-                    <label for="title">Tiêu đề <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control @error('title') is-invalid @enderror" id="title" name="title" value="{{ old('title') }}" required>
-                    @error('title')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="description">Mô tả</label>
-                    <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="3">{{ old('description') }}</textarea>
-                    @error('description')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="button_title">Button Title</label>
-                    <input type="text" class="form-control @error('button_title') is-invalid @enderror" id="button_title" name="button_title" value="{{ old('button_title') }}">
-                    @error('button_title')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="form-group">
                     <label for="image">Ảnh <span class="text-danger">*</span></label>
                     <input type="file" class="form-control-file @error('image') is-invalid @enderror" id="image" name="image" accept="image/*" required>
                     @error('image')

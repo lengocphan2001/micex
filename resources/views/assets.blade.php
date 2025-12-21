@@ -142,7 +142,6 @@
                         }
                     }
                 } catch (error) {
-                    console.error('Error:', error);
                     if (typeof showToast === 'function') {
                         showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'error');
                     }

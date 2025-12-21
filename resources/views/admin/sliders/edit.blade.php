@@ -14,34 +14,10 @@
                 @method('PUT')
 
                 <div class="form-group">
-                    <label for="title">Tiêu đề <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control @error('title') is-invalid @enderror" id="title" name="title" value="{{ old('title', $slider->title) }}" required>
-                    @error('title')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="description">Mô tả</label>
-                    <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="3">{{ old('description', $slider->description) }}</textarea>
-                    @error('description')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="button_title">Button Title</label>
-                    <input type="text" class="form-control @error('button_title') is-invalid @enderror" id="button_title" name="button_title" value="{{ old('button_title', $slider->button_title) }}">
-                    @error('button_title')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="form-group">
                     <label for="image">Ảnh</label>
                     @if($slider->image)
                         <div class="mb-2">
-                            <img src="{{ asset('storage/' . $slider->image) }}" alt="{{ $slider->title }}" style="max-width: 300px; max-height: 200px; object-fit: cover;" class="img-thumbnail">
+                            <img src="{{ asset('storage/' . $slider->image) }}" alt="Slider image" style="max-width: 300px; max-height: 200px; object-fit: cover;" class="img-thumbnail">
                         </div>
                     @endif
                     <input type="file" class="form-control-file @error('image') is-invalid @enderror" id="image" name="image" accept="image/*">

@@ -279,10 +279,6 @@
         const formData = new FormData(form);
         
         // Debug: Log FormData
-        console.log('FormData entries:');
-        for (let [key, value] of formData.entries()) {
-            console.log(key, ':', value);
-        }
         
         // Get CSRF token from meta tag or form
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
@@ -323,7 +319,6 @@
             }
         })
         .catch(error => {
-            console.error('Error:', error);
             let errorMessage = 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại.';
             
             if (error.message) {
@@ -447,7 +442,6 @@
                 }
             })
             .catch(error => {
-                console.error('Polling error:', error);
                 // Continue polling on error, but with longer delay
                 if (isPolling) {
                     pollingTimeoutId = setTimeout(poll, POLLING_INTERVAL * 2);

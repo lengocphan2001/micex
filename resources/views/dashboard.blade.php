@@ -11,8 +11,8 @@
     .carousel-inner {
         position: relative;
         width: 100%;
-        overflow: visible;
-        min-height: 200px;
+        overflow: hidden;
+        height: 200px;
     }
     .carousel-item {
         display: none;
@@ -23,6 +23,7 @@
         top: 0;
         left: 0;
         width: 100%;
+        height: 200px;
     }
     .carousel-item.active {
         display: block;
@@ -30,6 +31,7 @@
         transform: translateX(0);
         position: relative;
         width: 100%;
+        height: 200px;
     }
     .carousel-item.fade-out {
         opacity: 0;
@@ -226,6 +228,12 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
                                         </svg>
                                     </div>
+                                @elseif($notification->type === 'commission_available')
+                                    <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
                                 @else
                                     <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
                                         <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,27 +277,11 @@
                 <div class="carousel-inner">
                     @foreach($sliders as $index => $slider)
                         <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
-                            <div class="rounded-xl p-6 relative overflow-visible flex items-start slider-content border-[0.5px] border-[#FF9D00]" style="min-height: 200px; background: linear-gradient(to bottom, #3958F5, #111111);">
-                                <!-- Left Content -->
-                                <div class="flex-1 relative z-10 pr-4 slider-text min-w-0">
-                                    <div class="text-white/80 text-base font-semibold slider-badge">MICEX</div>
-                                    <h2 class="text-white text-lg font-bold mb-2 slider-title break-words">{{ $slider->title }}</h2>
-                                    @if($slider->button_title)
-                                        <button class="bg-white/90 text-blue-700 font-semibold px-4 py-2 rounded-full text-xs mb-3 hover:bg-white transition-all duration-300 hover:scale-105 slider-button">
-                                            {{ $slider->button_title }}
-                                        </button>
-                                    @endif
-                                    @if($slider->description)
-                                        <p class="text-white/90 text-xs slider-description break-words whitespace-normal">{{ $slider->description }}</p>
-                                    @endif
+                            @if($slider->image)
+                                <div class="rounded-xl overflow-hidden h-full">
+                                    <img src="{{ asset('storage/' . $slider->image) }}" alt="Slider" class="w-full h-full object-cover" style="height: 200px; width: 100%;">
                                 </div>
-                                <!-- Right Image -->
-                                @if($slider->image)
-                                    <div class="flex-shrink-0 w-32 h-32 relative z-10 slider-image">
-                                        <img src="{{ asset('storage/' . $slider->image) }}" alt="{{ $slider->title }}" class="w-full h-full object-cover rounded-lg">
-                                    </div>
-                                @endif
-                            </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -355,20 +347,20 @@
             </a>
             <!-- Countdown Timer -->
             <div class="flex gap-2 text-white text-xs items-center justify-center">
-                <div class="flex items-center gap-1">
-                    <div class="bg-gray-700 px-2 py-1 rounded font-mono font-bold">06</div>
+                <div class="flex items-center gap-2">
+                    <div id="countdown-days" class="bg-gray-700 px-2 py-1 rounded font-mono font-bold text-center" style="min-width: 2.5rem;">00</div>
                     <span class="text-gray-400">Ngày</span>
                 </div>
-                <div class="flex items-center gap-1">
-                    <div class="bg-gray-700 px-2 py-1 rounded font-mono font-bold">23</div>
+                <div class="flex items-center gap-2">
+                    <div id="countdown-hours" class="bg-gray-700 px-2 py-1 rounded font-mono font-bold text-center" style="min-width: 2.5rem;">00</div>
                     <span class="text-gray-400">giờ</span>
                 </div>
-                <div class="flex items-center gap-1">
-                    <div class="bg-gray-700 px-2 py-1 rounded font-mono font-bold">52</div>
+                <div class="flex items-center gap-2">
+                    <div id="countdown-minutes" class="bg-gray-700 px-2 py-1 rounded font-mono font-bold text-center" style="min-width: 2.5rem;">00</div>
                     <span class="text-gray-400">phút</span>
                 </div>
-                <div class="flex items-center gap-1">
-                    <div class="bg-gray-700 px-2 py-1 rounded font-mono font-bold">18</div>
+                <div class="flex items-center gap-2">
+                    <div id="countdown-seconds" class="bg-gray-700 px-2 py-1 rounded font-mono font-bold text-center" style="min-width: 2.5rem;">00</div>
                     <span class="text-gray-400">giây</span>
                 </div>
             </div>
@@ -446,7 +438,7 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                             },
-                        }).catch(err => console.error('Error marking notification as read:', err));
+                        }).catch(() => {});
                     }
                 });
             }
@@ -595,5 +587,45 @@
             }
         });
     }
+
+    // Countdown to end of year
+    function updateCountdown() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59); // December 31, 23:59:59
+        
+        const diff = endOfYear - now;
+        
+        if (diff <= 0) {
+            // Năm đã kết thúc, đếm ngược tới cuối năm tiếp theo
+            const nextYear = currentYear + 1;
+            const nextEndOfYear = new Date(nextYear, 11, 31, 23, 59, 59);
+            const nextDiff = nextEndOfYear - now;
+            
+            const days = Math.floor(nextDiff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((nextDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((nextDiff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((nextDiff % (1000 * 60)) / 1000);
+            
+            document.getElementById('countdown-days').textContent = String(days).padStart(2, '0');
+            document.getElementById('countdown-hours').textContent = String(hours).padStart(2, '0');
+            document.getElementById('countdown-minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('countdown-seconds').textContent = String(seconds).padStart(2, '0');
+        } else {
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            document.getElementById('countdown-days').textContent = String(days).padStart(2, '0');
+            document.getElementById('countdown-hours').textContent = String(hours).padStart(2, '0');
+            document.getElementById('countdown-minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('countdown-seconds').textContent = String(seconds).padStart(2, '0');
+        }
+    }
+
+    // Update countdown immediately and then every second
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
 </script>
 @endpush

@@ -163,7 +163,6 @@
                     copyReferralLink.querySelector('span').textContent = 'Sao chép';
                 }, 2000);
             }).catch(function(err) {
-                console.error('Failed to copy:', err);
             });
         });
     }
@@ -185,7 +184,6 @@
                     copyReferralCode.querySelector('span').textContent = 'Sao chép';
                 }, 2000);
             }).catch(function(err) {
-                console.error('Failed to copy:', err);
             });
         });
     }
@@ -213,7 +211,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error checking withdraw status:', error);
             });
     }
 
@@ -313,7 +310,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error withdrawing commission:', error);
                 withdrawStatus.textContent = 'Có lỗi xảy ra khi rút hoa hồng';
                 withdrawStatus.classList.remove('text-gray-400', 'text-green-400');
                 withdrawStatus.classList.add('text-red-400');

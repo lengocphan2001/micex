@@ -142,7 +142,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 alert('Có lỗi xảy ra khi xóa');
             });
         }

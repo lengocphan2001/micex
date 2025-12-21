@@ -285,7 +285,6 @@
                     }
                 }
             } catch (error) {
-                console.error('Error submitting withdraw request:', error);
                 if (typeof showToast === 'function') {
                     showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'error');
                 } else {
@@ -366,7 +365,6 @@
                 }
             })
             .catch(error => {
-                console.error('Polling error:', error);
                 pollingTimeoutId = setTimeout(poll, POLLING_INTERVAL);
             });
         }

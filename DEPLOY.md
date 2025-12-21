@@ -444,19 +444,71 @@ sudo chmod -R 775 /var/www/micex/bootstrap/cache
 
 ### 8.1. Cấu hình Laravel Scheduler
 
+Laravel scheduler sẽ tự động chạy command `commission:notify-available` mỗi giờ để gửi thông báo hoa hồng cho users.
+
+**Cách 1: Setup Cron Job (Khuyến nghị)**
+
 ```bash
+# Chỉnh sửa crontab cho user www-data
 sudo crontab -e -u www-data
 ```
 
-Thêm dòng:
+Thêm dòng sau (thay `/var/www/micex` bằng đường dẫn thực tế của project):
 
 ```
 * * * * * cd /var/www/micex && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 **Lưu ý**: 
-- Scheduler chạy các scheduled tasks (nếu có)
+- Cron job này chạy mỗi phút và gọi `schedule:run`
+- `schedule:run` sẽ kiểm tra và chạy các scheduled tasks (như `commission:notify-available` mỗi giờ)
 - Round timer được xử lý bởi RoundTimerLoop service (bước 7)
+
+**Cách 2: Test Command Thủ Công**
+
+Để test command trước khi setup cron:
+
+```bash
+# SSH vào VPS
+ssh user@your-vps-ip
+
+# Chuyển đến thư mục project
+cd /var/www/micex
+
+# Chạy command thủ công để test
+php artisan commission:notify-available
+```
+
+**Cách 3: Kiểm Tra Scheduler Có Chạy Không**
+
+```bash
+# Xem log của scheduler
+tail -f storage/logs/laravel.log
+
+# Hoặc kiểm tra cron job có chạy không
+sudo crontab -l -u www-data
+
+# Kiểm tra xem có process nào đang chạy schedule:run không
+ps aux | grep "schedule:run"
+```
+
+**Cách 4: Chạy Scheduler Trong Background (Tạm thời)**
+
+Nếu chưa setup cron, có thể chạy scheduler trong screen/tmux:
+
+```bash
+# Sử dụng screen
+screen -S scheduler
+cd /var/www/micex
+php artisan schedule:work
+
+# Hoặc sử dụng tmux
+tmux new -s scheduler
+cd /var/www/micex
+php artisan schedule:work
+```
+
+**Lưu ý**: `schedule:work` sẽ chạy scheduler liên tục trong foreground. Nhấn `Ctrl+A+D` (screen) hoặc `Ctrl+B+D` (tmux) để detach.
 
 ## 🔧 Bước 9: Cấu hình Firewall
 
@@ -564,7 +616,7 @@ screen -S round-process-loop -X quit
 sudo apt install tmux -y
 
 # 2. Tạo session và chạy
-tmux new-session -d -s round-process-loop 'cd /path/to/your/project && php artisan round:process-loop'
+tmux new-session -d -s round-process-loop 'cd /var/www/micex && php artisan round:process-loop'
 
 # 3. Kiểm tra session
 tmux ls

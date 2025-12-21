@@ -32,9 +32,6 @@ class SliderController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'button_title' => ['nullable', 'string', 'max:255'],
             'image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:51200'], // 50MB
             'order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
@@ -46,6 +43,10 @@ class SliderController extends Controller
         }
 
         $validated['is_active'] = $request->has('is_active');
+        // Set default values for title, description, button_title (nullable)
+        $validated['title'] = '';
+        $validated['description'] = null;
+        $validated['button_title'] = null;
 
         Slider::create($validated);
 
@@ -79,9 +80,6 @@ class SliderController extends Controller
         $slider = Slider::findOrFail($id);
 
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'button_title' => ['nullable', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:51200'], // 50MB
             'order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
@@ -100,6 +98,8 @@ class SliderController extends Controller
         }
 
         $validated['is_active'] = $request->has('is_active');
+        // Keep existing title, description, button_title (don't update them)
+        unset($validated['title'], $validated['description'], $validated['button_title']);
 
         $slider->update($validated);
 

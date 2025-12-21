@@ -291,10 +291,8 @@
             
             if (gemTypes && Array.isArray(gemTypes)) {
                 updatePayoutRates(gemTypes);
-                console.log('Payout rates loaded from API:', gemTypes);
             }
         } catch (error) {
-            console.error('Error loading payout rates:', error);
             // Sử dụng default rates nếu API fail
         }
     }
@@ -424,9 +422,9 @@
             // Khởi tạo round nếu chưa có
             const clientRoundNumber = calculateRoundNumber();
             initializeRound(clientRoundNumber);
-            return;
-        }
-        
+                return;
+            }
+            
         const now = Date.now();
         const clientRoundNumber = calculateRoundNumber();
         const deadline = calculateRoundDeadline(clientRoundNumber);
@@ -439,9 +437,9 @@
                 currentRound._checkingBetResult = false;
             }
             initializeRound(clientRoundNumber);
-            return;
-        }
-        
+                return;
+            }
+            
         // Tính current second từ countdown
         let currentSecond = 0;
         let phase = 'betting';
@@ -473,8 +471,8 @@
                 if (resultToShow) {
                     roundResults[59] = resultToShow;
                 }
-            }
-            
+                }
+                
             // Nếu round vừa finish (countdown = 0 hoặc currentSecond >= 60)
             if (currentSecond >= 60 || countdown === 0) {
                 // Round đã finish, call API để lấy admin_set_result
@@ -495,17 +493,16 @@
                                 if (data.admin_set_result) {
                                     currentRound.admin_set_result = data.admin_set_result;
                                 }
-                                
+                        
                                 // Update final result card
-                                updateFinalResultCard();
-                                
+                        updateFinalResultCard();
+                        
                                 // Append kết quả mới vào signal grid (không cần gọi API)
                                 appendRoundToSignalGrid(currentRound.round_number, data.result);
                                 
                                 // Nếu user đã đặt cược, hiển thị popup ngay lập tức
                                 if (clientBetInfo && clientBetInfo.round_number === currentRound.round_number && 
                                     resultPopupShownForRound !== currentRound.round_number) {
-                                    console.log('Round finished - Showing result from API, Round:', currentRound.round_number);
                                     const isWin = clientBetInfo.gem_type === data.result;
                                     const result = isWin ? 'won' : 'lost';
                                     const amount = isWin ? (clientBetInfo.amount * clientBetInfo.payout_rate) : clientBetInfo.amount;
@@ -521,7 +518,12 @@
                                         myBet._popupShown = true;
                                     }
                                     
-                                    console.log('Result popup shown from API result:', result, amount);
+                                    // Refresh balance và bet info từ server sau khi thắng
+                                    // Đợi một chút để server xử lý xong bet
+                                    setTimeout(() => {
+                                        loadMyBet(true);
+                        }, 1000);
+                                    
                                 }
                             } else {
                                 // Nếu API không trả về result, tính từ seed
@@ -539,13 +541,12 @@
                                     resultPopupShownForRound = currentRound.round_number;
                                     if (!myBet) {
                                         myBet = { _popupShown: true };
-                                    } else {
+                    } else {
                                         myBet._popupShown = true;
                                     }
                                 }
-                            }
+                    }
                         } catch (error) {
-                            console.error('Error fetching round result:', error);
                             // Nếu API lỗi, tính từ seed
                             currentRound.final_result = getGemForSecond(currentRound.seed, 60);
                             updateFinalResultCard();
@@ -845,9 +846,9 @@
         if (!finalResultIcon) return;
         
         const gemType = gemTypesArray[currentBlinkGemIndex];
-        const gem = GEM_TYPES[gemType];
+                const gem = GEM_TYPES[gemType];
         
-        if (gem) {
+                if (gem) {
             finalResultIcon.src = gem.icon;
             finalResultIcon.alt = gem.name;
             finalResultIcon.style.display = 'block';
@@ -959,7 +960,6 @@
                     finalResultPayout.textContent = `${gem.payoutRate}x`;
             }
         } else {
-                console.warn('Gem type not found:', resultToShow);
                 // Nếu không tìm thấy gem type, hiển thị animation nhấp nháy tất cả các loại đá
                 startGemBlinkAnimation();
                 if (finalResultName) {
@@ -967,7 +967,7 @@
                 }
                 if (finalResultPayout) {
                     finalResultPayout.textContent = '';
-                }
+            }
             }
         } else {
             // Chưa có kết quả (round chưa finish), hiển thị animation nhấp nháy
@@ -1044,7 +1044,6 @@
                 // Chỉ hiển thị nếu chưa hiển thị cho round này
                 if ((newStatus === 'won' || newStatus === 'lost') && !myBet._popupShown && resultPopupShownForRound !== currentRound?.round_number) {
                     // Show popup immediately
-                    console.log('loadMyBet: Showing result popup for user, status:', newStatus, 'Round:', currentRound?.round_number, 'Bet ID:', myBet.id);
                     // Chỉ hiển thị popup khi thắng
                     if (newStatus === 'won') {
                         showResultPopup('won', myBet.payout_amount || (myBet.amount * myBet.payout_rate), myBet.payout_rate);
@@ -1066,7 +1065,6 @@
                 hideMyBet();
             }
         } catch (error) {
-            console.error('Error loading my bet:', error);
         } finally {
             isLoadingMyBet = false;
         }
@@ -1151,7 +1149,6 @@
         // Đảm bảo hiển thị cho tất cả users, không chỉ user đầu tiên
         // Chỉ hiển thị nếu chưa hiển thị cho round này
         if ((currentStatus === 'won' || currentStatus === 'lost') && !myBet._popupShown && resultPopupShownForRound !== currentRound?.round_number) {
-            console.log('DisplayMyBet: Showing popup for status:', currentStatus, 'Round:', currentRound?.round_number, 'Bet ID:', myBet.id);
             // Chỉ hiển thị nếu chưa hiển thị trước đó
             // Chỉ hiển thị popup khi thắng
             if (currentStatus === 'won') {
@@ -1165,7 +1162,6 @@
     
     // Show result popup
     function showResultPopup(result, amount, payoutRate = null) {
-        console.log('showResultPopup called:', result, amount, payoutRate);
         const popup = document.getElementById('resultPopup');
         const titleEl = document.getElementById('resultTitle');
         const amountEl = document.getElementById('resultAmount');
@@ -1173,23 +1169,20 @@
         const payoutRateEl = document.getElementById('resultPayoutRate');
         
         if (!popup) {
-            console.error('resultPopup element not found!');
             return;
         }
         if (!titleEl || !amountEl || !messageEl) {
-            console.error('Result popup elements not found!', {titleEl, amountEl, messageEl});
             return;
         }
         
-        console.log('Setting popup content...');
         
         // Chỉ hiển thị popup khi thắng
         if (result !== 'won') {
             return; // Không hiển thị popup khi thua
         }
         
-        titleEl.textContent = 'Chúc mừng bạn !';
-        amountEl.textContent = `+${parseFloat(amount).toFixed(2)} USDT`;
+            titleEl.textContent = 'Chúc mừng bạn !';
+            amountEl.textContent = `+${parseFloat(amount).toFixed(2)} USDT`;
         amountEl.className = 'text-green-400 text-3xl font-bold mb-3';
         messageEl.textContent = 'Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.';
         
@@ -1201,12 +1194,10 @@
         }
         
         // Show popup - remove hidden class first
-        console.log('Showing popup...');
         popup.classList.remove('hidden');
         // Trigger animation by adding show class after a small delay
         setTimeout(() => {
             popup.classList.add('show');
-            console.log('Popup show class added');
         }, 10);
         
         // Auto hide after 10 seconds
@@ -1277,7 +1268,6 @@
                 payout_rate: gem ? gem.payoutRate : 1.95,
                 placed_at: Date.now()
             };
-            console.log('Client bet info saved:', clientBetInfo);
         }
         
         // Call API ở background (không await để không block UI)
@@ -1315,10 +1305,9 @@
                 }
             }
         }).catch((error) => {
-            console.error('Error placing bet:', error);
             // Nếu API call fail, xóa client bet info
             clientBetInfo = null;
-            confirmBtn.disabled = false;
+                confirmBtn.disabled = false;
             if (typeof showToast === 'function') {
                 showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'error');
             } else {
@@ -1364,17 +1353,18 @@
     
     // Load recent rounds for signal tab (chỉ gọi 1 lần khi mở tab lần đầu)
     // Load từ server để tất cả user thấy giống nhau
+    // Server trả về 60 rounds: cột 1+2 (40 rounds) và cột 3 (20 rounds)
     async function loadRecentRounds() {
         try {
             const response = await fetch('{{ route("explore.signal-grid-rounds") }}');
             const rounds = await response.json();
             
             if (rounds && Array.isArray(rounds)) {
+                // Lấy tất cả 60 rounds từ server
                 signalGridRounds = rounds;
                 updateSignalGridWithRounds();
             }
         } catch (error) {
-            console.error('Error loading signal grid rounds:', error);
             signalGridRounds = [];
             updateSignalGridWithRounds();
         }
@@ -1385,11 +1375,19 @@
         if (!result) return;
         
         try {
-            // Lấy CSRF token từ meta tag
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            // Lấy CSRF token từ meta tag hoặc từ form
+            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            // Nếu không tìm thấy trong meta tag, thử lấy từ form
+            if (!csrfToken) {
+                const csrfInput = document.querySelector('input[name="_token"]');
+                if (csrfInput) {
+                    csrfToken = csrfInput.value;
+                }
+            }
             
             if (!csrfToken) {
-                console.error('CSRF token not found');
+                // Không có CSRF token, không thể gọi API
                 return;
             }
             
@@ -1412,7 +1410,6 @@
             if (!response.ok) {
                 // Nếu lỗi 419 (CSRF token mismatch), không làm gì
                 if (response.status === 419) {
-                    console.warn('CSRF token mismatch, skipping append to signal grid');
                     return;
                 }
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -1421,32 +1418,41 @@
             // Kiểm tra content-type trước khi parse JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
-                console.error('Response is not JSON:', contentType);
                 return;
             }
             
             const data = await response.json();
             
             if (data.success && data.rounds) {
+                // Server trả về tất cả rounds sau khi append (có thể < 60 nếu chưa đầy, hoặc = 60 nếu đã shift)
                 // Cập nhật signalGridRounds từ server response
+                // Server đã xử lý shift nếu cần, nên chỉ cần cập nhật từ response
                 signalGridRounds = data.rounds;
+                // Đảm bảo không vượt quá 60 rounds
+                if (signalGridRounds.length > 60) {
+                    signalGridRounds = signalGridRounds.slice(-60);
+                }
                 // LUÔN update grid ngay lập tức (không cần check tab)
                 updateSignalGridWithRounds();
             }
         } catch (error) {
-            console.error('Error appending round to signal grid:', error);
             // Fallback: update local nếu API fail (chỉ khi không phải lỗi 419)
             if (!error.message || !error.message.includes('419')) {
                 const existingIndex = signalGridRounds.findIndex(r => r.round_number === roundNumber);
                 if (existingIndex !== -1) {
                     signalGridRounds[existingIndex].final_result = result;
                 } else {
+                    // Thêm round mới vào cột 3
+                    // Logic: Cột 1+2 (40 rounds), Cột 3 (20 rounds)
+                    // Khi cột 3 đầy (60 rounds), server sẽ shift tự động
                     signalGridRounds.push({
                         round_number: roundNumber,
                         final_result: result,
                     });
+                    
+                    // Nếu vượt quá 60 rounds, giữ 60 rounds cuối (server sẽ xử lý shift)
                     if (signalGridRounds.length > 60) {
-                        signalGridRounds.shift();
+                        signalGridRounds = signalGridRounds.slice(-60);
                     }
                 }
                 updateSignalGridWithRounds();
@@ -1454,18 +1460,13 @@
         }
     }
     
-    // Update signal grid với 60 rounds (chỉ ở client)
-    // Layout: 3 cột, mỗi cột 5 hàng x 4 items = 20 items/cột = 60 items tổng
-    // Fill dọc trước (từ trên xuống), ngang sau (từ trái qua phải):
-    // - Cột 1, hàng 1: rounds[0-3]
-    // - Cột 1, hàng 2: rounds[4-7]
-    // - Cột 1, hàng 3: rounds[8-11]
-    // - Cột 1, hàng 4: rounds[12-15]
-    // - Cột 1, hàng 5: rounds[16-19]
-    // - Cột 2, hàng 1: rounds[20-23]
-    // - Cột 2, hàng 2: rounds[24-27]
-    // - ...
-    // - Cột 3, hàng 5: rounds[56-59]
+    // Update signal grid
+    // Tab signal là một slider không bao giờ dừng
+    // Layout: 3 items (cột), mỗi item 4 hàng x 5 cột = 20 slots/item
+    // - Item 1: rounds[0-19] (20 rounds, đã fill đầy)
+    // - Item 2: rounds[20-39] (20 rounds, đã fill đầy)
+    // - Item 3: rounds[40-59] (20 rounds, đang fill)
+    // Khi item 3 đầy (60 rounds), server sẽ shift: Item 1 = rounds[20-39], Item 2 = rounds[40-59], Item 3 trống và bắt đầu fill lại
     function updateSignalGridWithRounds() {
         const signalGrid = document.getElementById('signalGrid');
         if (!signalGrid) return;
@@ -1483,7 +1484,11 @@
         }
         
         // Tạo 3 cột, mỗi cột có 4 hàng, mỗi hàng 5 items = 20 items/cột
-        // Fill dọc trước (từ trên xuống trong mỗi cột), ngang sau (từ cột 1 sang cột 2, rồi cột 3)
+        // Fill theo cột dọc: cột 1 hàng 1, cột 1 hàng 2, ... cột 2 hàng 1, cột 2 hàng 2, ...
+        // Layout: 3 cột x 4 hàng x 5 items = 60 items
+        // Cột 1: rounds[0-19] (fill dọc: hàng 1: 0-4, hàng 2: 5-9, hàng 3: 10-14, hàng 4: 15-19)
+        // Cột 2: rounds[20-39] (fill dọc: hàng 1: 20-24, hàng 2: 25-29, hàng 3: 30-34, hàng 4: 35-39)
+        // Cột 3: rounds[40-59] (fill dọc: hàng 1: 40-44, hàng 2: 45-49, hàng 3: 50-54, hàng 4: 55-59)
         for (let colIndex = 0; colIndex < 3; colIndex++) {
             // Tạo 4 hàng cho mỗi cột
             for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
@@ -1498,19 +1503,19 @@
                 // Tạo 5 items cho mỗi hàng
                 for (let itemInRow = 0; itemInRow < 5; itemInRow++) {
                     // Tính index trong mảng signalGridRounds
-                    // Fill dọc trước (từ trên xuống trong mỗi cột), ngang sau (từ cột 1 sang cột 2, rồi cột 3)
-                    // Cột 1: rounds[0-19] (hàng 1: 0-4, hàng 2: 5-9, hàng 3: 10-14, hàng 4: 15-19)
-                    // Cột 2: rounds[20-39] (hàng 1: 20-24, hàng 2: 25-29, ...)
-                    // Cột 3: rounds[40-59] (hàng 1: 40-44, hàng 2: 45-49, ...)
-                    // roundIndex = colIndex * 20 + rowIndex * 5 + itemInRow
+                    // Fill theo cột dọc: colIndex * 20 + rowIndex * 5 + itemInRow
+                    // Cột 0: rounds[0-19], Cột 1: rounds[20-39], Cột 2: rounds[40-59]
                     const roundIndex = colIndex * 20 + rowIndex * 5 + itemInRow;
                     
                     // Tạo item
                     const iconDiv = document.createElement('div');
                     iconDiv.className = 'flex items-center justify-center bg-gray-700 rounded-full w-6 h-6 p-0.5';
                     
-                    // Nếu có round tại vị trí này, hiển thị icon đá
-                    if (roundIndex < signalGridRounds.length && signalGridRounds[roundIndex] && signalGridRounds[roundIndex].final_result) {
+                    // Hiển thị icon nếu có round tại vị trí này
+                    // Đảm bảo roundIndex hợp lệ và có data
+                    if (roundIndex < signalGridRounds.length && 
+                        signalGridRounds[roundIndex] && 
+                        signalGridRounds[roundIndex].final_result) {
                         const gem = GEM_TYPES[signalGridRounds[roundIndex].final_result];
                         if (gem) {
                             const iconImg = document.createElement('img');
@@ -1527,7 +1532,7 @@
                             iconDiv.appendChild(iconImg);
                         }
                     }
-                    // Nếu không có round, chỉ hiển thị background (không có icon)
+                    // Nếu không có round, chỉ hiển thị background (trống)
                     
                     rowDiv.appendChild(iconDiv);
                 }

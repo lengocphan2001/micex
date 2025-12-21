@@ -80,7 +80,7 @@
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     },
-                }).catch(err => console.error('Error marking notification as read:', err));
+                }).catch(() => {});
             }
         });
     });

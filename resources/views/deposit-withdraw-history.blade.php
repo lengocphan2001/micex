@@ -111,14 +111,12 @@
 @push('scripts')
 <script>
     function showDetailModal(requestId) {
-        console.log('showDetailModal called with:', requestId);
         
         // Extract type and id from requestId (format: "deposit_123" or "withdraw_456")
         const parts = requestId.split('_');
         const requestType = parts[0];
         const id = parts.slice(1).join('_');
         
-        console.log('Parsed - type:', requestType, 'id:', id);
         
         // Try to find row by both attributes
         let row = document.querySelector(`[data-request-id="${id}"][data-request-type="${requestType}"]`);
@@ -129,7 +127,6 @@
         }
         
         if (!row) {
-            console.error('Row not found for:', requestId);
             alert('Không tìm thấy thông tin giao dịch. Vui lòng thử lại.');
             return;
         }
@@ -138,7 +135,6 @@
         const content = document.getElementById('modalContent');
         
         if (!modal || !content) {
-            console.error('Modal elements not found');
             alert('Không thể hiển thị chi tiết. Vui lòng thử lại.');
             return;
         }

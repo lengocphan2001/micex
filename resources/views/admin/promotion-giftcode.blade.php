@@ -352,7 +352,6 @@
             }
         })
         .catch(error => {
-            console.error('Error loading giftcode history:', error);
             contentDiv.innerHTML = '<div class="alert alert-danger">Có lỗi xảy ra khi tải dữ liệu.</div>';
         });
     }

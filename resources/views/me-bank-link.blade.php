@@ -191,7 +191,6 @@
                         fundPasswordError.classList.remove('hidden');
                     }
                 } catch (error) {
-                    console.error('Error:', error);
                     fundPasswordError.textContent = 'Có lỗi xảy ra khi tạo mật khẩu quỹ. Vui lòng thử lại.';
                     fundPasswordError.classList.remove('hidden');
                 }

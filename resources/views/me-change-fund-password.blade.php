@@ -145,7 +145,6 @@
                         sendBtn.textContent = 'Gửi mã';
                     }
                 } catch (error) {
-                    console.error('Error:', error);
                     
                     // Show error message
                     if (statusText) {

@@ -218,7 +218,6 @@
 
 @section('js')
 <script>
-    console.log('Admin intervene-results script loaded');
     
     let realtimeInterval = null;
     let betAmountsInterval = null;
@@ -239,11 +238,9 @@
     function loadBetAmounts() {
         // Only fetch if round is running
         if (currentRoundStatus !== 'running') {
-            console.log('Round not running, skipping bet amounts fetch');
             return;
         }
         
-        console.log('Loading bet amounts...');
         fetch('{{ route("admin.intervene-results.bet-amounts") }}', {
             method: 'GET',
             headers: {
@@ -253,14 +250,12 @@
             cache: 'no-cache'
         })
             .then(response => {
-                console.log('Bet amounts response status:', response.status);
                 if (!response.ok) {
                     throw new Error('Network response was not ok: ' + response.status);
                 }
                 return response.json();
             })
             .then(data => {
-                console.log('Bet amounts data received:', data);
                 // Update bet amounts only
                 if (data.bet_amounts) {
                     Object.keys(data.bet_amounts).forEach(gemType => {
@@ -269,17 +264,13 @@
                             const amount = parseFloat(data.bet_amounts[gemType] || 0);
                             const oldValue = amountEl.textContent;
                             amountEl.textContent = amount.toFixed(2);
-                            console.log(`Updated bet amount for ${gemType}: ${oldValue} -> ${amount.toFixed(2)}`);
                         } else {
-                            console.warn(`Element not found for gem type: ${gemType}`);
                         }
                     });
                 } else {
-                    console.warn('No bet_amounts in response:', data);
                 }
             })
             .catch(error => {
-                console.error('Error loading bet amounts:', error);
             });
     }
     
@@ -293,7 +284,6 @@
         
         // If status is running and polling is not active, start polling
         if (isRunning && !isPollingActive) {
-            console.log('Round is running, starting polling...');
             isPollingActive = true;
             
             // Start bet amounts polling
@@ -305,7 +295,6 @@
             
         } else if (!isRunning && isPollingActive) {
             // If status is not running and polling is active, stop polling
-            console.log('Round ended or in break, stopping polling...');
             isPollingActive = false;
             
             // Stop bet amounts polling
@@ -340,12 +329,10 @@
                 return response.json();
             })
             .then(data => {
-                console.log('Realtime round data received:', data);
                 
                 // Check if new round started (break time ended)
                 if (lastRoundId !== null && lastRoundId !== data.round.id) {
                     // New round started, reload page to refresh form
-                    console.log('New round started, reloading page...');
                     window.location.reload();
                     return;
                 }
@@ -455,7 +442,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error loading realtime round data:', error);
             });
     }
     
@@ -482,7 +468,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error checking initial round status:', error);
             });
     }
     
@@ -549,7 +534,6 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error updating payout rates:', error);
                     saveBtn.disabled = false;
                     saveBtnText.textContent = 'Lưu tỉ lệ ăn';
                     

@@ -212,7 +212,6 @@
         // Date picker functionality
         document.getElementById('datePicker').addEventListener('change', function() {
             // Handle date change - can be implemented to filter data
-            console.log('Date changed:', this.value);
         });
     </script>
 @stop
