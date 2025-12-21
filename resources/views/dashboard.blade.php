@@ -11,7 +11,7 @@
     .carousel-inner {
         position: relative;
         width: 100%;
-        overflow: hidden;
+        overflow: visible;
         min-height: 200px;
     }
     .carousel-item {
@@ -23,13 +23,13 @@
         top: 0;
         left: 0;
         width: 100%;
-        height: 100%;
     }
     .carousel-item.active {
         display: block;
         opacity: 1;
         transform: translateX(0);
         position: relative;
+        width: 100%;
     }
     .carousel-item.fade-out {
         opacity: 0;
@@ -85,6 +85,20 @@
     }
     .carousel-item.active .slider-description {
         animation: fadeInUp 0.5s ease-out 0.4s both;
+    }
+    
+    /* Slider Content - Auto height */
+    .slider-content {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    .slider-text {
+        overflow: visible;
+    }
+    .slider-description {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
     }
     
     @keyframes slideInLeft {
@@ -255,18 +269,18 @@
                 <div class="carousel-inner">
                     @foreach($sliders as $index => $slider)
                         <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
-                            <div class="rounded-xl p-6 relative overflow-hidden flex items-start slider-content border-[0.5px] border-[#FF9D00]" style="height: 200px; background: linear-gradient(to bottom, #3958F5, #111111);">
+                            <div class="rounded-xl p-6 relative overflow-visible flex items-start slider-content border-[0.5px] border-[#FF9D00]" style="min-height: 200px; background: linear-gradient(to bottom, #3958F5, #111111);">
                                 <!-- Left Content -->
-                                <div class="flex-1 relative z-10 pr-4 slider-text">
+                                <div class="flex-1 relative z-10 pr-4 slider-text min-w-0">
                                     <div class="text-white/80 text-base font-semibold slider-badge">MICEX</div>
-                                    <h2 class="text-white text-lg font-bold mb-2 slider-title">{{ $slider->title }}</h2>
+                                    <h2 class="text-white text-lg font-bold mb-2 slider-title break-words">{{ $slider->title }}</h2>
                                     @if($slider->button_title)
                                         <button class="bg-white/90 text-blue-700 font-semibold px-4 py-2 rounded-full text-xs mb-3 hover:bg-white transition-all duration-300 hover:scale-105 slider-button">
                                             {{ $slider->button_title }}
                                         </button>
                                     @endif
                                     @if($slider->description)
-                                        <p class="text-white/90 text-xs slider-description">{{ $slider->description }}</p>
+                                        <p class="text-white/90 text-xs slider-description break-words whitespace-normal">{{ $slider->description }}</p>
                                     @endif
                                 </div>
                                 <!-- Right Image -->
