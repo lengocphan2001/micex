@@ -15,37 +15,6 @@
         background: rgba(59, 130, 246, 0.1);
     }
     
-    /* Result Popup Animation - Bottom Slide Up */
-    #resultPopup {
-        align-items: flex-end;
-        justify-content: center;
-        padding-bottom: 0; /* Nằm sát bottom, đè lên bottom menu */
-        z-index: 9999 !important; /* Đảm bảo đè lên bottom menu (z-50) */
-        position: fixed !important;
-    }
-    
-    #resultPopup.show {
-        display: flex !important;
-    }
-    
-    #resultPopup .popup-content {
-        transform: translateY(100%);
-        opacity: 0;
-        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease-out;
-        width: calc(100% - 32px);
-        max-width: 419px;
-    }
-    
-    @media (min-width: 768px) {
-        #resultPopup .popup-content {
-            max-width: 419px;
-        }
-    }
-    
-    #resultPopup.show .popup-content {
-        transform: translateY(0);
-        opacity: 1;
-    }
 </style>
 @endpush
 
@@ -162,36 +131,6 @@
 </div>
 @endsection
 
-<!-- Result Popup (Modal Bottom) - Đặt ngoài @section('content') để đè lên bottom menu -->
-<div id="resultPopup" class="fixed inset-0 z-[9999] flex items-end justify-center hidden">
-    <!-- Backdrop -->
-    <div class="absolute inset-0 bg-black/50" onclick="closeResultPopup()"></div>
-    
-    <!-- Popup Content -->
-    <div class="popup-content relative bg-gradient-to-b from-[#2d1b69] to-[#1a0f3d] rounded-t-3xl shadow-2xl mb-0">
-        <!-- Top Right Payout Rate Badge -->
-        <div class="absolute top-4 right-4 bg-blue-500/80 rounded-lg px-3 py-1">
-            <span id="resultPayoutRate" class="text-white text-sm font-semibold">1.95x</span>
-        </div>
-        
-        <!-- Miner Character -->
-        <div class="flex justify-center -mt-16 mb-4">
-            <img src="{{ asset('images/result_image.png') }}" alt="Miner" class="w-32 h-32 object-contain">
-        </div>
-        
-        <!-- Content -->
-        <div class="px-6 pt-4 pb-6 text-center">
-            <h2 id="resultTitle" class="text-white text-xl font-bold mb-3">Chúc mừng bạn !</h2>
-            <p id="resultAmount" class="text-green-400 text-3xl font-bold mb-3">+0 USDT</p>
-            <p id="resultMessage" class="text-white/90 text-sm mb-6 leading-relaxed">Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.</p>
-            
-            <!-- Confirm Button -->
-            <button onclick="closeResultPopup()" class="bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white font-semibold px-8 py-3 rounded-xl w-full transition-colors">
-                Xác nhận
-            </button>
-        </div>
-    </div>
-</div>
 
 @push('scripts')
 <script>
@@ -298,10 +237,8 @@
     // Load payout rates from API
     async function loadPayoutRates() {
         try {
-            console.log('[API] Calling: explore.gem-types');
             const response = await fetch('{{ route("explore.gem-types") }}');
             const gemTypes = await response.json();
-            console.log('[API] Response explore.gem-types:', gemTypes);
             
             if (gemTypes && Array.isArray(gemTypes)) {
                 updatePayoutRates(gemTypes);
@@ -402,7 +339,9 @@
                     myBet = null;
             previousBetStatus = null;
             clientBetInfo = null; // Reset client bet info khi round mới
+            localStorage.removeItem('clientBetInfo');
             resultPopupShownForRound = null; // Reset popup shown flag khi round mới
+            localStorage.removeItem('resultPopupShownForRound');
                     hideMyBet();
                     clearBetAmount();
                     selectedGemType = null;
@@ -503,10 +442,8 @@
                     setTimeout(async () => {
                         // Gọi API để lấy kết quả round (admin_set_result hoặc random)
                         try {
-                            console.log(`[API] Calling: explore.round-result?round_number=${currentRound.round_number}`);
                             const response = await fetch(`{{ route("explore.round-result") }}?round_number=${currentRound.round_number}`);
             const data = await response.json();
-            console.log('[API] Response explore.round-result:', data);
                             
                             if (data.result) {
                                 // Cập nhật final_result từ server
@@ -548,12 +485,13 @@
                                         showResultPopup(result, amount, payoutRate);
                                         
                                         // Đánh dấu đã hiển thị
-                                        resultPopupShownForRound = currentRound.round_number;
-                                        if (!myBet) {
-                                            myBet = { _popupShown: true };
-            } else {
-                                            myBet._popupShown = true;
-                                        }
+                                    resultPopupShownForRound = currentRound.round_number;
+                                    localStorage.setItem('resultPopupShownForRound', currentRound.round_number.toString());
+                                    if (!myBet) {
+                                        myBet = { _popupShown: true };
+                                    } else {
+                                        myBet._popupShown = true;
+                                    }
             }
             
                                     // Refresh balance và bet info từ server sau khi thắng
@@ -596,9 +534,10 @@
                                     
                                     showResultPopup(result, amount, payoutRate);
                                     resultPopupShownForRound = currentRound.round_number;
+                                    localStorage.setItem('resultPopupShownForRound', currentRound.round_number.toString());
                                     if (!myBet) {
                                         myBet = { _popupShown: true };
-                    } else {
+                                    } else {
                                         myBet._popupShown = true;
                                     }
                                 }
@@ -632,12 +571,13 @@
                                 const amount = isWin ? (clientBetInfo.amount * payoutRate) : clientBetInfo.amount;
                                 
                                 showResultPopup(result, amount, payoutRate);
-                                resultPopupShownForRound = currentRound.round_number;
-                                if (!myBet) {
-                                    myBet = { _popupShown: true };
-                    } else {
-                                    myBet._popupShown = true;
-                }
+                                    resultPopupShownForRound = currentRound.round_number;
+                                    localStorage.setItem('resultPopupShownForRound', currentRound.round_number.toString());
+                                    if (!myBet) {
+                                        myBet = { _popupShown: true };
+                                    } else {
+                                        myBet._popupShown = true;
+                                    }
                             }
                         }
                         
@@ -1010,10 +950,8 @@
         isLoadingMyBet = true;
         lastMyBetLoadTime = now;
         try {
-            console.log('[API] Calling: explore.my-bet');
             const response = await fetch('{{ route("explore.my-bet") }}');
             const data = await response.json();
-            console.log('[API] Response explore.my-bet:', data);
             
             // Update balance if provided
             if (data.balance !== undefined) {
@@ -1054,10 +992,14 @@
                     
                     // Mark as shown để tránh hiển thị lại
                     myBet._popupShown = true;
+                    if (currentRound && currentRound.round_number) {
+                        localStorage.setItem('resultPopupShownForRound', currentRound.round_number.toString());
+                    }
                     
                     // Xóa client bet info vì đã có kết quả từ server
                     if (clientBetInfo) {
                         clientBetInfo = null;
+                        localStorage.removeItem('clientBetInfo');
                     }
                 }
                 
@@ -1161,78 +1103,39 @@
             
             // Mark as shown để tránh hiển thị lại
             myBet._popupShown = true;
+            if (myBet.round && myBet.round.round_number) {
+                localStorage.setItem('resultPopupShownForRound', myBet.round.round_number.toString());
+            }
         }
     }
     
     // Show result popup
+    // Use global function for showing result popup
     function showResultPopup(result, amount, payoutRate = null) {
-        const popup = document.getElementById('resultPopup');
-        const titleEl = document.getElementById('resultTitle');
-        const amountEl = document.getElementById('resultAmount');
-        const messageEl = document.getElementById('resultMessage');
-        const payoutRateEl = document.getElementById('resultPayoutRate');
-        
-        if (!popup) {
-            return;
-        }
-        if (!titleEl || !amountEl || !messageEl) {
-            return;
-        }
-        
-        
-        // Chỉ hiển thị popup khi thắng
-        if (result !== 'won') {
-            return; // Không hiển thị popup khi thua
-        }
-        
-            titleEl.textContent = 'Chúc mừng bạn !';
-            amountEl.textContent = `+${parseFloat(amount).toFixed(2)} USDT`;
-        amountEl.className = 'text-green-400 text-3xl font-bold mb-3';
-        messageEl.textContent = 'Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.';
-        
-        // Hiển thị payout rate nếu có
-        // Ưu tiên: payoutRate parameter > myBet.payout_rate > clientBetInfo.payout_rate > GEM_TYPES
-        if (payoutRateEl) {
-            if (payoutRate) {
-                // Sử dụng payoutRate được truyền vào (đã được tính đúng cho nổ hũ)
-                payoutRateEl.textContent = `${parseFloat(payoutRate).toFixed(2)}x`;
-            } else if (myBet && myBet.payout_rate) {
-                // Lấy từ myBet (server đã set đúng khi nổ hũ)
-                payoutRateEl.textContent = `${parseFloat(myBet.payout_rate).toFixed(2)}x`;
+        // Calculate payout rate if not provided
+        if (!payoutRate) {
+            if (myBet && myBet.payout_rate) {
+                payoutRate = myBet.payout_rate;
             } else if (clientBetInfo && clientBetInfo.payout_rate) {
-                // Lấy từ clientBetInfo
-                payoutRateEl.textContent = `${parseFloat(clientBetInfo.payout_rate).toFixed(2)}x`;
+                payoutRate = clientBetInfo.payout_rate;
             } else if (currentRound && currentRound.final_result) {
-                // Nếu là nổ hũ, lấy từ GEM_TYPES
                 const jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
                 if (jackpotTypes.includes(currentRound.final_result) && GEM_TYPES[currentRound.final_result]) {
-                    payoutRateEl.textContent = `${parseFloat(GEM_TYPES[currentRound.final_result].payoutRate).toFixed(2)}x`;
+                    payoutRate = GEM_TYPES[currentRound.final_result].payoutRate;
                 }
             }
         }
         
-        // Show popup - remove hidden class first
-        popup.classList.remove('hidden');
-        // Trigger animation by adding show class after a small delay
-        setTimeout(() => {
-            popup.classList.add('show');
-        }, 10);
-        
-        // Auto hide after 10 seconds
-        setTimeout(() => {
-            closeResultPopup();
-        }, 10000);
+        // Use global function
+        if (typeof showGlobalResultPopup === 'function') {
+            showGlobalResultPopup(result, amount, payoutRate);
+        }
     }
     
-    // Close result popup
+    // Use global function for closing result popup
     function closeResultPopup() {
-        const popup = document.getElementById('resultPopup');
-        if (popup) {
-            popup.classList.remove('show');
-            // Hide after animation completes
-            setTimeout(() => {
-                popup.classList.add('hidden');
-            }, 300);
+        if (typeof closeGlobalResultPopup === 'function') {
+            closeGlobalResultPopup();
         }
     }
 
@@ -1286,10 +1189,12 @@
                 payout_rate: gem ? gem.payoutRate : 1.95,
                 placed_at: Date.now()
             };
+            
+            // Lưu vào localStorage để có thể hiển thị popup từ tab khác
+            localStorage.setItem('clientBetInfo', JSON.stringify(clientBetInfo));
         }
         
         // Call API ở background (không await để không block UI)
-        console.log('[API] Calling: explore.bet', { gem_type: selectedGemType, amount: amount });
         const apiCall = fetch('{{ route("explore.bet") }}', {
                 method: 'POST',
                 headers: {
@@ -1304,7 +1209,6 @@
                 }),
         }).then(async (response) => {
             const data = await response.json();
-            console.log('[API] Response explore.bet:', data);
             
             if (response.ok && data.success) {
                 // Update balance
@@ -1317,6 +1221,7 @@
             } else {
                 // Nếu API call fail, xóa client bet info
                 clientBetInfo = null;
+                localStorage.removeItem('clientBetInfo');
                 confirmBtn.disabled = false;
                 if (typeof showToast === 'function') {
                     showToast(data.error || 'Có lỗi xảy ra khi đặt cược', 'error');
@@ -1327,6 +1232,7 @@
         }).catch((error) => {
             // Nếu API call fail, xóa client bet info
             clientBetInfo = null;
+            localStorage.removeItem('clientBetInfo');
                 confirmBtn.disabled = false;
             if (typeof showToast === 'function') {
                 showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'error');
@@ -1412,7 +1318,6 @@
             }
             
             // Gọi API để append vào server
-            console.log('[API] Calling: explore.signal-grid-rounds.append', { round_number: roundNumber, final_result: result });
             const response = await fetch('{{ route("explore.signal-grid-rounds.append") }}', {
                 method: 'POST',
                 headers: {
@@ -1443,7 +1348,6 @@
             }
             
             const data = await response.json();
-            console.log('[API] Response explore.signal-grid-rounds.append:', data);
 
                     if (data.success && data.rounds) {
                 // Server trả về tất cả rounds sau khi append (có thể < 60 nếu chưa đầy, hoặc = 60 nếu đã shift)

@@ -156,6 +156,52 @@
         transform: translateY(0);
         opacity: 1;
     }
+    
+    /* Gift Spotlight Effect - Circular glow, not square */
+    .gift-spotlight {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(255, 157, 0, 0.3) 0%, rgba(255, 157, 0, 0.1) 40%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 1;
+        animation: giftPulse 3s ease-in-out infinite;
+    }
+    
+    @keyframes giftPulse {
+        0%, 100% {
+            opacity: 0.5;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        50% {
+            opacity: 0.8;
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+    }
+    
+    /* Gift Container - Ensure no square glow */
+    .gift-container {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .gift-image {
+        filter: drop-shadow(0 0 20px rgba(255, 157, 0, 0.5));
+        animation: giftShine 2s ease-in-out infinite;
+    }
+    
+    @keyframes giftShine {
+        0%, 100% {
+            filter: drop-shadow(0 0 20px rgba(255, 157, 0, 0.5));
+        }
+        50% {
+            filter: drop-shadow(0 0 30px rgba(255, 157, 0, 0.8));
+        }
+    }
 </style>
 @endpush
 
@@ -273,7 +319,7 @@
     <!-- Slider Section -->
     @if($sliders->count() > 0)
         <div class="mx-4 mt-4 relative">
-            <div id="sliderCarousel" class="carousel slide">
+            <div id="sliderCarousel" class="carousel slide" style="border-radius: 10px; border: 0.5px solid #FF9D00; background: linear-gradient(180deg, #324CCF -11.41%, #171923 101.14%);">
                 <div class="carousel-inner">
                     @foreach($sliders as $index => $slider)
                         <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
