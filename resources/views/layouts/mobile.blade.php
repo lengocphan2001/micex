@@ -35,14 +35,14 @@
     </style>
 </head>
 <body class="bg-[#181A20] md:bg-gray-800 min-h-screen flex items-center justify-center">
-    <div class="w-full md:max-w-[450px] h-screen flex flex-col mx-auto bg-gray-900 md:shadow-2xl overflow-hidden text-white relative">
+    <div class="w-full md:max-w-[450px] h-screen flex flex-col mx-auto bg-gray-900 md:shadow-2xl text-white relative">
         <!-- Fixed Header -->
         <div class="fixed top-0 left-0 right-0 z-40 md:left-auto md:right-auto md:max-w-[450px]">
             @yield('header')
         </div>
 
         <!-- Scrollable Main Content -->
-        <main class="flex-1 overflow-y-auto hide-scrollbar text-base leading-relaxed pt-[64px] pb-20" style="background-color: #181A20;">
+        <main class="overflow-y-auto hide-scrollbar text-base leading-relaxed" style="background-color: #181A20; padding-top: 64px; padding-bottom: 80px; height: 100vh;">
             @yield('content')
         </main>
 
