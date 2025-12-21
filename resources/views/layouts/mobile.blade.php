@@ -46,7 +46,7 @@
 <body class="bg-[#181A20] md:bg-gray-800 h-screen w-screen overflow-hidden flex items-center justify-center">
     <div class="w-full md:max-w-[450px] h-full flex flex-col mx-auto bg-gray-900 md:shadow-2xl text-white relative">
         <!-- Fixed Header -->
-        <div class="fixed top-0 left-0 right-0 z-40 md:left-auto md:right-auto md:max-w-[450px] bg-gray-900">
+        <div class="fixed top-0 left-0 right-0 z-40 bg-gray-900 md:left-1/2 md:-translate-x-1/2 md:max-w-[450px]">
             @yield('header')
         </div>
 

@@ -53,10 +53,10 @@
 
     <form action="{{ route('me.bank.submit') }}" method="POST" class="space-y-3">
         @csrf
-        <input type="text" name="bank_name" value="{{ old('bank_name', $user->bank_name) }}" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Ngân hàng" required>
-        <input type="text" name="bank_account" value="{{ old('bank_account', $user->bank_account) }}" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Số tài khoản" required>
-        <input type="text" name="bank_full_name" value="{{ old('bank_full_name', $user->bank_full_name) }}" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Họ và Tên" required>
-        <input type="password" name="fund_password" id="fundPasswordInput" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Mật khẩu quỹ (để xác nhận)" required>
+        <input type="text" name="bank_name" value="{{ old('bank_name', $user->bank_name) }}" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Ngân hàng" required>
+        <input type="text" name="bank_account" value="{{ old('bank_account', $user->bank_account) }}" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Số tài khoản" required>
+        <input type="text" name="bank_full_name" value="{{ old('bank_full_name', $user->bank_full_name) }}" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Họ và Tên" required>
+        <input type="password" name="fund_password" id="fundPasswordInput" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Mật khẩu quỹ (để xác nhận)" required>
 
         <button type="submit" id="submitBankLink" class="w-full bg-[#2d59ff] hover:bg-[#2448d1] text-white font-semibold py-3 rounded-full text-base shadow">Lưu ngân hàng</button>
     </form>
@@ -74,8 +74,8 @@
         <form id="createFundPasswordForm" class="space-y-3">
             @csrf
             <div class="space-y-2">
-                <input type="password" name="fund_password" id="newFundPassword" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Mật khẩu quỹ mới" required minlength="6">
-                <input type="password" name="fund_password_confirmation" id="newFundPasswordConfirm" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Nhập lại mật khẩu quỹ" required minlength="6">
+                <input type="password" name="fund_password" id="newFundPassword" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Mật khẩu quỹ mới" required minlength="6">
+                <input type="password" name="fund_password_confirmation" id="newFundPasswordConfirm" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Nhập lại mật khẩu quỹ" required minlength="6">
             </div>
             
             <div id="fundPasswordError" class="bg-red-500/20 border border-red-500 text-red-200 text-sm rounded-lg px-3 py-2 hidden"></div>

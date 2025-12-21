@@ -63,7 +63,7 @@
                     <p class="text-xs text-gray-300">Số lượng đá quý</p>
                     <button type="button" id="maxAmountBtn" class="text-xs text-blue-400 font-semibold hover:text-blue-300">Tối đa</button>
                 </div>
-                <input type="text" id="gemAmountInput" inputmode="decimal" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Nhập số lượng đá quý">
+                <input type="text" id="gemAmountInput" inputmode="decimal" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Nhập số lượng đá quý">
             </div>
 
             <div class="space-y-2">
@@ -78,7 +78,7 @@
         <!-- Fund Password -->
         <div class="space-y-2">
             <p class="text-xs text-gray-300">Mật khẩu quỹ</p>
-            <input type="password" id="fundPasswordInput" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Nhập mật khẩu quỹ">
+            <input type="password" id="fundPasswordInput" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Nhập mật khẩu quỹ">
         </div>
 
         <!-- Success/Error Messages -->

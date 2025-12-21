@@ -34,11 +34,11 @@
 
     <form action="{{ route('me.change-fund-password.submit') }}" method="POST" class="space-y-3">
         @csrf
-        <input type="password" name="current_fund_password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Mật khẩu quỹ hiện tại" required>
-        <input type="password" name="fund_password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Mật khẩu quỹ mới" required>
-        <input type="password" name="fund_password_confirmation" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Nhập lại mật khẩu quỹ mới" required>
+        <input type="password" name="current_fund_password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Mật khẩu quỹ hiện tại" required>
+        <input type="password" name="fund_password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Mật khẩu quỹ mới" required>
+        <input type="password" name="fund_password_confirmation" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Nhập lại mật khẩu quỹ mới" required>
         <div class="relative">
-            <input type="text" name="verification_code" id="verificationCodeInput" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 pr-24 outline-none placeholder-gray-500" placeholder="Mã xác nhận" required>
+            <input type="text" name="verification_code" id="verificationCodeInput" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 pr-24 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Mã xác nhận" required>
             <button type="button" id="sendVerificationCodeBtn" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-[#2d59ff] hover:bg-[#2448d1] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
                 Gửi mã
             </button>

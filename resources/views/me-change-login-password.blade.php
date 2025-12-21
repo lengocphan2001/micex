@@ -34,9 +34,9 @@
 
     <form action="{{ route('me.change-login-password.submit') }}" method="POST" class="space-y-3">
         @csrf
-        <input type="password" name="current_password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Mật khẩu hiện tại" required>
-        <input type="password" name="password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Mật khẩu mới" required>
-        <input type="password" name="password_confirmation" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white text-sm px-3 py-3 outline-none placeholder-gray-500" placeholder="Nhập lại mật khẩu mới" required>
+        <input type="password" name="current_password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Mật khẩu hiện tại" required>
+        <input type="password" name="password" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Mật khẩu mới" required>
+        <input type="password" name="password_confirmation" class="w-full rounded-lg border border-blue-500/60 bg-[#0f1118] text-white px-3 py-3 outline-none placeholder-gray-500" style="font-size: 16px;" placeholder="Nhập lại mật khẩu mới" required>
 
         <button type="submit" class="w-full bg-[#2d59ff] hover:bg-[#2448d1] text-white font-semibold py-3 rounded-full text-base shadow">Hoàn tất</button>
     </form>
