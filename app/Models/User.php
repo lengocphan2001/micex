@@ -188,4 +188,84 @@ class User extends Authenticatable
         
         return $totalBetting >= $depositAmount;
     }
+
+    /**
+     * Get count of subordinates who have deposited (approved deposits)
+     */
+    public function getDepositedSubordinatesCount()
+    {
+        // Get all subordinate IDs recursively
+        $allSubordinateIds = $this->getAllSubordinateIds();
+        
+        // Count users who have at least one approved deposit
+        return \App\Models\DepositRequest::whereIn('user_id', $allSubordinateIds)
+            ->where('status', 'approved')
+            ->distinct('user_id')
+            ->count('user_id');
+    }
+
+    /**
+     * Get all subordinate IDs recursively
+     */
+    public function getAllSubordinateIds()
+    {
+        return $this->_getAllSubordinateIdsRecursive($this->id);
+    }
+    
+    /**
+     * Helper method for recursive subordinate ID collection
+     */
+    private function _getAllSubordinateIdsRecursive($userId)
+    {
+        $ids = [];
+        $directSubordinates = User::where('referred_by', $userId)->pluck('id')->toArray();
+        
+        foreach ($directSubordinates as $subId) {
+            $ids[] = $subId;
+            $ids = array_merge($ids, $this->_getAllSubordinateIdsRecursive($subId));
+        }
+        
+        return $ids;
+    }
+
+    /**
+     * Calculate user level based on number of deposited subordinates
+     * LV2: 20 người đã nạp
+     * LV3: 30 người đã nạp
+     * LV4: 45 người đã nạp
+     * LV5: 60 người đã nạp
+     * LV6: 80 người đã nạp
+     */
+    public function getNetworkLevel()
+    {
+        $depositedCount = $this->getDepositedSubordinatesCount();
+        
+        if ($depositedCount >= 80) {
+            return 6;
+        } elseif ($depositedCount >= 60) {
+            return 5;
+        } elseif ($depositedCount >= 45) {
+            return 4;
+        } elseif ($depositedCount >= 30) {
+            return 3;
+        } elseif ($depositedCount >= 20) {
+            return 2;
+        } else {
+            return 1;
+        }
+    }
+
+    /**
+     * Get maximum commission level based on network level
+     * LV1: chỉ ăn F1
+     * LV2: ăn F1-F2
+     * LV3: ăn F1-F3
+     * ...
+     * LV6: ăn F1-F6
+     */
+    public function getMaxCommissionLevel()
+    {
+        $networkLevel = $this->getNetworkLevel();
+        return $networkLevel; // Returns 1-6, which corresponds to F1-F6
+    }
 }

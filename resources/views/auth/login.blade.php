@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Đăng nhập - Micex</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ asset('images/icons/metalogo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-gray-800 md:bg-gray-800 min-h-screen flex items-center justify-center ">
@@ -139,7 +141,7 @@
                     <!-- Login Button -->
                     <button 
                         type="submit" 
-                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition-colors"
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition-colors cursor-pointer"
                     >
                         Đăng nhập
                     </button>

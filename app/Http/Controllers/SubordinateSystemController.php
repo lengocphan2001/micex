@@ -23,8 +23,11 @@ class SubordinateSystemController extends Controller
             return redirect()->route('login');
         }
 
-        // Calculate F1, F2, F3... (downline levels)
-        $downlineStats = $this->calculateDownlineStats($user);
+        // Calculate user network level
+        $networkLevel = $user->getNetworkLevel();
+        
+        // Calculate F1, F2, F3... (downline stats) - only count users who have deposited
+        $downlineStats = $this->calculateDownlineStatsWithDeposit($user);
         
         // Get transaction volumes (tính từ khối lượng bet thực tế)
         $transactionVolumes = $this->getTransactionVolumes($user, $downlineStats);
@@ -36,8 +39,10 @@ class SubordinateSystemController extends Controller
             ->where('status', 'withdrawn')
             ->sum('commission_amount');
         
-        // Get commission by level
+        // Get commission by level (only for levels user can receive based on network level)
+        $maxCommissionLevel = $user->getMaxCommissionLevel();
         $commissionByLevel = UserCommission::where('user_id', $user->id)
+            ->whereIn('level', array_map(function($i) { return 'F' . $i; }, range(1, $maxCommissionLevel)))
             ->select('level', DB::raw('SUM(commission_amount) as total'))
             ->groupBy('level')
             ->pluck('total', 'level')
@@ -53,14 +58,27 @@ class SubordinateSystemController extends Controller
         // Get referral list with level, transaction volume, and commission
         $referralList = $this->getReferralList($user, $downlineStats);
         
-        // Calculate total traders (sum of all levels)
+        // Calculate total traders (sum of all levels) - only users who have deposited
         $totalTraders = array_sum(array_column($downlineStats, 'count'));
         
         // Get referrer info
         $referrer = $user->referrer;
+        
+        // New statistics
+        $newMembersToday = User::where('referred_by', $user->id)
+            ->whereDate('created_at', today())
+            ->count();
+        
+        $totalSystemTransactions = $transactionVolumes['total'] ?? 0;
+        
+        $totalMembers = $totalTraders;
+        
+        // Get monthly transaction volumes by level
+        $monthlyTransactionVolumes = $this->getMonthlyTransactionVolumes($user, $downlineStats);
 
         return view('subordinate-system', compact(
             'user', 
+            'networkLevel',
             'downlineStats', 
             'transactionVolumes',
             'availableCommission',
@@ -70,7 +88,11 @@ class SubordinateSystemController extends Controller
             'recentCommissions',
             'referralList',
             'totalTraders',
-            'referrer'
+            'referrer',
+            'newMembersToday',
+            'totalSystemTransactions',
+            'totalMembers',
+            'monthlyTransactionVolumes'
         ));
     }
 
@@ -242,6 +264,87 @@ class SubordinateSystemController extends Controller
         }
 
         return $stats;
+    }
+
+    /**
+     * Calculate downline statistics - only count users who have deposited
+     */
+    private function calculateDownlineStatsWithDeposit(User $user)
+    {
+        $stats = [];
+        $currentLevelUserIds = [$user->id];
+        
+        // Calculate each level (F1 to F6)
+        for ($level = 1; $level <= 6; $level++) {
+            // Get users at current level (referred by users from previous level)
+            $currentLevelUsers = User::whereIn('referred_by', $currentLevelUserIds)->get();
+            
+            // Filter to only users who have at least one approved deposit
+            $depositedUsers = $currentLevelUsers->filter(function($u) {
+                return \App\Models\DepositRequest::where('user_id', $u->id)
+                    ->where('status', 'approved')
+                    ->exists();
+            });
+            
+            $stats['F' . $level] = [
+                'count' => $depositedUsers->count(),
+                'users' => $depositedUsers
+            ];
+            
+            // Prepare for next level (use all users, not just deposited ones, for chain calculation)
+            $currentLevelUserIds = $currentLevelUsers->pluck('id')->toArray();
+            
+            // If no users at this level, break early
+            if (empty($currentLevelUserIds)) {
+                // Fill remaining levels with 0
+                for ($remaining = $level + 1; $remaining <= 6; $remaining++) {
+                    $stats['F' . $remaining] = [
+                        'count' => 0,
+                        'users' => collect()
+                    ];
+                }
+                break;
+            }
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Get monthly transaction volumes by level
+     */
+    private function getMonthlyTransactionVolumes(User $user, array $downlineStats)
+    {
+        $monthlyData = [];
+        
+        // Get last 3 months
+        for ($i = 0; $i < 3; $i++) {
+            $date = now()->subMonths($i);
+            $month = $date->format('Y-m');
+            $monthLabel = $date->format('m-Y');
+            
+            // Calculate volume for each level in this month
+            foreach ($downlineStats as $level => $stats) {
+                if ($stats['count'] > 0 && !empty($stats['users'])) {
+                    $userIds = $stats['users']->pluck('id')->toArray();
+                    
+                    $volume = Bet::whereIn('user_id', $userIds)
+                        ->whereYear('created_at', $date->year)
+                        ->whereMonth('created_at', $date->month)
+                        ->sum('amount');
+                    
+                    if ($volume > 0) {
+                        $monthlyData[] = [
+                            'month' => $monthLabel,
+                            'level' => $level,
+                            'volume' => $volume
+                        ];
+                    }
+                }
+            }
+        }
+        
+        return $monthlyData;
     }
 
     /**

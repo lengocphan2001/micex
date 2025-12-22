@@ -678,6 +678,15 @@ class ExploreController extends Controller
                 break;
             }
             
+            // Check referrer's network level to determine max commission level
+            // LV1: chỉ ăn F1, LV2: ăn F1-F2, ..., LV6: ăn F1-F6
+            $referrerMaxLevel = $referrer->getMaxCommissionLevel();
+            
+            // Only create commission if current level is within referrer's max level
+            if ($level > $referrerMaxLevel) {
+                break; // Referrer's level doesn't allow this commission level
+            }
+            
             // Find commission rate for this level (F1, F2, F3...)
             $levelKey = 'F' . $level;
             $rate = $commissionRates->firstWhere('level', $levelKey);

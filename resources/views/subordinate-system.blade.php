@@ -9,38 +9,123 @@
 @endsection
 
 @section('content')
-<div class="px-4 py-4 space-y-6">
-    <!-- User Profile/Rank Section -->
-    <div class="flex flex-col items-center">
-        <div class="flex items-start gap-2 mb-4">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<div class="px-4 space-y-2">
+    <!-- User Profile Section with Display Name -->
+    <div class="flex items-center gap-2">
+        <div class="w-10 h-10 rounded flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
             </svg>
-            <span class="text-orange-400 font-semibold text-base">{{ $user->display_name ?? $user->referral_code ?? 'C3002023' }}</span>
         </div>
-        
-        <div class="relative mb-4">
-            <img src="{{ asset('images/icons/goal.png') }}" alt="Rank Badge" class="w-20 h-20 object-contain" style="filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6)) drop-shadow(0 0 30px rgba(255, 215, 0, 0.3)) drop-shadow(0 0 45px rgba(255, 215, 0, 0.2));">
-        </div>
-        
-        <div class="bg-gray-800 rounded-full px-4 py-2 flex items-center gap-2 mb-2">
-            <span class="text-white text-sm font-medium">Cấp 1</span>
-            <button class="w-4 h-4 rounded-full bg-yellow-500 flex items-center justify-center cursor-pointer relative group" title="Thông tin về cấp độ">
-                <span class="text-white text-xs">?</span>
-                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-10 border border-gray-700">
-                    Thông tin về cấp độ
-                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                        <div class="border-4 border-transparent border-t-gray-900"></div>
-                    </div>
-                </div>
-            </button>
-        </div>
-        
-        <p class="text-white text-sm">Hệ thống của bạn</p>
+        <span class="text-orange-400 font-semibold text-base">{{ $user->display_name ?? $user->referral_code ?? 'C3002023' }}</span>
     </div>
 
+    <!-- Promotion Banner with Level -->
+    <div class="relative bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg px-4 overflow-hidden">
+        <div class="relative z-10 flex items-start">
+            <div class="flex-1" style="width: 50%; padding-top: 10px; padding-bottom: 10px;">
+                <div class="relative mb-2" style="height: 48px;">
+                    <!-- Circular Badge -->
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center relative overflow-hidden">
+                        <img src="{{ asset('images/icons/componentnetwork.png') }}" alt="" class="absolute inset-0 w-full h-full object-cover">
+                        <span class="text-orange-900 font-bold text-base relative z-10 flex items-center justify-center" style="color: #7c2d12; width: 100%; height: 100%;">{{ $networkLevel }}</span>
+                    </div>
+                    <!-- Rectangular Section -->
+                    <div class="absolute left-8.5 top-2.5 z-1 px-4 rounded-r-full border-2 border-yellow-400 bg-transparent flex items-center" style="border-left: none;">
+                        <span class="text-yellow-400 font-semibold text-lg whitespace-nowrap">Cấp {{ $networkLevel }}</span>
+                    </div>
+                </div>
+                <div class="flex flex-col">
+                    <p class="text-white text-sm font-medium">Mời bạn bè nhận quà tới</p>
+                    <p class="text-green-400 font-semibold text-lg">2,000 USDT</p>
+                </div>
+                
+                <p class="mt-2 text-white text-xs opacity-90">Thưởng tiền mặt cho mỗi lượt giới thiệu bạn bè mới !</p>
+            </div>
+            <div class="flex-shrink-0 flex items-end justify-end" style="width: 50%; min-height: 180px;">
+                <img src="{{ asset('images/network.png') }}" alt="Promotion" class="object-contain" style="width: 180px; height: 180px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Grid -->
+    <div class="mt-6 rounded-lg p-4" style="border: 0.3px solid #FFFFFF80">
+        <div class="grid grid-cols-2 gap-6">
+            <div class="text-center">
+                <p class="text-[#D9D9D980] text-xs mb-1">Thành viên mới trong ngày</p>
+                <p class="text-green-400 font-semibold text-lg">{{ number_format($newMembersToday ?? 0, 0, '.', ',') }}</p>
+            </div>
+            <div class="text-center">
+                <p class="text-[#D9D9D980] text-xs mb-1">Tổng giao dịch hệ thống</p>
+                <p class="text-blue-400 font-semibold text-lg">{{ number_format($totalSystemTransactions ?? 0, 2, '.', ',') }}$</p>
+            </div>
+            <div class="text-center">
+                <p class="text-[#D9D9D980] text-xs mb-1">Tổng hoa hồng</p>
+                <p class="text-red-400 font-semibold text-lg">{{ number_format($totalCommission ?? 0, 2, '.', ',') }}$</p>
+            </div>
+            <div class="text-center">
+                <p class="text-[#D9D9D980] text-xs mb-1">Tổng số thành viên</p>
+                <p class="text-purple-400 font-semibold text-lg">{{ number_format($totalMembers ?? 0, 0, '.', ',') }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Transaction Volume Table -->
+    <div class="mb-4">
+        <div class=" py-3 flex items-center gap-2">
+            <h3 class="text-white text-sm font-medium">KLGD Cấp Dưới</h3>
+            <button class="rounded-full flex items-center justify-center cursor-pointer relative group" style="width: 20px; height: 20px; border: 1px solid #3958F5; background: transparent;" title="Khối lượng giao dịch cấp dưới">
+                <span class="text-xs font-semibold" style="color: #3958F5;">?</span>
+            </button>
+        </div>
+        <div class="overflow-hidden" style="border-radius: 10px; border: 0.3px solid rgba(255, 255, 255, 0.5);">
+            <div class="overflow-x-auto h-full">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-white text-xs font-medium px-4 py-3 text-center">Tháng</th>
+                            <th class="text-white text-xs font-medium px-4 py-3 text-center">Cấp dưới</th>
+                            <th class="text-white text-xs font-medium px-4 py-3 text-center">Tổng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($monthlyTransactionVolumes ?? [] as $item)
+                            <tr class="border-b border-gray-700 last:border-0">
+                                <td class="text-white text-xs px-4 py-3 text-center">{{ $item['month'] }}</td>
+                                <td class="text-white text-xs px-4 py-3 text-center">{{ $item['level'] }}</td>
+                                <td class="text-white text-xs px-4 py-3 text-center font-semibold">{{ number_format($item['volume'], 2, '.', ',') }}$</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="text-gray-400 text-xs px-4 py-8 text-center">Chưa có dữ liệu</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Commission Section -->
+    <div class="bg-[#111111] rounded-lg p-4 space-y-3">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-white text-xs mb-1">Hoa hồng có thể rút</p>
+                <p class="text-green-400 font-semibold text-lg">{{ number_format($availableCommission ?? 0, 2, '.', ',') }}$</p>
+            </div>
+            <button id="withdrawCommissionBtn" class="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg transition-colors cursor-pointer whitespace-nowrap">
+                Rút hoa hồng
+            </button>
+        </div>
+        <p id="withdrawStatus" class="text-gray-400 text-xs"></p>
+    </div>
+
+
+    <h3 class="mt-4 text-white text-sm font-medium">Liên kết mời bạn bè !</h3>
     <!-- Referral Links Section -->
-    <div class="space-y-4">
+    <div class="space-y-4 rounded-lg p-4" style="border: 0.3px solid rgba(255, 255, 255, 0.5);">
+        
+        
         <!-- Registration Link -->
         <div>
             <label class="text-white text-sm mb-2 block">Link đăng ký</label>
@@ -67,78 +152,6 @@
                     <span>Sao chép</span>
                 </button>
             </div>
-        </div>
-    </div>
-
-    <!-- Summary Statistics Section -->
-    <div class="grid grid-cols-2 gap-4">
-        <!-- Left Card -->
-        <div class="bg-[#111111] rounded-lg p-4 space-y-3">
-            <div>
-                <p class="text-white text-xs mb-1 text-center">Tổng giao dịch hệ thống</p>
-                <p class="text-blue-400 font-semibold text-lg text-center">{{ number_format($transactionVolumes['total'] ?? 0, 2, '.', ',') }}$</p>
-            </div>
-
-            <hr class="w-full border-gray-700 h-1">
-            <div>
-                <p class="text-white text-xs mb-1 text-center">Tổng hoa hồng</p>
-                <p class="text-orange-400 font-semibold text-lg text-center">{{ number_format($totalCommission ?? 0, 2, '.', ',') }}$</p>
-            </div>
-        </div>
-        
-        <!-- Right Card -->
-        <div class="bg-[#111111] rounded-lg p-4 space-y-3">
-            <div>
-                <p class="text-white text-xs mb-1 text-center">Người giới thiệu</p>
-                <p class="text-white font-semibold text-lg text-center">{{ $referrer->display_name ?? $referrer->referral_code ?? '-' }}</p>
-            </div>
-            <hr class="w-full border-gray-700 h-1">
-            <div>
-                <p class="text-white text-xs mb-1 text-center">Tổng nhà giao dịch</p>
-                <p class="text-blue-400 font-semibold text-lg text-center">{{ number_format($totalTraders ?? 0, 0, '.', ',') }}</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Withdraw Commission Section -->
-    <div class="bg-[#111111] rounded-lg p-4 space-y-3">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-white text-xs mb-1">Hoa hồng có thể rút</p>
-                <p class="text-green-400 font-semibold text-lg">{{ number_format($availableCommission ?? 0, 2, '.', ',') }}$</p>
-            </div>
-            <button id="withdrawCommissionBtn" class="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg transition-colors cursor-pointer whitespace-nowrap">
-                Rút hoa hồng
-            </button>
-        </div>
-        <p id="withdrawStatus" class="text-gray-400 text-xs"></p>
-    </div>
-
-    <!-- Referral List/Table -->
-    <div class="bg-[#111111] rounded-lg overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="bg-gray-900 border-b border-gray-700">
-                        <th class="text-white text-xs font-medium px-4 py-3 text-left">Cấp độ</th>
-                        <th class="text-white text-xs font-medium px-4 py-3 text-right">KLGD</th>
-                        <th class="text-white text-xs font-medium px-4 py-3 text-right">HH Nhận</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($referralList ?? [] as $item)
-                    <tr class="border-b border-gray-700 last:border-0">
-                        <td class="text-white text-xs px-4 py-3">{{ $item['level'] }}</td>
-                        <td class="text-white text-xs px-4 py-3 text-right">{{ number_format($item['transaction_volume'] ?? 0, 2, '.', ',') }}$</td>
-                        <td class="text-green-400 text-xs px-4 py-3 text-right font-semibold">{{ number_format($item['commission'] ?? 0, 2, '.', ',') }}$</td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="3" class="text-gray-400 text-xs px-4 py-8 text-center">Chưa có người giới thiệu</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
         </div>
     </div>
 </div>
