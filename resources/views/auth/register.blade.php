@@ -201,17 +201,17 @@
                     </div>
 
                     <!-- Terms and Conditions -->
-                    <div class="flex items-center">
+                    <div class="flex items-start gap-3">
                         <input 
                             type="checkbox" 
                             id="terms" 
                             name="terms" 
                             value="1"
-                            class="custom-checkbox"
+                            class="custom-checkbox mt-0.5 flex-shrink-0"
                             {{ old('terms', true) ? 'checked' : '' }}
                             required
                         >
-                        <label for="terms" class="ml-3 text-white text-sm leading-relaxed cursor-pointer">
+                        <label for="terms" class="text-white text-sm leading-relaxed cursor-pointer flex-1">
                             Khi đăng ký, bạn đồng ý với 
                             <a href="#" class="text-blue-500 underline hover:text-blue-400">Điều khoản bảo mật</a> 
                             và 

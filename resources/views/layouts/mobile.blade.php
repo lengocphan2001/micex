@@ -90,6 +90,30 @@
             transform: translateY(0);
             opacity: 1;
         }
+
+        /* Jackpot highlight */
+        #resultPopup.jackpot .popup-content {
+            border: 2px solid #facc15;
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.5), 0 0 40px rgba(250, 204, 21, 0.35);
+            animation: jackpotPulse 1.2s ease-in-out infinite;
+        }
+        #resultPopup.jackpot #resultTitle {
+            color: #facc15;
+        }
+        #resultPopup.jackpot #resultAmount {
+            color: #facc15;
+        }
+        #jackpotBadge {
+            display: none;
+        }
+        #resultPopup.jackpot #jackpotBadge {
+            display: inline-flex;
+        }
+        @keyframes jackpotPulse {
+            0% { box-shadow: 0 0 12px rgba(250, 204, 21, 0.3), 0 0 24px rgba(250, 204, 21, 0.2); }
+            50% { box-shadow: 0 0 22px rgba(250, 204, 21, 0.6), 0 0 44px rgba(250, 204, 21, 0.35); }
+            100% { box-shadow: 0 0 12px rgba(250, 204, 21, 0.3), 0 0 24px rgba(250, 204, 21, 0.2); }
+        }
     </style>
 </head>
 <body class="bg-[#181A20] md:bg-gray-800 h-screen w-screen overflow-hidden flex items-center justify-center">
@@ -117,7 +141,10 @@
         
         <!-- Popup Content -->
         <div class="popup-content relative bg-gradient-to-b from-[#2d1b69] to-[#1a0f3d] rounded-t-3xl shadow-2xl mb-0">
-            <!-- Top Right Payout Rate Badge -->
+            <!-- Top Badges -->
+            <div class="absolute top-4 left-4">
+                <span id="jackpotBadge" class="hidden bg-yellow-400 text-gray-900 text-xs font-bold rounded-lg px-3 py-1 uppercase tracking-wide">Jackpot</span>
+            </div>
             <div class="absolute top-4 right-4 bg-blue-500/80 rounded-lg px-3 py-1">
                 <span id="resultPayoutRate" class="text-white text-sm font-semibold">1.95x</span>
             </div>
@@ -145,8 +172,45 @@
     
     <!-- Global Scripts for Result Popup -->
     <script>
+        // Cache gem types to avoid multiple fetches
+        let gemTypesCache = null;
+
+        // Helper: get payout rate for a gem type (supports jackpot)
+        async function getPayoutRateForType(gemType, fallbackRate) {
+            const defaultJackpotRates = { thachanhtim: 10, ngusac: 20, cuoc: 50 };
+
+            // If jackpot and default available
+            if (['thachanhtim', 'ngusac', 'cuoc'].includes(gemType) && defaultJackpotRates[gemType]) {
+                fallbackRate = defaultJackpotRates[gemType];
+            }
+
+            // Try cache
+            if (gemTypesCache && Array.isArray(gemTypesCache)) {
+                const found = gemTypesCache.find(g => g.type === gemType);
+                if (found && found.payout_rate) return parseFloat(found.payout_rate);
+            }
+
+            // Fetch once
+            try {
+                const res = await fetch('/api/explore/gem-types');
+                if (res.ok) {
+                    const data = await res.json();
+                    const list = Array.isArray(data) ? data : data.gem_types;
+                    if (Array.isArray(list)) {
+                        gemTypesCache = list;
+                        const found = list.find(g => g.type === gemType);
+                        if (found && found.payout_rate) return parseFloat(found.payout_rate);
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
+
+            return fallbackRate;
+        }
+
         // Global function to show result popup from any page
-        function showGlobalResultPopup(result, amount, payoutRate = null) {
+        function showGlobalResultPopup(result, amount, payoutRate = null, options = {}) {
             if (result !== 'won') return; // Chỉ hiển thị khi thắng
             
             const popup = document.getElementById('resultPopup');
@@ -154,19 +218,32 @@
             const amountEl = document.getElementById('resultAmount');
             const messageEl = document.getElementById('resultMessage');
             const payoutRateEl = document.getElementById('resultPayoutRate');
+            const jackpotBadgeEl = document.getElementById('jackpotBadge');
             
             if (!popup) return;
             
+            const isJackpot = options.isJackpot || ['thachanhtim', 'ngusac', 'cuoc'].includes(options.gemType);
+
             // Sanitize numbers to tránh NaN khi payoutRate/amount undefined
             const safePayoutRate = payoutRate !== null && !isNaN(payoutRate) ? Number(payoutRate) : null;
             const safeAmount = amount !== null && !isNaN(amount) ? Number(amount) : 0;
 
             // Update content
-            if (titleEl) titleEl.textContent = 'Chúc mừng bạn !';
+            if (titleEl) titleEl.textContent = isJackpot ? 'Nổ hũ thành công!' : 'Chúc mừng bạn !';
             if (amountEl) amountEl.textContent = '+' + safeAmount.toFixed(2) + ' USDT';
-            if (messageEl) messageEl.textContent = 'Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.';
+            if (messageEl) messageEl.textContent = isJackpot 
+                ? 'Bạn vừa trúng JACKPOT! Phần thưởng đã được chuyển vào ví.'
+                : 'Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.';
             if (payoutRateEl && safePayoutRate !== null) {
                 payoutRateEl.textContent = safePayoutRate.toFixed(2) + 'x';
+            }
+
+            // Jackpot highlight
+            if (popup) {
+                popup.classList.toggle('jackpot', isJackpot);
+            }
+            if (jackpotBadgeEl) {
+                jackpotBadgeEl.classList.toggle('hidden', !isJackpot);
             }
             
             // Remove hidden class first
@@ -269,50 +346,48 @@
                 const isWin = isJackpot || (clientBetInfo.gem_type === finalResult);
                 
                 if (isWin) {
-                    // Get payout rate
-                    let payoutRate = clientBetInfo.payout_rate;
-                    if (isJackpot) {
-                        // Fetch gem types to get jackpot payout rate
-                        try {
-                            const gemTypesResponse = await fetch('/api/explore/gem-types');
-                            if (gemTypesResponse.ok) {
-                                const gemTypesData = await gemTypesResponse.json();
-                                const gemList = Array.isArray(gemTypesData) ? gemTypesData : gemTypesData.gem_types;
-                                if (Array.isArray(gemList)) {
-                                    const jackpotGem = gemList.find(g => g.type === finalResult);
-                                    if (jackpotGem && jackpotGem.payout_rate) {
-                                        payoutRate = parseFloat(jackpotGem.payout_rate);
-                                    }
-                                }
+                    // Ưu tiên lấy payout_rate & payout_amount từ server để khớp admin set rate
+                    let serverPayoutRate = null;
+                    let serverPayoutAmount = null;
+
+                    try {
+                        const betRes = await fetch('/api/explore/my-bet');
+                        if (betRes.ok) {
+                            const betData = await betRes.json();
+                            if (betData && betData.bet && betData.bet.status === 'won') {
+                                serverPayoutRate = betData.bet.payout_rate ? Number(betData.bet.payout_rate) : null;
+                                serverPayoutAmount = betData.bet.payout_amount ? Number(betData.bet.payout_amount) : null;
                             }
-                        } catch (e) {
-                            // fallback below
                         }
-                        // Fallback nếu vẫn chưa có
-                        if (!payoutRate || isNaN(payoutRate)) {
-                            const defaultJackpotRates = { thachanhtim: 10, ngusac: 20, cuoc: 50 };
-                            payoutRate = defaultJackpotRates[finalResult] || clientBetInfo.payout_rate || 1.95;
-                        }
+                    } catch (e) {
+                        // ignore, fallback below
+                    }
+
+                    // Get payout rate (supports jackpot) fallback khi server chưa trả về
+                    let payoutRate = serverPayoutRate !== null ? serverPayoutRate : clientBetInfo.payout_rate;
+                    if (isJackpot) {
+                        payoutRate = serverPayoutRate !== null
+                            ? serverPayoutRate
+                            : await getPayoutRateForType(finalResult, payoutRate || 1.95);
                     }
                     
                     const safePayoutRate = payoutRate && !isNaN(payoutRate) ? Number(payoutRate) : 1.95;
                     const safeAmountBet = clientBetInfo.amount && !isNaN(clientBetInfo.amount) ? Number(clientBetInfo.amount) : 0;
-                    const payoutAmount = safeAmountBet * safePayoutRate;
+                    const payoutAmount = serverPayoutAmount !== null && !isNaN(serverPayoutAmount)
+                        ? Number(serverPayoutAmount)
+                        : safeAmountBet * safePayoutRate;
                     
-                    // Show popup
-                    showGlobalResultPopup('won', payoutAmount, safePayoutRate);
+                    // Show popup (pass gem type for jackpot highlight)
+                    showGlobalResultPopup('won', payoutAmount, safePayoutRate, { gemType: finalResult, isJackpot });
                     
                     // Mark as shown
                     localStorage.setItem('resultPopupShownForRound', roundNumber.toString());
                     
-                    // Refresh balance after winning
-                    // Try to call loadMyBet from explore if available, otherwise fetch balance directly
+                    // Refresh balance/history after winning
                     setTimeout(() => {
                         if (typeof loadMyBet === 'function') {
-                            // Call loadMyBet from explore page
                             loadMyBet(true);
                         } else {
-                            // Fallback: fetch balance directly
                             fetch('/api/explore/my-bet')
                                 .then(response => response.json())
                                 .then(data => {
@@ -323,11 +398,9 @@
                                         }
                                     }
                                 })
-                                .catch(error => {
-                                    // Silent fail
-                                });
+                                .catch(() => {});
                         }
-                    }, 1500);
+                    }, 1200);
                     
                     // Clear client bet info after showing
                     setTimeout(() => {

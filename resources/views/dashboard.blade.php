@@ -12,8 +12,8 @@
         position: relative;
         width: 100%;
         overflow: hidden;
-        height: 200px;
         border-radius: 10px;
+        aspect-ratio: 16 / 9; /* giữ tỷ lệ cho cả mobile và desktop */
     }
     .carousel-item {
         display: none;
@@ -24,7 +24,7 @@
         top: 0;
         left: 0;
         width: 100%;
-        height: 200px;
+        height: 100%;
     }
     .carousel-item.active {
         display: block;
@@ -32,7 +32,7 @@
         transform: translateX(0);
         position: relative;
         width: 100%;
-        height: 200px;
+        height: 100%;
     }
     .carousel-item.fade-out {
         opacity: 0;
@@ -326,7 +326,7 @@
                         <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
                             @if($slider->image)
                                 <div class="h-full w-full overflow-hidden" style="border-radius: 10px;">
-                                    <img src="{{ asset('storage/' . $slider->image) }}" alt="Slider" class="w-full h-full object-cover" style="border-radius: 10px; width: 100%; height: 200px;">
+                                    <img src="{{ asset('storage/' . $slider->image) }}" alt="Slider" class="w-full h-full object-cover" style="border-radius: 10px; width: 100%; height: 100%; aspect-ratio: 16 / 9;">
                                 </div>
                             @endif
                         </div>
