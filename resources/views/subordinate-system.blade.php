@@ -26,13 +26,13 @@
             <div class="flex flex-col gap-2" style="padding-top: 10px; padding-bottom: 10px;">
                 <div class="relative mb-2" style="height: 48px;">
                     <!-- Circular Badge -->
-                    <div class="w-12 h-12 rounded-full flex items-center justify-center relative overflow-hidden">
-                        <img src="{{ asset('images/icons/componentnetwork.png') }}" alt="" class="absolute inset-0 w-full h-full object-cover">
-                        <span class="text-orange-900 font-bold text-3xl relative z-10 flex items-center justify-center mr-0.5" style="color: #7c2d12; width: 100%; height: 100%; line-height: 1; display: flex; align-items: center; justify-content: center;">{{ $networkLevel }}</span>
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center relative overflow-hidden" style="width: 48px; height: 48px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+                        <img src="{{ asset('images/icons/newcomponentnetwork.png') }}" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;">
+                        <span class="text-orange-900 font-bold text-3xl relative z-10 flex items-center justify-center mr-0.5" style="color: #7c2d12; width: 100%; height: 100%; line-height: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 10;">{{ $networkLevel }}</span>
                     </div>
                     <!-- Rectangular Section -->
-                    <div class="absolute left-9 top-1 py-2 z-1 px-8 rounded-r-full border-2 border-yellow-400 bg-transparent flex items-center" style="border-left: none;">
-                        <span class="text-yellow-400 font-semibold text-sm whitespace-nowrap">Cấp {{ $networkLevel }}</span>
+                    <div class="absolute py-2 px-8 rounded-r-full border-2 border-yellow-400 bg-transparent flex items-center" style="position: absolute; left: 36px; top: 4px; z-index: 1; padding: 8px 32px; border-radius: 0 9999px 9999px 0; border: 2px solid #facc15; border-left: none; background: transparent; display: flex; align-items: center;">
+                        <span class="text-yellow-400 font-semibold text-sm whitespace-nowrap" style="color: #facc15; font-weight: 600; font-size: 14px; white-space: nowrap;">Cấp {{ $networkLevel }}</span>
                     </div>
                 </div>
                 <p class="text-[#FFFFFF80] text-[10px] font-medium">Micex invite member</p>
