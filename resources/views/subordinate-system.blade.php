@@ -27,11 +27,11 @@
                 <div class="relative mb-2" style="height: 48px;">
                     <!-- Circular Badge -->
                     <div class="w-12 h-12 rounded-full flex items-center justify-center relative overflow-hidden">
-                        <img src="{{ asset('images/icons/componentnetwork.png') }}" alt="" class="absolute inset-0 w-full h-full object-cover">
-                        <span class="text-orange-900 font-bold text-3xl relative z-10 flex items-center justify-center mt-1 mr-0.5" style="color: #7c2d12; width: 100%; height: 100%; line-height: 1; display: flex; align-items: center; justify-content: center;">{{ $networkLevel }}</span>
+                        <img src="{{ asset('images/icons/componentnetwork.png') }}" alt="" class="absolute inset-0 w-full h-full object-fit">
+                        <span class="text-orange-900 font-bold text-3xl relative z-10 flex items-center justify-center mr-0.5" style="color: #7c2d12; width: 100%; height: 100%; line-height: 1; display: flex; align-items: center; justify-content: center;">{{ $networkLevel }}</span>
                     </div>
                     <!-- Rectangular Section -->
-                    <div class="absolute left-8.5 top-2.5 py-1 z-1 px-8 rounded-r-full border-2 border-yellow-400 bg-transparent flex items-center" style="border-left: none;">
+                    <div class="absolute left-9 top-1 py-2 z-1 px-8 rounded-r-full border-2 border-yellow-400 bg-transparent flex items-center" style="border-left: none;">
                         <span class="text-yellow-400 font-semibold text-sm whitespace-nowrap">Cấp {{ $networkLevel }}</span>
                     </div>
                 </div>
