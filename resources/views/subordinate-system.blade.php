@@ -21,29 +21,30 @@
     </div>
 
     <!-- Promotion Banner with Level -->
-    <div class="relative bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg px-4 overflow-hidden">
+    <div class="relative rounded-lg px-4 overflow-hidden" style="background: linear-gradient(245.48deg, #F6C938 -22.29%, #2A2C30 50.86%);">
         <div class="relative z-10 flex items-start">
-            <div class="flex-1" style="width: 50%; padding-top: 10px; padding-bottom: 10px;">
+            <div class="flex flex-col gap-2" style="padding-top: 10px; padding-bottom: 10px;">
                 <div class="relative mb-2" style="height: 48px;">
                     <!-- Circular Badge -->
                     <div class="w-12 h-12 rounded-full flex items-center justify-center relative overflow-hidden">
                         <img src="{{ asset('images/icons/componentnetwork.png') }}" alt="" class="absolute inset-0 w-full h-full object-cover">
-                        <span class="text-orange-900 font-bold text-base relative z-10 flex items-center justify-center" style="color: #7c2d12; width: 100%; height: 100%;">{{ $networkLevel }}</span>
+                        <span class="text-orange-900 font-bold text-3xl relative z-10 flex items-center justify-center mt-1 mr-0.5" style="color: #7c2d12; width: 100%; height: 100%; line-height: 1; display: flex; align-items: center; justify-content: center;">{{ $networkLevel }}</span>
                     </div>
                     <!-- Rectangular Section -->
-                    <div class="absolute left-8.5 top-2.5 z-1 px-4 rounded-r-full border-2 border-yellow-400 bg-transparent flex items-center" style="border-left: none;">
-                        <span class="text-yellow-400 font-semibold text-lg whitespace-nowrap">Cấp {{ $networkLevel }}</span>
+                    <div class="absolute left-8.5 top-2.5 py-1 z-1 px-8 rounded-r-full border-2 border-yellow-400 bg-transparent flex items-center" style="border-left: none;">
+                        <span class="text-yellow-400 font-semibold text-sm whitespace-nowrap">Cấp {{ $networkLevel }}</span>
                     </div>
                 </div>
+                <p class="text-[#FFFFFF80] text-[10px] font-medium">Micex invite member</p>
                 <div class="flex flex-col">
                     <p class="text-white text-sm font-medium">Mời bạn bè nhận quà tới</p>
-                    <p class="text-green-400 font-semibold text-lg">2,000 USDT</p>
+                    <p class="text-[#FF9D00] font-semibold text-lg" style="line-height: normal;">2,000 USDT</p>
                 </div>
                 
-                <p class="mt-2 text-white text-xs opacity-90">Thưởng tiền mặt cho mỗi lượt giới thiệu bạn bè mới !</p>
+                <p class="text-white text-[10px] opacity-90">Thưởng tiền mặt cho mỗi lượt giới thiệu bạn bè mới !</p>
             </div>
-            <div class="flex-shrink-0 flex items-end justify-end" style="width: 50%; min-height: 180px;">
-                <img src="{{ asset('images/network.png') }}" alt="Promotion" class="object-contain" style="width: 180px; height: 180px;">
+            <div class="flex-shrink-0 flex items-center justify-center self-center" style="">
+                <img src="{{ asset('images/networklevel.png') }}" alt="Promotion" class="object-contain" style="width: 140px; height: 140px;">
             </div>
         </div>
     </div>
