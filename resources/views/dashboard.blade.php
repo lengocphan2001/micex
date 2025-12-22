@@ -13,6 +13,7 @@
         width: 100%;
         overflow: hidden;
         height: 200px;
+        border-radius: 10px;
     }
     .carousel-item {
         display: none;
@@ -324,8 +325,8 @@
                     @foreach($sliders as $index => $slider)
                         <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
                             @if($slider->image)
-                                <div class="rounded-xl overflow-hidden h-full">
-                                    <img src="{{ asset('storage/' . $slider->image) }}" alt="Slider" class="w-full h-full object-cover" style="height: 200px; width: 100%;">
+                                <div class="h-full w-full flex items-center justify-center overflow-hidden" style="border-radius: 10px;">
+                                    <img src="{{ asset('storage/' . $slider->image) }}" alt="Slider" class="w-full h-full object-contain" style="border-radius: 10px; max-height: 200px; max-width: 100%;">
                                 </div>
                             @endif
                         </div>
