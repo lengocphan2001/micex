@@ -157,12 +157,16 @@
             
             if (!popup) return;
             
+            // Sanitize numbers to tránh NaN khi payoutRate/amount undefined
+            const safePayoutRate = payoutRate !== null && !isNaN(payoutRate) ? Number(payoutRate) : null;
+            const safeAmount = amount !== null && !isNaN(amount) ? Number(amount) : 0;
+
             // Update content
             if (titleEl) titleEl.textContent = 'Chúc mừng bạn !';
-            if (amountEl) amountEl.textContent = '+' + parseFloat(amount).toFixed(2) + ' USDT';
+            if (amountEl) amountEl.textContent = '+' + safeAmount.toFixed(2) + ' USDT';
             if (messageEl) messageEl.textContent = 'Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.';
-            if (payoutRateEl && payoutRate) {
-                payoutRateEl.textContent = parseFloat(payoutRate).toFixed(2) + 'x';
+            if (payoutRateEl && safePayoutRate !== null) {
+                payoutRateEl.textContent = safePayoutRate.toFixed(2) + 'x';
             }
             
             // Remove hidden class first
@@ -269,20 +273,34 @@
                     let payoutRate = clientBetInfo.payout_rate;
                     if (isJackpot) {
                         // Fetch gem types to get jackpot payout rate
-                        const gemTypesResponse = await fetch('/api/explore/gem-types');
-                        if (gemTypesResponse.ok) {
-                            const gemTypesData = await gemTypesResponse.json();
-                            const jackpotGem = gemTypesData.gem_types.find(g => g.type === finalResult);
-                            if (jackpotGem) {
-                                payoutRate = parseFloat(jackpotGem.payout_rate);
+                        try {
+                            const gemTypesResponse = await fetch('/api/explore/gem-types');
+                            if (gemTypesResponse.ok) {
+                                const gemTypesData = await gemTypesResponse.json();
+                                const gemList = Array.isArray(gemTypesData) ? gemTypesData : gemTypesData.gem_types;
+                                if (Array.isArray(gemList)) {
+                                    const jackpotGem = gemList.find(g => g.type === finalResult);
+                                    if (jackpotGem && jackpotGem.payout_rate) {
+                                        payoutRate = parseFloat(jackpotGem.payout_rate);
+                                    }
+                                }
                             }
+                        } catch (e) {
+                            // fallback below
+                        }
+                        // Fallback nếu vẫn chưa có
+                        if (!payoutRate || isNaN(payoutRate)) {
+                            const defaultJackpotRates = { thachanhtim: 10, ngusac: 20, cuoc: 50 };
+                            payoutRate = defaultJackpotRates[finalResult] || clientBetInfo.payout_rate || 1.95;
                         }
                     }
                     
-                    const payoutAmount = clientBetInfo.amount * payoutRate;
+                    const safePayoutRate = payoutRate && !isNaN(payoutRate) ? Number(payoutRate) : 1.95;
+                    const safeAmountBet = clientBetInfo.amount && !isNaN(clientBetInfo.amount) ? Number(clientBetInfo.amount) : 0;
+                    const payoutAmount = safeAmountBet * safePayoutRate;
                     
                     // Show popup
-                    showGlobalResultPopup('won', payoutAmount, payoutRate);
+                    showGlobalResultPopup('won', payoutAmount, safePayoutRate);
                     
                     // Mark as shown
                     localStorage.setItem('resultPopupShownForRound', roundNumber.toString());
