@@ -14,6 +14,7 @@ use App\Models\CommissionRate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
@@ -22,37 +23,78 @@ class AdminController extends Controller
      */
     public function dashboard()
     {
-        // Calculate statistics - using try-catch in case tables don't exist yet
+        // Calculate statistics from real data
         try {
-            // Optimize: Get all transaction sums in one query using groupBy
-            $transactionSums = DB::table('transactions')
-                ->select('type', DB::raw('SUM(amount) as total'))
-                ->whereIn('type', ['profit', 'deposit', 'withdraw', 'commission', 'promotion', 'first_deposit_bonus', 'manual_bonus'])
-                ->groupBy('type')
-                ->pluck('total', 'type')
-                ->toArray();
+            // Total deposit from approved deposit requests
+            $totalDeposit = DepositRequest::where('status', 'approved')
+                ->sum('gem_amount') ?? 0;
             
-            // Get user balance sum in separate query (different table)
-            $totalOnExchange = DB::table('users')->sum('balance') ?? 0;
+            // Total withdraw from approved withdraw requests
+            $totalWithdraw = \App\Models\WithdrawRequest::where('status', 'approved')
+                ->sum('gem_amount') ?? 0;
             
-            // Extract values with defaults
-            $systemProfit = $transactionSums['profit'] ?? 0;
-            $totalDeposit = $transactionSums['deposit'] ?? 0;
-            $totalWithdraw = $transactionSums['withdraw'] ?? 0;
-            $commissionPaid = $transactionSums['commission'] ?? 0;
-            $promotionBonus = $transactionSums['promotion'] ?? 0;
-            $firstDepositBonus = $transactionSums['first_deposit_bonus'] ?? 0;
-            $manualBonus = $transactionSums['manual_bonus'] ?? 0;
+            // Get user balance sum
+            $totalOnExchange = User::sum('balance') ?? 0;
+            
+            // Calculate system profit: total deposit - total withdraw - total balance on exchange
+            $systemProfit = $totalDeposit - $totalWithdraw - $totalOnExchange;
+            
+            // Commission paid from user_commissions table
+            $commissionPaid = \App\Models\UserCommission::where('status', 'withdrawn')
+                ->sum('commission_amount') ?? 0;
+            
+            // Promotion bonus: Calculate from deposit requests that have promotion bonus
+            // Check each approved deposit to see if it was approved during an active promotion
+            $promotionBonus = 0;
+            $approvedDeposits = DepositRequest::where('status', 'approved')
+                ->whereNotNull('approved_at')
+                ->get();
+            
+            foreach ($approvedDeposits as $deposit) {
+                // Check if there was an active promotion at the time of approval
+                $promotion = Promotion::getActivePromotion($deposit->approved_at);
+                if ($promotion) {
+                    $baseAmount = $deposit->gem_amount ?? ($deposit->amount / SystemSetting::getVndToGemRate());
+                    $promotionBonus += $baseAmount * ($promotion->deposit_percentage / 100);
+                }
+            }
+            
+            // First deposit bonus: Calculate from first approved deposit per user
+            $firstDepositBonus = 0;
+            $usersWithFirstDeposit = DB::table('deposit_requests')
+                ->select('user_id', DB::raw('MIN(approved_at) as first_approved_at'))
+                ->where('status', 'approved')
+                ->groupBy('user_id')
+                ->get();
+            
+            foreach ($usersWithFirstDeposit as $userDeposit) {
+                $firstDeposit = DepositRequest::where('user_id', $userDeposit->user_id)
+                    ->where('status', 'approved')
+                    ->where('approved_at', $userDeposit->first_approved_at)
+                    ->first();
+                
+                if ($firstDeposit) {
+                    // Check if there's a first deposit bonus setting
+                    $firstDepositBonusRate = SystemSetting::getValue('first_deposit_bonus_rate', '0');
+                    if ($firstDepositBonusRate > 0) {
+                        $baseAmount = $firstDeposit->gem_amount ?? ($firstDeposit->amount / SystemSetting::getVndToGemRate());
+                        $firstDepositBonus += $baseAmount * ($firstDepositBonusRate / 100);
+                    }
+                }
+            }
+            
+            // Manual bonus: This would need to be tracked separately, for now set to 0
+            $manualBonus = 0;
         } catch (\Exception $e) {
             // If tables don't exist, set default values
-            $systemProfit = 32992.11;
-            $totalDeposit = 32992.11;
-            $totalWithdraw = 32992.11;
-            $totalOnExchange = 32992.11;
-            $commissionPaid = 12992.11;
-            $promotionBonus = 12992.11;
-            $firstDepositBonus = 12992.11;
-            $manualBonus = 12992.11;
+            $systemProfit = 0;
+            $totalDeposit = 0;
+            $totalWithdraw = 0;
+            $totalOnExchange = 0;
+            $commissionPaid = 0;
+            $promotionBonus = 0;
+            $firstDepositBonus = 0;
+            $manualBonus = 0;
         }
 
         // Get active promotion
@@ -402,6 +444,198 @@ class AdminController extends Controller
     {
         $users = User::where('role', 'user')->paginate(20);
         return view('admin.member-list', compact('users'));
+    }
+
+    /**
+     * View user detail with subordinates
+     */
+    public function viewUserDetail($id)
+    {
+        $user = User::with(['referrals', 'referrer'])->findOrFail($id);
+        
+        // Get total deposit and withdraw for this user
+        $userTotalDeposit = DepositRequest::where('user_id', $id)
+            ->where('status', 'approved')
+            ->sum('gem_amount') ?? 0;
+        
+        $userTotalWithdraw = \App\Models\WithdrawRequest::where('user_id', $id)
+            ->where('status', 'approved')
+            ->sum('gem_amount') ?? 0;
+        
+        // Get all subordinate IDs (recursive)
+        $subordinateIds = $this->getAllSubordinateIds($id);
+        
+        // Get total deposit and withdraw for all subordinates
+        $subordinatesTotalDeposit = DepositRequest::whereIn('user_id', $subordinateIds)
+            ->where('status', 'approved')
+            ->sum('gem_amount') ?? 0;
+        
+        $subordinatesTotalWithdraw = \App\Models\WithdrawRequest::whereIn('user_id', $subordinateIds)
+            ->where('status', 'approved')
+            ->sum('gem_amount') ?? 0;
+        
+        // Get subordinates with pagination
+        $subordinates = User::where('referred_by', $id)
+            ->withCount(['referrals'])
+            ->paginate(20);
+        
+        return view('admin.user-detail', compact(
+            'user',
+            'userTotalDeposit',
+            'userTotalWithdraw',
+            'subordinatesTotalDeposit',
+            'subordinatesTotalWithdraw',
+            'subordinates'
+        ));
+    }
+
+    /**
+     * Get all subordinate IDs recursively
+     */
+    private function getAllSubordinateIds($userId)
+    {
+        $ids = [];
+        $directSubordinates = User::where('referred_by', $userId)->pluck('id')->toArray();
+        
+        foreach ($directSubordinates as $subId) {
+            $ids[] = $subId;
+            $ids = array_merge($ids, $this->getAllSubordinateIds($subId));
+        }
+        
+        return $ids;
+    }
+
+    /**
+     * View user network tree
+     */
+    public function viewUserNetwork($id)
+    {
+        $user = User::findOrFail($id);
+        
+        // Build network tree recursively
+        $networkTree = $this->buildNetworkTree($id);
+        
+        // Calculate statistics for network
+        $networkStats = $this->calculateNetworkStats($id);
+        
+        return view('admin.user-network', compact('user', 'networkTree', 'networkStats'));
+    }
+
+    /**
+     * Build network tree structure recursively
+     */
+    private function buildNetworkTree($userId, $level = 0, $maxLevel = 5)
+    {
+        if ($level > $maxLevel) {
+            return null;
+        }
+        
+        $user = User::find($userId);
+        if (!$user) {
+            return null;
+        }
+        
+        // Get user statistics
+        $totalDeposit = DepositRequest::where('user_id', $userId)
+            ->where('status', 'approved')
+            ->sum('gem_amount') ?? 0;
+        
+        $totalWithdraw = \App\Models\WithdrawRequest::where('user_id', $userId)
+            ->where('status', 'approved')
+            ->sum('gem_amount') ?? 0;
+        
+        $subordinatesCount = User::where('referred_by', $userId)->count();
+        
+        $node = [
+            'user' => $user,
+            'level' => $level,
+            'total_deposit' => $totalDeposit,
+            'total_withdraw' => $totalWithdraw,
+            'subordinates_count' => $subordinatesCount,
+            'children' => []
+        ];
+        
+        // Get direct subordinates
+        $directSubordinates = User::where('referred_by', $userId)->get();
+        
+        foreach ($directSubordinates as $subordinate) {
+            $childNode = $this->buildNetworkTree($subordinate->id, $level + 1, $maxLevel);
+            if ($childNode) {
+                $node['children'][] = $childNode;
+            }
+        }
+        
+        return $node;
+    }
+
+    /**
+     * Calculate network statistics
+     */
+    private function calculateNetworkStats($userId)
+    {
+        $allSubordinateIds = $this->getAllSubordinateIds($userId);
+        
+        // Count by level
+        $levelCounts = [];
+        $currentLevelUserIds = [$userId];
+        
+        for ($level = 1; $level <= 6; $level++) {
+            $currentLevelUsers = User::whereIn('referred_by', $currentLevelUserIds)->get();
+            $levelCounts['F' . $level] = $currentLevelUsers->count();
+            $currentLevelUserIds = $currentLevelUsers->pluck('id')->toArray();
+            
+            if (empty($currentLevelUserIds)) {
+                break;
+            }
+        }
+        
+        // Total deposit and withdraw
+        $totalDeposit = DepositRequest::whereIn('user_id', $allSubordinateIds)
+            ->where('status', 'approved')
+            ->sum('gem_amount') ?? 0;
+        
+        $totalWithdraw = \App\Models\WithdrawRequest::whereIn('user_id', $allSubordinateIds)
+            ->where('status', 'approved')
+            ->sum('gem_amount') ?? 0;
+        
+        return [
+            'level_counts' => $levelCounts,
+            'total_subordinates' => count($allSubordinateIds),
+            'total_deposit' => $totalDeposit,
+            'total_withdraw' => $totalWithdraw,
+        ];
+    }
+
+    /**
+     * Update user login password
+     */
+    public function updateUserPassword(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->password = Hash::make($validated['password']);
+        $user->save();
+
+        return back()->with('success', 'Đã cập nhật mật khẩu đăng nhập thành công.');
+    }
+
+    /**
+     * Update user fund password
+     */
+    public function updateUserFundPassword(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'fund_password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->fund_password = Hash::make($validated['fund_password']);
+        $user->save();
+
+        return back()->with('success', 'Đã cập nhật mật khẩu quỹ thành công.');
     }
 
     /**

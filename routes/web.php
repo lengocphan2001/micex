@@ -310,6 +310,10 @@ Route::prefix('admin')->name('admin.')->middleware('set.admin.guard')->group(fun
         Route::get('/api/intervene-results/realtime', [AdminController::class, 'getRealtimeRoundData'])->name('intervene-results.realtime');
         Route::get('/api/intervene-results/bet-amounts', [AdminController::class, 'getBetAmounts'])->name('intervene-results.bet-amounts');
         Route::get('/member-list', [AdminController::class, 'memberList'])->name('member-list');
+        Route::get('/member/{id}', [AdminController::class, 'viewUserDetail'])->name('member.detail');
+        Route::get('/member/{id}/network', [AdminController::class, 'viewUserNetwork'])->name('member.network');
+        Route::post('/member/{id}/update-password', [AdminController::class, 'updateUserPassword'])->name('member.update-password');
+        Route::post('/member/{id}/update-fund-password', [AdminController::class, 'updateUserFundPassword'])->name('member.update-fund-password');
         Route::get('/deposit', [AdminController::class, 'deposit'])->name('deposit');
         Route::post('/deposit/{id}/approve', [AdminController::class, 'approveDeposit'])->name('deposit.approve');
         Route::post('/deposit/{id}/reject', [AdminController::class, 'rejectDeposit'])->name('deposit.reject');

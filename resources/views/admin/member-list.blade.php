@@ -29,8 +29,7 @@
                             <td>{{ $user->referral_code }}</td>
                             <td>{{ $user->created_at->format('d/m/Y H:i') }}</td>
                             <td>
-                                <a href="#" class="btn btn-sm btn-info">Xem</a>
-                                <a href="#" class="btn btn-sm btn-warning">Sửa</a>
+                                <a href="{{ route('admin.member.detail', $user->id) }}" class="btn btn-sm btn-info">Xem</a>
                             </td>
                         </tr>
                     @empty

@@ -23,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'fund_password',
         'referral_code',
         'referred_by',
         'transfer_code',
