@@ -181,8 +181,7 @@
     let clientTimerInterval = null;
     let roundResults = []; // Mảng lưu tất cả kết quả random từ giây 1-60 (chỉ để hiển thị)
     let isPollingBet = false; // Flag để tránh polling bet nhiều lần
-    let clientBetInfo = null; // Lưu thông tin bet ở client để hiển thị kết quả ngay lập tức
-    let resultPopupShownForRound = null; // Track round number đã hiển thị popup để tránh hiển thị lại
+    let clientBetInfo = null; // Lưu thông tin bet ở client để layout xử lý khi round finish
     let signalGridRounds = []; // Lưu 60 rounds để hiển thị trong grid Signal (chỉ ở client)
     let signalTabLoaded = false; // Flag để biết tab Signal đã load chưa
     
@@ -340,8 +339,6 @@
             previousBetStatus = null;
             clientBetInfo = null; // Reset client bet info khi round mới
             localStorage.removeItem('clientBetInfo');
-            resultPopupShownForRound = null; // Reset popup shown flag khi round mới
-            localStorage.removeItem('resultPopupShownForRound');
                     hideMyBet();
                     clearBetAmount();
                     selectedGemType = null;
@@ -443,105 +440,28 @@
                         // Gọi API để lấy kết quả round (admin_set_result hoặc random)
                         try {
                             const response = await fetch(`{{ route("explore.round-result") }}?round_number=${currentRound.round_number}`);
-            const data = await response.json();
+                            const data = await response.json();
                             
                             if (data.result) {
                                 // Cập nhật final_result từ server
                                 currentRound.final_result = data.result;
                                 if (data.admin_set_result) {
                                     currentRound.admin_set_result = data.admin_set_result;
-    }
-    
-                                // Update final result card
-                        updateFinalResultCard();
-                        
-                                // Append kết quả mới vào signal grid (không cần gọi API)
-                                appendRoundToSignalGrid(currentRound.round_number, data.result);
-                                
-                                // Nếu user đã đặt cược, hiển thị popup ngay lập tức
-                                // Nếu có clientBetInfo, dùng clientBetInfo để hiển thị ngay
-                                // Nếu không có clientBetInfo (đã refresh trang), gọi loadMyBet để lấy từ server
-                                if (clientBetInfo && clientBetInfo.round_number === currentRound.round_number && 
-                                    resultPopupShownForRound !== currentRound.round_number) {
-                                    // Check nếu là nổ hũ (thachanhtim, ngusac, cuoc)
-                                    const jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
-                                    const isJackpot = jackpotTypes.includes(data.result);
-            
-                                    // Nếu nổ hũ: tất cả bets đều thắng với tỉ lệ của hũ
-                                    // Nếu không: chỉ bets đúng loại đá mới thắng
-                                    const isWin = isJackpot || (clientBetInfo.gem_type === data.result);
-                                    
-                                    // Lấy payout rate: nếu nổ hũ thì lấy từ đá nổ hũ, nếu không thì lấy từ clientBetInfo
-                                    let payoutRate = clientBetInfo.payout_rate;
-                                    if (isJackpot && GEM_TYPES[data.result]) {
-                                        payoutRate = GEM_TYPES[data.result].payoutRate;
-                                    }
-                                    
-                                    const result = isWin ? 'won' : 'lost';
-                                    const amount = isWin ? (clientBetInfo.amount * payoutRate) : clientBetInfo.amount;
-                                    
-                                    // Hiển thị modal ngay lập tức (chỉ khi thắng)
-                                    if (isWin) {
-                                        showResultPopup(result, amount, payoutRate);
-                                        
-                                        // Đánh dấu đã hiển thị
-                                    resultPopupShownForRound = currentRound.round_number;
-                                    localStorage.setItem('resultPopupShownForRound', currentRound.round_number.toString());
-                                    if (!myBet) {
-                                        myBet = { _popupShown: true };
-                                    } else {
-                                        myBet._popupShown = true;
-                                    }
-            }
-            
-                                    // Refresh balance và bet info từ server sau khi thắng
-                                    // Đợi một chút để server xử lý xong bet
-                                    setTimeout(() => {
-                                        loadMyBet(true);
-                                    }, 1000);
-                                    
-                                } else {
-                                    // Nếu không có clientBetInfo (đã refresh trang), gọi loadMyBet để lấy bet từ server
-                                    // và hiển thị popup nếu bet đã thắng
-                                    setTimeout(() => {
-                                        loadMyBet(true);
-                                    }, 1000);
                                 }
+                                
+                                // Update final result card
+                                updateFinalResultCard();
+                                
+                                // Append kết quả mới vào signal grid
+                                appendRoundToSignalGrid(currentRound.round_number, data.result);
                             } else {
                                 // Nếu API không trả về result, tính từ seed
                                 currentRound.final_result = getGemForSecond(currentRound.seed, 60);
                                 updateFinalResultCard();
                                 
-                                // Hiển thị popup nếu có bet
-                                if (clientBetInfo && clientBetInfo.round_number === currentRound.round_number && 
-                                    resultPopupShownForRound !== currentRound.round_number) {
-                                    // Check nếu là nổ hũ (thachanhtim, ngusac, cuoc)
-                                    const jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
-                                    const isJackpot = jackpotTypes.includes(currentRound.final_result);
-                                    
-                                    // Nếu nổ hũ: tất cả bets đều thắng với tỉ lệ của hũ
-                                    // Nếu không: chỉ bets đúng loại đá mới thắng
-                                    const isWin = isJackpot || (clientBetInfo.gem_type === currentRound.final_result);
-                                    
-                                    // Lấy payout rate: nếu nổ hũ thì lấy từ đá nổ hũ, nếu không thì lấy từ clientBetInfo
-                                    let payoutRate = clientBetInfo.payout_rate;
-                                    if (isJackpot && GEM_TYPES[currentRound.final_result]) {
-                                        payoutRate = GEM_TYPES[currentRound.final_result].payoutRate;
-                                    }
-                                    
-                                    const result = isWin ? 'won' : 'lost';
-                                    const amount = isWin ? (clientBetInfo.amount * payoutRate) : clientBetInfo.amount;
-                                    
-                                    showResultPopup(result, amount, payoutRate);
-                                    resultPopupShownForRound = currentRound.round_number;
-                                    localStorage.setItem('resultPopupShownForRound', currentRound.round_number.toString());
-                                    if (!myBet) {
-                                        myBet = { _popupShown: true };
-                                    } else {
-                                        myBet._popupShown = true;
-                                    }
-                                }
-                    }
+                                // Append kết quả mới vào signal grid
+                                appendRoundToSignalGrid(currentRound.round_number, currentRound.final_result);
+                            }
                         } catch (error) {
                             // Nếu API lỗi, tính từ seed
                             currentRound.final_result = getGemForSecond(currentRound.seed, 60);
@@ -549,43 +469,13 @@
                             
                             // Append kết quả mới vào signal grid
                             appendRoundToSignalGrid(currentRound.round_number, currentRound.final_result);
-                            
-                            // Hiển thị popup nếu có bet
-                            if (clientBetInfo && clientBetInfo.round_number === currentRound.round_number && 
-                                resultPopupShownForRound !== currentRound.round_number) {
-                                // Check nếu là nổ hũ (thachanhtim, ngusac, cuoc)
-                                const jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
-                                const isJackpot = jackpotTypes.includes(currentRound.final_result);
-                                
-                                // Nếu nổ hũ: tất cả bets đều thắng với tỉ lệ của hũ
-                                // Nếu không: chỉ bets đúng loại đá mới thắng
-                                const isWin = isJackpot || (clientBetInfo.gem_type === currentRound.final_result);
-                        
-                                // Lấy payout rate: nếu nổ hũ thì lấy từ đá nổ hũ, nếu không thì lấy từ clientBetInfo
-                                let payoutRate = clientBetInfo.payout_rate;
-                                if (isJackpot && GEM_TYPES[currentRound.final_result]) {
-                                    payoutRate = GEM_TYPES[currentRound.final_result].payoutRate;
-                                }
-                                
-                                const result = isWin ? 'won' : 'lost';
-                                const amount = isWin ? (clientBetInfo.amount * payoutRate) : clientBetInfo.amount;
-                                
-                                showResultPopup(result, amount, payoutRate);
-                                    resultPopupShownForRound = currentRound.round_number;
-                                    localStorage.setItem('resultPopupShownForRound', currentRound.round_number.toString());
-                                    if (!myBet) {
-                                        myBet = { _popupShown: true };
-                                    } else {
-                                        myBet._popupShown = true;
-                                    }
-                            }
                         }
                         
                         currentRound._checkingBetResult = false;
                     }, 1000);
                 }
-            return;
-        }
+                return;
+            }
         } else {
             // Round đã finish, chuyển sang round tiếp theo
             phase = 'result';
@@ -977,31 +867,7 @@
                 }
                 
                 // Display bet info
-                    displayMyBet();
-                
-                // LUÔN hiển thị popup nếu bet đã thắng và chưa hiển thị
-                // Logic đơn giản: nếu bet.status === 'won' và chưa hiển thị popup, thì hiển thị ngay
-                // Không cần check currentRound, chỉ cần check bet status và _popupShown flag
-                if (newStatus === 'won' && !myBet._popupShown) {
-                    // Lấy payout rate từ myBet (server đã set đúng khi nổ hũ)
-                    const payoutRate = myBet.payout_rate || (myBet.payout_amount / myBet.amount);
-                    const payoutAmount = myBet.payout_amount || (myBet.amount * payoutRate);
-                    
-                    // Hiển thị popup ngay lập tức
-                    showResultPopup('won', payoutAmount, payoutRate);
-                    
-                    // Mark as shown để tránh hiển thị lại
-                    myBet._popupShown = true;
-                    if (currentRound && currentRound.round_number) {
-                        localStorage.setItem('resultPopupShownForRound', currentRound.round_number.toString());
-                    }
-                    
-                    // Xóa client bet info vì đã có kết quả từ server
-                    if (clientBetInfo) {
-                        clientBetInfo = null;
-                        localStorage.removeItem('clientBetInfo');
-                    }
-                }
+                displayMyBet();
                 
                 previousBetStatus = newStatus;
             } else {
@@ -1089,55 +955,8 @@
         
         // Update previousBetStatus để track changes
         const currentStatus = myBet.status;
-        
-        // Show result popup khi status là won và chưa hiển thị popup
-        // Logic đơn giản: nếu bet.status === 'won' và chưa hiển thị popup, thì hiển thị ngay
-        // Không cần check currentRound, chỉ cần check bet status và _popupShown flag
-        if (currentStatus === 'won' && !myBet._popupShown) {
-            // Lấy payout rate từ myBet (server đã set đúng khi nổ hũ)
-            const payoutRate = myBet.payout_rate || (myBet.payout_amount / myBet.amount);
-            const payoutAmount = myBet.payout_amount || (myBet.amount * payoutRate);
-            
-            // Hiển thị popup ngay lập tức
-            showResultPopup('won', payoutAmount, payoutRate);
-            
-            // Mark as shown để tránh hiển thị lại
-            myBet._popupShown = true;
-            if (myBet.round && myBet.round.round_number) {
-                localStorage.setItem('resultPopupShownForRound', myBet.round.round_number.toString());
-            }
-        }
     }
     
-    // Show result popup
-    // Use global function for showing result popup
-    function showResultPopup(result, amount, payoutRate = null) {
-        // Calculate payout rate if not provided
-        if (!payoutRate) {
-            if (myBet && myBet.payout_rate) {
-                payoutRate = myBet.payout_rate;
-            } else if (clientBetInfo && clientBetInfo.payout_rate) {
-                payoutRate = clientBetInfo.payout_rate;
-            } else if (currentRound && currentRound.final_result) {
-                const jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
-                if (jackpotTypes.includes(currentRound.final_result) && GEM_TYPES[currentRound.final_result]) {
-                    payoutRate = GEM_TYPES[currentRound.final_result].payoutRate;
-                }
-            }
-        }
-        
-        // Use global function
-        if (typeof showGlobalResultPopup === 'function') {
-            showGlobalResultPopup(result, amount, payoutRate);
-        }
-    }
-    
-    // Use global function for closing result popup
-    function closeResultPopup() {
-        if (typeof closeGlobalResultPopup === 'function') {
-            closeGlobalResultPopup();
-        }
-    }
 
     // Hide my bet
     function hideMyBet() {
@@ -1190,7 +1009,7 @@
                 placed_at: Date.now()
             };
             
-            // Lưu vào localStorage để có thể hiển thị popup từ tab khác
+            // Lưu vào localStorage để layout xử lý khi round finish
             localStorage.setItem('clientBetInfo', JSON.stringify(clientBetInfo));
         }
         

@@ -93,7 +93,8 @@ class SubordinateSystemController extends Controller
             ->first();
         
         if ($lastWithdraw && $lastWithdraw->withdrawn_at) {
-            $timeSinceLastWithdraw = now()->diffInSeconds($lastWithdraw->withdrawn_at);
+            // Calculate time since last withdrawal in seconds
+            $timeSinceLastWithdraw = now()->timestamp - $lastWithdraw->withdrawn_at->timestamp;
             $oneHourInSeconds = 3600;
             
             if ($timeSinceLastWithdraw < $oneHourInSeconds) {

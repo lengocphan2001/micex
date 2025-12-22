@@ -63,6 +63,10 @@
             }
         }
         
+        #resultPopup {
+            display: none;
+        }
+        
         #resultPopup.show {
             display: flex !important;
         }
@@ -161,8 +165,19 @@
                 payoutRateEl.textContent = parseFloat(payoutRate).toFixed(2) + 'x';
             }
             
-            // Show popup
-            popup.classList.add('show');
+            // Remove hidden class first
+            popup.classList.remove('hidden');
+            
+            // Show popup first (display: flex)
+            popup.style.display = 'flex';
+            
+            // Force reflow to ensure the element is rendered before adding show class
+            // This ensures the animation triggers properly
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    popup.classList.add('show');
+                });
+            });
             
             // Auto close after 10 seconds
             setTimeout(() => {
@@ -174,106 +189,195 @@
         function closeGlobalResultPopup() {
             const popup = document.getElementById('resultPopup');
             if (popup) {
+                // Remove show class to trigger exit animation
                 popup.classList.remove('show');
+                
+                // Hide after animation completes
                 setTimeout(() => {
+                    popup.style.display = 'none';
                     popup.classList.add('hidden');
                 }, 400);
             }
         }
         
-        // Check bet result from any page (polling)
-        let betResultCheckInterval = null;
-        let lastCheckedRoundNumber = null;
-        
-        function startBetResultPolling() {
-            // Clear existing interval
-            if (betResultCheckInterval) {
-                clearInterval(betResultCheckInterval);
+        // Round finish detection and bet result checking
+        // Wrap in IIFE to avoid conflicts with explore page
+        (function() {
+            let roundFinishCheckInterval = null;
+            let lastCheckedRoundNumber = null;
+            
+            // Base time để tính round number và deadline
+            const LAYOUT_BASE_TIME = new Date('2025-01-01T00:00:00Z').getTime();
+            const LAYOUT_ROUND_DURATION = 60; // 60 giây mỗi round
+            
+            // Tính round number dựa trên base time
+            // Sử dụng hàm từ explore nếu có, nếu không thì tự tính
+            function layoutCalculateRoundNumber() {
+                if (typeof calculateRoundNumber === 'function') {
+                    return calculateRoundNumber();
+                }
+                const now = Date.now();
+                const elapsed = Math.floor((now - LAYOUT_BASE_TIME) / 1000);
+                return Math.floor(elapsed / LAYOUT_ROUND_DURATION) + 1;
             }
             
-            // Check every 2 seconds
-            betResultCheckInterval = setInterval(async () => {
-                try {
-                    // Get client bet info from localStorage
-                    const clientBetInfoStr = localStorage.getItem('clientBetInfo');
-                    if (!clientBetInfoStr) return;
-                    
-                    const clientBetInfo = JSON.parse(clientBetInfoStr);
-                    if (!clientBetInfo || !clientBetInfo.round_number) return;
-                    
-                    // Check if we already showed popup for this round
-                    const popupShownForRound = localStorage.getItem('resultPopupShownForRound');
-                    if (popupShownForRound && parseInt(popupShownForRound) === clientBetInfo.round_number) {
-                        return; // Already shown
+            // Tính deadline cho round hiện tại
+            // Sử dụng hàm từ explore nếu có, nếu không thì tự tính
+            function layoutCalculateRoundDeadline(roundNumber) {
+                if (typeof calculateRoundDeadline === 'function') {
+                    return calculateRoundDeadline(roundNumber);
+                }
+                const roundStartTime = LAYOUT_BASE_TIME + ((roundNumber - 1) * LAYOUT_ROUND_DURATION * 1000);
+                return roundStartTime + (LAYOUT_ROUND_DURATION * 1000);
+            }
+            
+            // Handle round finish event
+            async function handleRoundFinish(roundNumber) {
+            try {
+                // Get client bet info from localStorage
+                const clientBetInfoStr = localStorage.getItem('clientBetInfo');
+                if (!clientBetInfoStr) return;
+                
+                const clientBetInfo = JSON.parse(clientBetInfoStr);
+                if (!clientBetInfo || !clientBetInfo.round_number) return;
+                
+                // Only process if bet is for this round
+                if (clientBetInfo.round_number !== roundNumber) return;
+                
+                // Check if we already showed popup for this round
+                const popupShownForRound = localStorage.getItem('resultPopupShownForRound');
+                if (popupShownForRound && parseInt(popupShownForRound) === roundNumber) {
+                    return; // Already shown
+                }
+                
+                // Fetch round result from API
+                const response = await fetch(`/api/explore/round-result?round_number=${roundNumber}`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                if (!data.result) return;
+                
+                const finalResult = data.result;
+                
+                // Check if user won
+                const jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
+                const isJackpot = jackpotTypes.includes(finalResult);
+                const isWin = isJackpot || (clientBetInfo.gem_type === finalResult);
+                
+                if (isWin) {
+                    // Get payout rate
+                    let payoutRate = clientBetInfo.payout_rate;
+                    if (isJackpot) {
+                        // Fetch gem types to get jackpot payout rate
+                        const gemTypesResponse = await fetch('/api/explore/gem-types');
+                        if (gemTypesResponse.ok) {
+                            const gemTypesData = await gemTypesResponse.json();
+                            const jackpotGem = gemTypesData.gem_types.find(g => g.type === finalResult);
+                            if (jackpotGem) {
+                                payoutRate = parseFloat(jackpotGem.payout_rate);
+                            }
+                        }
                     }
                     
-                    // Fetch current round to check if it's finished
-                    const response = await fetch('/api/explore/current-round');
-                    if (!response.ok) return;
+                    const payoutAmount = clientBetInfo.amount * payoutRate;
                     
-                    const data = await response.json();
-                    if (!data.round) return;
+                    // Show popup
+                    showGlobalResultPopup('won', payoutAmount, payoutRate);
                     
-                    const currentRound = data.round;
+                    // Mark as shown
+                    localStorage.setItem('resultPopupShownForRound', roundNumber.toString());
                     
-                    // If round is finished and we have a bet for it
-                    if (currentRound.status === 'finished' && 
-                        currentRound.round_number === clientBetInfo.round_number &&
-                        currentRound.final_result) {
-                        
-                        // Check if user won
-                        const jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
-                        const isJackpot = jackpotTypes.includes(currentRound.final_result);
-                        const isWin = isJackpot || (clientBetInfo.gem_type === currentRound.final_result);
-                        
-                        if (isWin) {
-                            // Get payout rate
-                            let payoutRate = clientBetInfo.payout_rate;
-                            if (isJackpot) {
-                                // Fetch gem types to get jackpot payout rate
-                                const gemTypesResponse = await fetch('/api/explore/gem-types');
-                                if (gemTypesResponse.ok) {
-                                    const gemTypesData = await gemTypesResponse.json();
-                                    const jackpotGem = gemTypesData.gem_types.find(g => g.type === currentRound.final_result);
-                                    if (jackpotGem) {
-                                        payoutRate = parseFloat(jackpotGem.payout_rate);
+                    // Refresh balance after winning
+                    // Try to call loadMyBet from explore if available, otherwise fetch balance directly
+                    setTimeout(() => {
+                        if (typeof loadMyBet === 'function') {
+                            // Call loadMyBet from explore page
+                            loadMyBet(true);
+                        } else {
+                            // Fallback: fetch balance directly
+                            fetch('/api/explore/my-bet')
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.balance !== undefined) {
+                                        const balanceEl = document.getElementById('userBalance');
+                                        if (balanceEl) {
+                                            balanceEl.textContent = parseFloat(data.balance).toLocaleString('vi-VN') + '$';
+                                        }
                                     }
-                                }
-                            }
+                                })
+                                .catch(error => {
+                                    // Silent fail
+                                });
+                        }
+                    }, 1500);
+                    
+                    // Clear client bet info after showing
+                    setTimeout(() => {
+                        localStorage.removeItem('clientBetInfo');
+                    }, 1000);
+                } else {
+                    // User lost, just clear the storage
+                    localStorage.removeItem('clientBetInfo');
+                }
+            } catch (error) {
+                // Silent fail
+                console.error('Error handling round finish:', error);
+            }
+        }
+        
+        // Check for round finish (client-side timer)
+        function startRoundFinishDetection() {
+            // Clear existing interval
+            if (roundFinishCheckInterval) {
+                clearInterval(roundFinishCheckInterval);
+            }
+            
+            // Check every second
+            roundFinishCheckInterval = setInterval(() => {
+                try {
+                    const now = Date.now();
+                    const currentRoundNumber = layoutCalculateRoundNumber();
+                    const deadline = layoutCalculateRoundDeadline(currentRoundNumber);
+                    const countdown = Math.max(0, Math.floor((deadline - now) / 1000));
+                    
+                    // Calculate current second
+                    let currentSecond = 0;
+                    if (countdown > 0 && countdown <= LAYOUT_ROUND_DURATION) {
+                        currentSecond = LAYOUT_ROUND_DURATION - countdown + 1;
+                    }
+                    
+                    // Check if round just finished (currentSecond >= 60 or countdown === 0)
+                    if (currentSecond >= 60 || countdown === 0) {
+                        // Only handle once per round
+                        if (lastCheckedRoundNumber !== currentRoundNumber) {
+                            lastCheckedRoundNumber = currentRoundNumber;
                             
-                            const payoutAmount = clientBetInfo.amount * payoutRate;
-                            
-                            // Show popup
-                            showGlobalResultPopup('won', payoutAmount, payoutRate);
-                            
-                            // Mark as shown
-                            localStorage.setItem('resultPopupShownForRound', currentRound.round_number.toString());
-                            
-                            // Clear client bet info after showing
+                            // Wait a bit for server to process round finish
                             setTimeout(() => {
-                                localStorage.removeItem('clientBetInfo');
+                                handleRoundFinish(currentRoundNumber);
                             }, 1000);
                         }
                     }
                 } catch (error) {
                     // Silent fail
                 }
-            }, 2000);
+            }, 1000);
         }
         
-        // Start polling when page loads
+        // Start detection when page loads
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', startBetResultPolling);
+            document.addEventListener('DOMContentLoaded', startRoundFinishDetection);
         } else {
-            startBetResultPolling();
+            startRoundFinishDetection();
         }
         
-        // Stop polling when page unloads
+        // Stop detection when page unloads
         window.addEventListener('beforeunload', () => {
-            if (betResultCheckInterval) {
-                clearInterval(betResultCheckInterval);
+            if (roundFinishCheckInterval) {
+                clearInterval(roundFinishCheckInterval);
             }
         });
+        })(); // End IIFE
     </script>
 </body>
 </html>

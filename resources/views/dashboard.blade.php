@@ -160,7 +160,7 @@
     /* Gift Spotlight Effect - Circular glow, not square */
     .gift-spotlight {
         position: absolute;
-        top: 50%;
+        top: 15%;
         left: 50%;
         transform: translate(-50%, -50%);
         width: 200px;
@@ -190,18 +190,18 @@
     }
     
     .gift-image {
-        filter: drop-shadow(0 0 20px rgba(255, 157, 0, 0.5));
-        animation: giftShine 2s ease-in-out infinite;
+        /* filter: drop-shadow(0 0 20px rgba(255, 157, 0, 0.5)); */
+        /* animation: giftShine 2s ease-in-out infinite; */
     }
     
-    @keyframes giftShine {
+    /* @keyframes giftShine {
         0%, 100% {
             filter: drop-shadow(0 0 20px rgba(255, 157, 0, 0.5));
         }
         50% {
             filter: drop-shadow(0 0 30px rgba(255, 157, 0, 0.8));
         }
-    }
+    } */
 </style>
 @endpush
 
@@ -379,7 +379,7 @@
         <!-- Spotlight Effect -->
         <div class="gift-spotlight"></div>
         <!-- Light Effect -->
-        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-40 bg-yellow-400/20 rounded-full blur-3xl"></div>
+        <!-- <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-40 bg-yellow-400/20 rounded-full blur-3xl"></div> -->
         <!-- Gift Box -->
         <div class="relative z-10 flex flex-col items-center">
             <div class="w-40 h-40 mb-4 relative gift-container">
