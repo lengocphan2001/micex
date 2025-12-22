@@ -49,7 +49,7 @@
     </div>
 
     <!-- Statistics Grid -->
-    <div class="mt-6 rounded-lg p-4" style="border: 0.3px solid #FFFFFF80">
+    <div class="mt-6 rounded-lg p-4" style="border: 0.3px solid #46484D">
         <div class="grid grid-cols-2 gap-6">
             <div class="text-center">
                 <p class="text-[#D9D9D980] text-xs mb-1">Thành viên mới trong ngày</p>
@@ -78,7 +78,7 @@
                 <span class="text-xs font-semibold" style="color: #3958F5;">?</span>
             </button>
         </div>
-        <div class="overflow-hidden" style="border-radius: 10px; border: 0.3px solid rgba(255, 255, 255, 0.5);">
+        <div class="overflow-hidden" style="border-radius: 10px; border: 0.3px solid #46484D;">
             <div class="overflow-x-auto h-full">
                 <table class="w-full">
                     <thead>
