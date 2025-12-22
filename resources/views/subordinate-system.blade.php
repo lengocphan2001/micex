@@ -27,7 +27,7 @@
                 <div class="relative mb-2" style="height: 48px;">
                     <!-- Circular Badge -->
                     <div class="w-12 h-12 rounded-full flex items-center justify-center relative overflow-hidden">
-                        <img src="{{ asset('images/icons/componentnetwork.png') }}" alt="" class="absolute inset-0 w-full h-full object-fit">
+                        <img src="{{ asset('images/icons/componentnetwork.png') }}" alt="" class="absolute inset-0 w-full h-full object-cover">
                         <span class="text-orange-900 font-bold text-3xl relative z-10 flex items-center justify-center mr-0.5" style="color: #7c2d12; width: 100%; height: 100%; line-height: 1; display: flex; align-items: center; justify-content: center;">{{ $networkLevel }}</span>
                     </div>
                     <!-- Rectangular Section -->

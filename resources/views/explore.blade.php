@@ -440,18 +440,18 @@
                         // Gọi API để lấy kết quả round (admin_set_result hoặc random)
                         try {
                             const response = await fetch(`{{ route("explore.round-result") }}?round_number=${currentRound.round_number}`);
-                            const data = await response.json();
+            const data = await response.json();
                             
                             if (data.result) {
                                 // Cập nhật final_result từ server
                                 currentRound.final_result = data.result;
                                 if (data.admin_set_result) {
                                     currentRound.admin_set_result = data.admin_set_result;
-                                }
-                                
+    }
+    
                                 // Update final result card
-                                updateFinalResultCard();
-                                
+                        updateFinalResultCard();
+                        
                                 // Append kết quả mới vào signal grid
                                 appendRoundToSignalGrid(currentRound.round_number, data.result);
                             } else {
@@ -461,7 +461,7 @@
                                 
                                 // Append kết quả mới vào signal grid
                                 appendRoundToSignalGrid(currentRound.round_number, currentRound.final_result);
-                            }
+                    }
                         } catch (error) {
                             // Nếu API lỗi, tính từ seed
                             currentRound.final_result = getGemForSecond(currentRound.seed, 60);
@@ -474,8 +474,8 @@
                         currentRound._checkingBetResult = false;
                     }, 1000);
                 }
-                return;
-            }
+            return;
+        }
         } else {
             // Round đã finish, chuyển sang round tiếp theo
             phase = 'result';
@@ -867,7 +867,7 @@
                 }
                 
                 // Display bet info
-                displayMyBet();
+                    displayMyBet();
                 
                 previousBetStatus = newStatus;
             } else {

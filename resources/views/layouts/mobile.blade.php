@@ -229,7 +229,7 @@
             // Sanitize numbers to tránh NaN khi payoutRate/amount undefined
             const safePayoutRate = payoutRate !== null && !isNaN(payoutRate) ? Number(payoutRate) : null;
             const safeAmount = amount !== null && !isNaN(amount) ? Number(amount) : 0;
-
+            
             // Update content
             if (titleEl) titleEl.textContent = isJackpot ? 'Nổ hũ thành công!' : 'Chúc mừng bạn !';
             if (amountEl) amountEl.textContent = '+' + safeAmount.toFixed(2) + ' USDT';
@@ -239,7 +239,7 @@
             if (payoutRateEl && safePayoutRate !== null) {
                 payoutRateEl.textContent = safePayoutRate.toFixed(2) + 'x';
             }
-
+            
             // Jackpot highlight
             if (popup) {
                 popup.classList.toggle('jackpot', isJackpot);
@@ -258,7 +258,7 @@
             // This ensures the animation triggers properly
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    popup.classList.add('show');
+            popup.classList.add('show');
                 });
             });
             
@@ -287,8 +287,8 @@
         // Wrap in IIFE to avoid conflicts with explore page
         (function() {
             let roundFinishCheckInterval = null;
-            let lastCheckedRoundNumber = null;
-            
+        let lastCheckedRoundNumber = null;
+        
             // Base time để tính round number và deadline
             const LAYOUT_BASE_TIME = new Date('2025-01-01T00:00:00Z').getTime();
             const LAYOUT_ROUND_DURATION = 60; // 60 giây mỗi round
@@ -316,38 +316,38 @@
             
             // Handle round finish event
             async function handleRoundFinish(roundNumber) {
-            try {
-                // Get client bet info from localStorage
-                const clientBetInfoStr = localStorage.getItem('clientBetInfo');
-                if (!clientBetInfoStr) return;
-                
-                const clientBetInfo = JSON.parse(clientBetInfoStr);
-                if (!clientBetInfo || !clientBetInfo.round_number) return;
+                try {
+                    // Get client bet info from localStorage
+                    const clientBetInfoStr = localStorage.getItem('clientBetInfo');
+                    if (!clientBetInfoStr) return;
+                    
+                    const clientBetInfo = JSON.parse(clientBetInfoStr);
+                    if (!clientBetInfo || !clientBetInfo.round_number) return;
                 
                 // Only process if bet is for this round
                 if (clientBetInfo.round_number !== roundNumber) return;
-                
-                // Check if we already showed popup for this round
-                const popupShownForRound = localStorage.getItem('resultPopupShownForRound');
+                    
+                    // Check if we already showed popup for this round
+                    const popupShownForRound = localStorage.getItem('resultPopupShownForRound');
                 if (popupShownForRound && parseInt(popupShownForRound) === roundNumber) {
-                    return; // Already shown
-                }
-                
+                        return; // Already shown
+                    }
+                    
                 // Fetch round result from API
                 const response = await fetch(`/api/explore/round-result?round_number=${roundNumber}`);
-                if (!response.ok) return;
-                
-                const data = await response.json();
+                    if (!response.ok) return;
+                    
+                    const data = await response.json();
                 if (!data.result) return;
-                
+                    
                 const finalResult = data.result;
-                
-                // Check if user won
-                const jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
+                        
+                        // Check if user won
+                        const jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
                 const isJackpot = jackpotTypes.includes(finalResult);
                 const isWin = isJackpot || (clientBetInfo.gem_type === finalResult);
-                
-                if (isWin) {
+                        
+                        if (isWin) {
                     // Ưu tiên lấy payout_rate & payout_amount từ server để khớp admin set rate
                     let serverPayoutRate = null;
                     let serverPayoutAmount = null;
@@ -367,7 +367,7 @@
 
                     // Get payout rate (supports jackpot) fallback khi server chưa trả về
                     let payoutRate = serverPayoutRate !== null ? serverPayoutRate : clientBetInfo.payout_rate;
-                    if (isJackpot) {
+                            if (isJackpot) {
                         payoutRate = serverPayoutRate !== null
                             ? serverPayoutRate
                             : await getPayoutRateForType(finalResult, payoutRate || 1.95);
@@ -397,8 +397,8 @@
                                         const balanceEl = document.getElementById('userBalance');
                                         if (balanceEl) {
                                             balanceEl.textContent = parseFloat(data.balance).toLocaleString('vi-VN') + '$';
-                                        }
                                     }
+                                }
                                 })
                                 .catch(() => {});
                         }
@@ -432,7 +432,7 @@
                     const currentRoundNumber = layoutCalculateRoundNumber();
                     const deadline = layoutCalculateRoundDeadline(currentRoundNumber);
                     const countdown = Math.max(0, Math.floor((deadline - now) / 1000));
-                    
+                            
                     // Calculate current second
                     let currentSecond = 0;
                     if (countdown > 0 && countdown <= LAYOUT_ROUND_DURATION) {
