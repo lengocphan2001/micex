@@ -55,44 +55,19 @@ class NotifyCommissionAvailable extends Command
                 continue;
             }
             
-            // Check if user already has a recent commission notification (within last hour)
-            $recentNotification = Notification::where('user_id', $user->id)
-                ->where('type', 'commission_available')
-                ->where('created_at', '>=', now()->subHour())
-                ->first();
-            
-            if ($recentNotification) {
-                // Update existing notification (luôn update để user thấy thông báo mới mỗi giờ)
-                $existingAmount = is_array($recentNotification->data) && isset($recentNotification->data['total_commission']) 
-                    ? floatval($recentNotification->data['total_commission']) 
-                    : 0;
-                    
-                // Update notification để user thấy thông báo mới (mark as unread)
-                $recentNotification->update([
-                    'title' => 'Hoa hồng có sẵn',
-                    'message' => "Bạn có " . number_format($totalCommission, 2, ',', '.') . "$ hoa hồng có thể rút. Vui lòng vào màn Hệ thống để rút hoa hồng.",
-                    'data' => [
-                        'total_commission' => $totalCommission,
-                    ],
-                    'is_read' => false, // Mark as unread để user thấy thông báo mới
-                    'created_at' => now(), // Update created_at để hiển thị như thông báo mới
-                ]);
-                $notifiedCount++;
-                $this->info("Updated notification for user {$user->id} (commission: {$totalCommission})");
-            } else {
-                // Create new notification
-                Notification::create([
-                    'user_id' => $user->id,
-                    'type' => 'commission_available',
-                    'title' => 'Hoa hồng có sẵn',
-                    'message' => "Bạn có " . number_format($totalCommission, 2, ',', '.') . "$ hoa hồng có thể rút. Vui lòng vào màn Hệ thống để rút hoa hồng.",
-                    'data' => [
-                        'total_commission' => $totalCommission,
-                    ],
-                ]);
-                $notifiedCount++;
-                $this->info("Created notification for user {$user->id} (commission: {$totalCommission})");
-            }
+            // Always create new notification every hour (don't check for recent notification)
+            // This ensures users see the notification in dropdown every hour
+            Notification::create([
+                'user_id' => $user->id,
+                'type' => 'commission_available',
+                'title' => 'Hoa hồng có sẵn',
+                'message' => "Bạn có " . number_format($totalCommission, 2, ',', '.') . "$ hoa hồng có thể rút. Vui lòng vào màn Hệ thống để rút hoa hồng.",
+                'data' => [
+                    'total_commission' => $totalCommission,
+                ],
+            ]);
+            $notifiedCount++;
+            $this->info("Created notification for user {$user->id} (commission: {$totalCommission})");
         }
         
         $this->info("Sent commission notifications to {$notifiedCount} users.");
