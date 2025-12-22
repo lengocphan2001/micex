@@ -41,7 +41,7 @@
                     <p class="text-[#FF9D00] font-semibold text-lg" style="line-height: normal;">2,000 USDT</p>
                 </div>
                 
-                <p class="text-white text-[10px] opacity-90">Thưởng tiền mặt cho mỗi lượt giới thiệu bạn bè mới !</p>
+                <p class="text-white text-[10px] opacity-90 text-nowrap">Thưởng tiền mặt cho mỗi lượt giới thiệu bạn bè mới !</p>
             </div>
             <div class="flex-shrink-0 flex items-center justify-center self-center" style="">
                 <img src="{{ asset('images/networklevel.png') }}" alt="Promotion" class="object-contain" style="width: 140px; height: 140px;">
