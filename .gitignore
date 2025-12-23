@@ -22,3 +22,8 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Large GIF files (use MP4 versions instead)
+/public/videos/*.gif
+/public/videos/Gif-*.gif
+/public/videos/running.gif
