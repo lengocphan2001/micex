@@ -212,6 +212,29 @@
         }
 
         // Global function to show result popup from any page
+        // Simple counter animation
+        function animateCountUp(el, targetValue, duration = 1200) {
+            if (!el) return;
+            const start = 0;
+            const end = targetValue;
+            const startTime = performance.now();
+            const formatter = (v) => '+' + v.toFixed(2) + ' USDT';
+
+            function tick(now) {
+                const elapsed = now - startTime;
+                const t = Math.min(1, elapsed / duration);
+                // easeOutCubic
+                const eased = 1 - Math.pow(1 - t, 3);
+                const current = start + (end - start) * eased;
+                el.textContent = formatter(current);
+                if (t < 1) {
+                    requestAnimationFrame(tick);
+                }
+            }
+
+            requestAnimationFrame(tick);
+        }
+
         function showGlobalResultPopup(result, amount, payoutRate = null, options = {}) {
             if (result !== 'won') return; // Chỉ hiển thị khi thắng
             
@@ -231,10 +254,13 @@
             const safeAmount = amount !== null && !isNaN(amount) ? Number(amount) : 0;
             
             // Update content
-            if (titleEl) titleEl.textContent = isJackpot ? 'Nổ hũ thành công!' : 'Chúc mừng bạn !';
-            if (amountEl) amountEl.textContent = '+' + safeAmount.toFixed(2) + ' USDT';
+            if (titleEl) titleEl.textContent = isJackpot ? 'Đá quý' : 'Chúc mừng bạn !';
+            if (amountEl) {
+                amountEl.textContent = '+' + safeAmount.toFixed(2) + ' USDT';
+                animateCountUp(amountEl, safeAmount);
+            }
             if (messageEl) messageEl.textContent = isJackpot 
-                ? 'Bạn vừa trúng JACKPOT! Phần thưởng đã được chuyển vào ví.'
+                ? 'Bạn vừa đào được đá quý! Phần thưởng đã được chuyển vào ví.'
                 : 'Phần thưởng đã được xử lý thành công và chuyển đến ví của bạn.';
             if (payoutRateEl && safePayoutRate !== null) {
                 payoutRateEl.textContent = safePayoutRate.toFixed(2) + 'x';
