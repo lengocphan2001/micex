@@ -68,14 +68,16 @@
 
         <!-- Miner Video -->
         <div class="rounded-2xl overflow-hidden card-shadow min-h-[384px]">
-            <!-- GIF cho 30 giây đầu -->
-            <img id="minerVideoFirst30" class="object-cover" loading="eager"
-                src="{{ asset('videos/222.gif') }}"
-                style="width: 419px; height: 384px; border-radius: 10px; opacity: 1; display: none;" alt="Miner Start">
-            <!-- GIF cho 30 giây cuối -->
-            <img id="minerVideoLast30" class="object-cover" loading="eager"
-                src="{{ asset('videos/111.gif') }}"
-                style="width: 419px; height: 384px; border-radius: 10px; opacity: 1; display: none;" alt="Miner End">
+            <!-- MP4 cho 30 giây đầu -->
+            <video id="minerVideoFirst30" class="object-cover" muted autoplay loop playsinline preload="auto"
+                style="width: 419px; height: 384px; border-radius: 10px; opacity: 1; display: none;" aria-label="Miner Start">
+                <source src="{{ asset('videos/222.mp4') }}" type="video/mp4">
+            </video>
+            <!-- MP4 cho 30 giây cuối -->
+            <video id="minerVideoLast30" class="object-cover" muted autoplay loop playsinline preload="auto"
+                style="width: 419px; height: 384px; border-radius: 10px; opacity: 1; display: none;" aria-label="Miner End">
+                <source src="{{ asset('videos/111.mp4') }}" type="video/mp4">
+            </video>
         </div>
 
         <!-- Tabs -->
@@ -91,7 +93,9 @@
             <!-- Cards row - Radar with current result -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-[#111111] rounded-xl card-shadow flex items-center justify-center overflow-hidden">
-                    <img src="{{ asset('videos/333.gif') }}" alt="Radar" class="w-full h-full object-cover" loading="eager">
+                    <video class="w-full h-full object-cover" autoplay muted loop playsinline preload="auto" aria-label="Radar">
+                        <source src="{{ asset('videos/333.mp4') }}" type="video/mp4">
+                    </video>
                 </div>
                 <div class="bg-[#111111] rounded-xl p-2 card-shadow flex flex-col items-center justify-center gap-2"
                     id="finalResultCard">
@@ -99,8 +103,8 @@
                     <img src="{{ asset('images/icons/thachanh.png') }}" alt="Kết quả"
                         class="w-10 h-10 object-contain flex-shrink-0" id="finalResultIcon" style="display: block;">
                     <!-- Chữ "Chờ kết quả..." (ở dưới) -->
-                    <div class="text-center flex flex-col items-center justify-center">
-                        <p class="text-white font-medium text-xs" id="finalResultName">Chờ kết quả...</p>
+                    <div class="text-center flex flex-col items-center justify-center" style="min-height: 32px;">
+                        <p class="text-white font-medium text-xs" id="finalResultName"></p>
                         <p class="text-gray-400 text-xs" id="finalResultPayout"></p>
                     </div>
                 </div>
@@ -244,6 +248,7 @@
         let clientBetInfo = null; // Lưu thông tin bet ở client để layout xử lý khi round finish
         let signalGridRounds = []; // Lưu 60 rounds để hiển thị trong grid Signal (chỉ ở client)
         let signalTabLoaded = false; // Flag để biết tab Signal đã load chưa
+        let minerVideoPhase = null; // phase hiện tại của miner video để tránh reset liên tục
 
 
         // Initialize
@@ -639,20 +644,45 @@
             
             if (!minerVideoFirst30 || !minerVideoLast30) return;
 
-            // 30 giây đầu (1-30): dùng 222.gif
-            // 30 giây cuối (31-60): dùng 111.gif
+            const showVideo = (videoToShow, videoToHide) => {
+                videoToShow.style.display = 'block';
+                videoToHide.style.display = 'none';
+
+                if (videoToHide.pause) {
+                    videoToHide.pause();
+                }
+                if (videoToShow.currentTime !== undefined) {
+                    videoToShow.currentTime = 0;
+                }
+                if (videoToShow.play) {
+                    videoToShow.play().catch(() => {});
+                }
+            };
+
+            let nextPhase = 'idle';
             if (currentSecond >= 1 && currentSecond <= 30) {
-                // Hiển thị GIF đầu, ẩn GIF cuối
-                minerVideoFirst30.style.display = 'block';
-                minerVideoLast30.style.display = 'none';
+                nextPhase = 'first';
             } else if (currentSecond > 30 && currentSecond <= 60) {
-                // Hiển thị GIF cuối, ẩn GIF đầu
-                minerVideoFirst30.style.display = 'none';
-                minerVideoLast30.style.display = 'block';
+                nextPhase = 'last';
+            }
+
+            // Tránh restart video liên tục nếu vẫn cùng phase
+            if (nextPhase === minerVideoPhase) {
+                return;
+            }
+            minerVideoPhase = nextPhase;
+
+            // 30 giây đầu (1-30): dùng 222.mp4
+            // 30 giây cuối (31-60): dùng 111.mp4
+            if (nextPhase === 'first' || nextPhase === 'idle') {
+                // Hiển thị video đầu, ẩn video cuối
+                showVideo(minerVideoFirst30, minerVideoLast30);
+            } else if (nextPhase === 'last') {
+                // Hiển thị video cuối, ẩn video đầu
+                showVideo(minerVideoLast30, minerVideoFirst30);
             } else {
                 // Mặc định hiển thị GIF đầu khi chưa bắt đầu round
-                minerVideoFirst30.style.display = 'block';
-                minerVideoLast30.style.display = 'none';
+                showVideo(minerVideoFirst30, minerVideoLast30);
             }
         }
 
@@ -912,7 +942,7 @@
                     // Nếu không tìm thấy gem type, hiển thị animation nhấp nháy tất cả các loại đá
                     startGemBlinkAnimation();
                     if (finalResultName) {
-                        finalResultName.textContent = 'Chờ kết quả...';
+                        finalResultName.textContent = '';
                     }
                     if (finalResultPayout) {
                         finalResultPayout.textContent = '';
@@ -921,16 +951,25 @@
                 return;
             }
 
-            // 5 giây cuối, chưa có kết quả: random/blink + "Chờ kết quả..."
+            // 5 giây cuối, chưa có kết quả: random/blink, icon center, ẩn text
             if (currentSecond >= 56 && currentSecond <= 60) {
+                const finalResultCard = document.getElementById('finalResultCard');
+                if (finalResultCard) {
+                    finalResultCard.classList.add('gap-0', 'justify-center');
+                }
                 startGemBlinkAnimation();
                 if (finalResultName) {
-                    finalResultName.textContent = 'Chờ kết quả...';
+                    finalResultName.textContent = '';
                 }
                 if (finalResultPayout) {
                     finalResultPayout.textContent = '';
                 }
                 return;
+            }
+            // Reset layout when không còn trong 5 giây cuối
+            const finalResultCard = document.getElementById('finalResultCard');
+            if (finalResultCard) {
+                finalResultCard.classList.remove('gap-0');
             }
 
             // Còn lại: hiển thị kết quả round trước (nếu có), nếu không thì chờ
@@ -951,7 +990,7 @@
             // Fallback: trạng thái chờ
             startGemBlinkAnimation();
             if (finalResultName) {
-                finalResultName.textContent = 'Chờ kết quả...';
+                finalResultName.textContent = '';
             }
             if (finalResultPayout) {
                 finalResultPayout.textContent = '';
