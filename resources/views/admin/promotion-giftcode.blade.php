@@ -300,7 +300,7 @@
                             html += `<br><small class="text-muted">${usage.user.email}</small>`;
                         }
                         html += `</td>`;
-                        html += `<td><span class="text-success font-weight-bold">+${parseFloat(usage.amount).toLocaleString('vi-VN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}$</span></td>`;
+                        html += `<td><span class="text-success font-weight-bold">+${parseFloat(usage.amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}$</span></td>`;
                         html += `<td>${usage.created_at_formatted}<br><small class="text-muted">${usage.created_at_human}</small></td>`;
                         html += '</tr>';
                     });

@@ -396,7 +396,7 @@
                                     if (data.balance !== undefined) {
                                         const balanceEl = document.getElementById('userBalance');
                                         if (balanceEl) {
-                                            balanceEl.textContent = parseFloat(data.balance).toLocaleString('vi-VN') + '$';
+                                            balanceEl.textContent = parseFloat(data.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$';
                                     }
                                 }
                                 })

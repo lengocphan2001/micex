@@ -155,11 +155,11 @@
     function formatVnd(value) {
         if (!value) return '';
         const num = parseAmount(value);
-        return num.toLocaleString('vi-VN');
+        return num.toLocaleString('en-US');
     }
 
     function formatNumber(num) {
-        return num.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+        return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
     }
 
     function updateGem() {

@@ -291,7 +291,7 @@
     
     function formatNumber(num) {
         if (!num) return '0';
-        return parseFloat(num).toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     }
     
     function escapeHtml(text) {
