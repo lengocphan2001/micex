@@ -164,9 +164,9 @@
         top: 15%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 200px;
-        height: 200px;
-        background: radial-gradient(circle, rgba(255, 157, 0, 0.3) 0%, rgba(255, 157, 0, 0.1) 40%, transparent 70%);
+        width: 240px;
+        height: 240px;
+        background: radial-gradient(circle, rgba(147, 51, 234, 0.5) 0%, rgba(147, 51, 234, 0.2) 40%, transparent 70%);
         border-radius: 50%;
         pointer-events: none;
         z-index: 1;
@@ -175,12 +175,12 @@
     
     @keyframes giftPulse {
         0%, 100% {
-            opacity: 0.5;
+            opacity: 0.6;
             transform: translate(-50%, -50%) scale(1);
         }
         50% {
             opacity: 0.8;
-            transform: translate(-50%, -50%) scale(1.1);
+            transform: translate(-50%, -50%) scale(1.05);
         }
     }
     
@@ -385,11 +385,11 @@
         <div class="relative z-10 flex flex-col items-center">
             <div class="w-40 h-40 mb-4 relative gift-container">
                 <!-- Gift Image -->
-                <img src="{{ asset('images/gift.png') }}" alt="Gift Box" class="w-full h-full object-contain gift-image">
+                <img src="{{ asset('images/newgift.png') }}" alt="Gift Box" class="w-full h-full object-contain gift-image">
             </div>
             <h3 class="text-white text-base font-bold mb-2">Đào liền tay ! Ring quà về ngay?</h3>
             <p class="text-gray-400 text-xs mb-4">Phần thưởng lên tới 1000 USDT đang chờ bạn</p>
-            <a href="{{ route('explore') }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-6 py-3 rounded-lg mb-4 transition-colors text-center">
+            <a href="{{ route('explore') }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-10 py-2 rounded-4xl mb-4 transition-colors text-center">
                 Đào ngay
             </a>
             <!-- Countdown Timer -->

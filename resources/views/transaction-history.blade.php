@@ -63,7 +63,7 @@
             <div class="text-white text-xs text-center flex items-center justify-center gap-1.5">
                     <span class="font-medium">{{ number_format($bet->amount, 2, '.', ',') }}</span>
                 <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin" class="w-5 h-5 object-contain">
-            </div>
+        </div>
                 <div class="{{ $profitColor }} text-xs text-center font-bold flex items-center justify-center">
                     @if($profitAmount > 0)
                         +{{ number_format($profitAmount, 2, '.', ',') }}$

@@ -80,6 +80,15 @@
             </video>
         </div>
 
+
+        <!-- Recent Rounds Results -->
+        <div class="flex items-center justify-center">
+            <div id="recentRoundsContainer" class="w-full rounded-[40px] bg-[#111111] py-2 flex items-center justify-center gap-1.5 overflow-x-auto" style="opacity: 1; transform: rotate(0deg);">
+                <!-- 13 rounds will be populated by JavaScript -->
+                <div class="text-gray-400 text-xs p-1">Đang tải...</div>
+            </div>
+        </div>
+
         <!-- Tabs -->
         <div class="flex items-center gap-8 px-1">
             <button id="tab-search" class="tab-button text-white font-semibold border-b-2 border-blue-500 pb-2"
@@ -138,8 +147,7 @@
                     </div>
                     <button id="confirmBetBtn" onclick="placeBet()"
                         class="text-white font-semibold cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity whitespace-nowrap"
-                        style="height: 47px; border-radius: 10px; background: #3958F5; padding-left: 16px; padding-right: 16px;">Xác
-                        nhận</button>
+                        style="height: 47px; border-radius: 10px; background: #3958F5; padding-left: 16px; padding-right: 16px;">Đặt cược</button>
                 </div>
                 <div id="betInfo" class="text-xs text-gray-400 hidden">
                     <p>Bạn đã đặt cược: <span id="betGemType" class="text-white"></span> - <span id="betAmountDisplay"
@@ -305,6 +313,9 @@
             // Initialize video display based on current second
             const initialSecond = currentRound.current_second || 1;
             updateMinerVideo(initialSecond);
+            
+            // Load recent rounds display
+            loadRecentRoundsDisplay();
         });
 
         // Load payout rates from API
@@ -626,10 +637,17 @@
             if (confirmBtn) {
                 if (ph === 'result' || sec > 30) {
                     confirmBtn.disabled = true;
+                    // Hiển thị đếm ngược trên button
+                    const mins = Math.floor(remainingSeconds / 60);
+                    const secs = remainingSeconds % 60;
+                    const formattedTime = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+                    confirmBtn.textContent = formattedTime;
                 } else if (myBet || clientBetInfo) {
                     confirmBtn.disabled = true;
+                    confirmBtn.textContent = 'Đặt cược';
                 } else {
                     confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Đặt cược';
                 }
             }
 
@@ -1304,6 +1322,56 @@
                 updateSignalGridWithRounds();
             }
         }
+        
+        // Load and display 13 recent rounds results
+        async function loadRecentRoundsDisplay() {
+            const container = document.getElementById('recentRoundsContainer');
+            if (!container) return;
+            
+            try {
+                // Try to use signalGridRounds if available, otherwise fetch from API
+                let rounds = [];
+                if (signalGridRounds && signalGridRounds.length > 0) {
+                    // Get last 13 rounds (oldest to newest, left to right)
+                    rounds = signalGridRounds.slice(-13);
+                } else {
+                    const response = await fetch('{{ route('explore.signal-grid-rounds') }}');
+                    const allRounds = await response.json();
+                    if (allRounds && Array.isArray(allRounds) && allRounds.length > 0) {
+                        rounds = allRounds.slice(-13);
+                    }
+                }
+                
+                if (rounds.length === 0) {
+                    container.innerHTML = '<div class="text-gray-400 text-xs">Chưa có dữ liệu</div>';
+                    return;
+                }
+                
+                // Clear container
+                container.innerHTML = '';
+                
+                // Display 13 rounds (or less if not enough data)
+                // Oldest on left, newest on right
+                rounds.forEach((round, index) => {
+                    const result = round.admin_set_result || round.final_result || 'thachanh';
+                    const gem = GEM_TYPES[result] || GEM_TYPES['thachanh'];
+                    
+                    const roundIcon = document.createElement('div');
+                    roundIcon.className = 'flex items-center justify-center bg-gray-700 rounded-full w-6 h-6 p-0.5 flex-shrink-0';
+                    
+                    const iconImg = document.createElement('img');
+                    iconImg.src = gem.icon;
+                    iconImg.alt = gem.name;
+                    iconImg.className = 'w-6 h-6 object-contain';
+                    
+                    roundIcon.appendChild(iconImg);
+                    container.appendChild(roundIcon);
+                });
+            } catch (error) {
+                console.error('Error loading recent rounds:', error);
+                container.innerHTML = '<div class="text-gray-400 text-xs">Lỗi tải dữ liệu</div>';
+            }
+        }
 
         // Append round result mới vào signal grid (lưu vào server)
         async function appendRoundToSignalGrid(roundNumber, result) {
@@ -1473,6 +1541,9 @@
                     }
                 }
             }
+            
+            // Update recent rounds display when signal grid is updated
+            loadRecentRoundsDisplay();
         }
 
         // Cleanup on page unload
