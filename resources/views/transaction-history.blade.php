@@ -17,11 +17,10 @@
 @section('content')
 <div class="px-4 py-4">
     <!-- Table Header -->
-    <div class="grid grid-cols-5 gap-3 mb-4 text-white text-sm font-semibold pb-3 border-b border-gray-600">
+    <div class="grid grid-cols-4 gap-3 mb-4 text-white text-sm font-semibold pb-3 border-b border-gray-600">
         <div class="text-center">Thời gian</div>
         <div class="text-center">Lựa chọn</div>
         <div class="text-center">Số lượng</div>
-        <div class="text-center">Kết quả</div>
         <div class="text-center">Lợi nhuận</div>
     </div>
 
@@ -33,25 +32,16 @@
                 $gemIcon = $gemType ? asset('images/icons/' . $gemType['icon']) : asset('images/icons/thachanh.png');
                 $gemName = $gemType ? $gemType['name'] : 'N/A';
                 
-                // Determine result text and color
-                $resultText = '';
-                $resultColor = 'text-gray-400';
                 $profitAmount = 0;
                 $profitColor = 'text-gray-400';
                 
                 if ($bet->status === 'won') {
-                    $resultText = 'Trúng';
-                    $resultColor = 'text-green-400';
                     $profitAmount = $bet->payout_amount ?? ($bet->amount * $bet->payout_rate);
                     $profitColor = 'text-green-400';
                 } elseif ($bet->status === 'lost') {
-                    $resultText = 'Thua';
-                    $resultColor = 'text-red-400';
                     $profitAmount = -$bet->amount;
                     $profitColor = 'text-red-400';
                 } elseif ($bet->status === 'pending') {
-                    $resultText = 'Chờ kết quả';
-                    $resultColor = 'text-yellow-400';
                     $profitAmount = 0;
                     $profitColor = 'text-gray-400';
                 }
@@ -62,7 +52,7 @@
                 $date = $createdAt->format('d-m-Y');
             @endphp
             
-        <div class="grid grid-cols-5 gap-3 py-3 border-b border-gray-700/30 hover:bg-gray-800/30 transition-colors rounded px-2">
+        <div class="grid grid-cols-4 gap-3 py-3 border-b border-gray-700/30 hover:bg-gray-800/30 transition-colors rounded px-2">
             <div class="text-white text-xs text-center leading-tight">
                     <div class="font-medium">{{ $time }}</div>
                     <div class="text-gray-400">{{ $date }}</div>
@@ -74,9 +64,6 @@
                     <span class="font-medium">{{ number_format($bet->amount, 2, '.', ',') }}</span>
                 <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin" class="w-5 h-5 object-contain">
             </div>
-                <div class="{{ $resultColor }} text-xs text-center font-medium flex items-center justify-center">
-                    {{ $resultText }}
-        </div>
                 <div class="{{ $profitColor }} text-xs text-center font-bold flex items-center justify-center">
                     @if($profitAmount > 0)
                         +{{ number_format($profitAmount, 2, '.', ',') }}$
