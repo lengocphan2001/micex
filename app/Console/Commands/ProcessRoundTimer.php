@@ -34,11 +34,14 @@ class ProcessRoundTimer extends Command
     /**
      * Calculate round number based on BASE_TIME
      * Round duration: 60 giây
+     * IMPORTANT: Use UTC timezone to match client-side calculation
      */
     private function calculateRoundNumber()
     {
-        $baseTime = Carbon::parse(self::BASE_TIME)->timestamp;
-        $now = now()->timestamp;
+        // Parse BASE_TIME as UTC (matching client: '2025-01-01T00:00:00Z')
+        $baseTime = Carbon::parse(self::BASE_TIME . ' UTC')->timestamp;
+        // Use UTC for now() to match client-side Date.now()
+        $now = Carbon::now('UTC')->timestamp;
         $elapsed = $now - $baseTime;
         $totalCycle = self::ROUND_DURATION; // 60 giây mỗi cycle
         return floor($elapsed / $totalCycle) + 1;
@@ -50,14 +53,16 @@ class ProcessRoundTimer extends Command
      */
     private function calculateRoundDeadline($roundNumber)
     {
-        $baseTime = Carbon::parse(self::BASE_TIME)->timestamp;
+        // Parse BASE_TIME as UTC (matching client)
+        $baseTime = Carbon::parse(self::BASE_TIME . ' UTC')->timestamp;
         $totalCycle = self::ROUND_DURATION; // 60 giây mỗi cycle
         
         // Round start time = baseTime + (roundNumber - 1) * totalCycle
         $roundStartTime = $baseTime + (($roundNumber - 1) * $totalCycle);
         
         // Deadline = roundStartTime + ROUND_DURATION (60 giây)
-        return Carbon::createFromTimestamp($roundStartTime + self::ROUND_DURATION);
+        // Use UTC timezone to match client
+        return Carbon::createFromTimestamp($roundStartTime + self::ROUND_DURATION, 'UTC');
     }
     
     /**
@@ -66,7 +71,8 @@ class ProcessRoundTimer extends Command
     private function calculateCurrentSecond($roundNumber)
     {
         $deadline = $this->calculateRoundDeadline($roundNumber);
-        $now = now();
+        // Use UTC to match client-side calculation
+        $now = Carbon::now('UTC');
         
         // Tính countdown: deadline - now (số giây còn lại)
         $countdown = max(0, (int) floor(($deadline->timestamp - $now->timestamp)));
@@ -107,7 +113,8 @@ class ProcessRoundTimer extends Command
         if ($round->status === 'running') {
             // Tính deadline để check xem round đã finish chưa
             $deadline = $this->calculateRoundDeadline($currentRoundNumber);
-            $now = now();
+            // Use UTC to match client-side calculation
+            $now = Carbon::now('UTC');
             $countdown = max(0, (int) floor(($deadline->timestamp - $now->timestamp)));
             
             // Nếu đã đến giây 60 hoặc quá deadline (countdown = 0), finish round

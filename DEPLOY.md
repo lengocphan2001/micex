@@ -9,7 +9,7 @@ Hướng dẫn chi tiết để deploy ứng dụng Laravel Micex lên VPS Ubunt
 - **Database**: MySQL 8.0+ hoặc MariaDB 10.6+
 - **Web Server**: Nginx
 - **SSL**: Let's Encrypt (Certbot)
-- **Domain**: mon88.click (đã trỏ về IP VPS)
+- **Domain**: micex-x.com  (đã trỏ về IP VPS)
 
 ## 🚀 Bước 1: Chuẩn bị VPS
 
@@ -200,7 +200,7 @@ APP_NAME=Micex
 APP_ENV=production
 APP_KEY=base64:... (đã generate ở trên)
 APP_DEBUG=false
-APP_URL=https://mon88.click
+APP_URL=https://micex-x.com 
 
 LOG_CHANNEL=stack
 LOG_DEPRECATIONS_CHANNEL=null
@@ -259,7 +259,7 @@ Nội dung file:
 server {
     listen 80;
     listen [::]:80;
-    server_name mon88.click www.mon88.click;
+    server_name micex-x.com  www.micex-x.com ;
     
     # Redirect HTTP to HTTPS
     return 301 https://$server_name$request_uri;
@@ -268,14 +268,14 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name mon88.click www.mon88.click;
+    server_name micex-x.com  www.micex-x.com ;
     
     root /var/www/micex/public;
     index index.php index.html;
 
     # SSL Configuration (sẽ được cấu hình bởi Certbot)
-    ssl_certificate /etc/letsencrypt/live/mon88.click/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/mon88.click/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/micex-x.com /fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/micex-x.com /privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
@@ -349,7 +349,7 @@ sudo apt install -y certbot python3-certbot-nginx
 ### 6.2. Lấy SSL certificate
 
 ```bash
-sudo certbot --nginx -d mon88.click -d www.mon88.click
+sudo certbot --nginx -d micex-x.com  -d www.micex-x.com 
 ```
 
 Certbot sẽ tự động:
@@ -569,10 +569,10 @@ sudo systemctl status micex-round-timer
 
 ```bash
 # Test từ server
-curl -I https://mon88.click
+curl -I https://micex-x.com 
 
 # Kiểm tra SSL
-openssl s_client -connect mon88.click:443
+openssl s_client -connect micex-x.com :443
 ```
 
 ## 🔄 Chạy Round Process Loop trên VPS
@@ -609,21 +609,83 @@ screen -S round-process-loop -X quit
 - Có thể attach để xem logs real-time
 - Process vẫn chạy khi disconnect
 
-### Phương pháp 2: Tmux (Tương tự Screen)
+### Phương pháp 2: Tmux (Tương tự Screen, khuyến nghị)
 
 ```bash
-# 1. Cài đặt tmux
+# 1. Cài đặt tmux (nếu chưa có)
 sudo apt install tmux -y
 
-# 2. Tạo session và chạy
-tmux new-session -d -s round-process-loop 'cd /var/www/micex && php artisan round:process-loop'
+# 2. Tạo tmux session mới và chạy round timer
+tmux new-session -d -s micex 'cd /var/www/micex && php artisan round:process-loop'
 
-# 3. Kiểm tra session
+# 3. Kiểm tra các tmux sessions đang chạy
 tmux ls
 
-# 4. Attach vào session
-tmux attach -t round-process-loop
-# Để detach: Nhấn Ctrl+B, sau đó nhấn D
+# 4. Attach vào session để xem logs
+tmux attach -t micex
+# Để detach (giữ session chạy): Nhấn Ctrl+B, sau đó nhấn D
+
+# 5. Tạo window mới trong cùng session (nếu cần chạy lệnh khác)
+# Trong tmux: Nhấn Ctrl+B, sau đó nhấn C
+
+# 6. Chuyển đổi giữa các windows
+# Trong tmux: Nhấn Ctrl+B, sau đó nhấn N (next) hoặc P (previous)
+
+# 7. Dừng process (kill session)
+tmux kill-session -t micex
+
+# 8. Restart process (kill và tạo lại)
+tmux kill-session -t micex 2>/dev/null; tmux new-session -d -s micex 'cd /var/www/micex && php artisan round:process-loop'
+```
+
+**Script helper để quản lý tmux (khuyến nghị):**
+
+```bash
+# 1. Upload script lên server (file tmux-micex.sh trong project root)
+cd /var/www/micex
+
+# 2. Cấp quyền thực thi
+chmod +x tmux-micex.sh
+
+# 3. Sử dụng script
+./tmux-micex.sh start      # Tạo và start session
+./tmux-micex.sh stop       # Dừng session
+./tmux-micex.sh restart    # Restart session
+./tmux-micex.sh status     # Kiểm tra status
+./tmux-micex.sh attach     # Attach vào session
+./tmux-micex.sh logs       # Xem logs
+```
+
+**Các lệnh tmux hữu ích:**
+
+```bash
+# List tất cả sessions
+tmux ls
+
+# Attach vào session
+tmux attach -t micex
+# hoặc
+tmux a -t micex
+
+# Tạo session mới với tên
+tmux new -s micex
+
+# Kill session
+tmux kill-session -t micex
+
+# Kill tất cả sessions
+tmux kill-server
+```
+
+**Trong tmux session (sau khi attach):**
+
+- `Ctrl+B` sau đó `D`: Detach (giữ session chạy)
+- `Ctrl+B` sau đó `C`: Tạo window mới
+- `Ctrl+B` sau đó `N`: Chuyển sang window tiếp theo
+- `Ctrl+B` sau đó `P`: Chuyển về window trước
+- `Ctrl+B` sau đó `[`: Scroll mode (để xem logs cũ)
+- `Ctrl+B` sau đó `]`: Paste mode
+- `Ctrl+B` sau đó `?`: Xem tất cả shortcuts
 
 # 5. Dừng process
 tmux kill-session -t round-process-loop

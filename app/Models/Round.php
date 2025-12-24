@@ -46,11 +46,14 @@ class Round extends Model
     /**
      * Calculate round number based on BASE_TIME
      * Round duration: 60 giây
+     * IMPORTANT: Use UTC timezone to match client-side calculation
      */
     public static function calculateRoundNumber()
     {
-        $baseTime = \Carbon\Carbon::parse(self::BASE_TIME)->timestamp;
-        $now = now()->timestamp;
+        // Parse BASE_TIME as UTC (matching client: '2025-01-01T00:00:00Z')
+        $baseTime = \Carbon\Carbon::parse(self::BASE_TIME . ' UTC')->timestamp;
+        // Use UTC for now() to match client-side Date.now()
+        $now = \Carbon\Carbon::now('UTC')->timestamp;
         $elapsed = $now - $baseTime;
         $totalCycle = 60; // 60 giây mỗi cycle
         return floor($elapsed / $totalCycle) + 1;
