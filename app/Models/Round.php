@@ -247,32 +247,32 @@ class Round extends Model
                 // Round đã có, cập nhật result
                 $rounds[$existingIndex]['final_result'] = $this->final_result;
             } else {
-                // Logic: Tab signal là slider không bao giờ dừng với 3 items
-                // - Item 1: rounds[0-19] (20 rounds, đã fill đầy)
-                // - Item 2: rounds[20-39] (20 rounds, đã fill đầy)
-                // - Item 3: rounds[40-59] (20 rounds, đang fill)
-                // Khi item 3 đầy (60 rounds), shift: xóa rounds[0-19], giữ rounds[20-59], thêm round mới
-                // Kiểm tra: nếu có >= 60 rounds, shift TRƯỚC KHI thêm round mới
-                if (count($rounds) >= 60) {
-                    // Shift: Item 1 = Item 2 cũ, Item 2 = Item 3 cũ, Item 3 trống
-                    // Xóa 20 rounds đầu (item 1 cũ), giữ 40 rounds tiếp theo (item 2+3 cũ)
-                    $rounds = array_slice($rounds, 20); // Giữ rounds[20-59], bây giờ có 40 rounds
+                // Logic: Tab signal là slider không bao giờ dừng với 3 cột
+                // - Cột 1: rounds[0-15] (16 rounds = 4 hàng x 4 items, đã fill đầy)
+                // - Cột 2: rounds[16-31] (16 rounds = 4 hàng x 4 items, đã fill đầy)
+                // - Cột 3: rounds[32-47] (16 rounds = 4 hàng x 4 items, đang fill)
+                // Khi cột 3 đầy (48 rounds), shift: xóa rounds[0-15] (cột 1 cũ), giữ rounds[16-47], thêm round mới vào cột 3 trống
+                // Kiểm tra: nếu có >= 48 rounds, shift TRƯỚC KHI thêm round mới
+                if (count($rounds) >= 48) {
+                    // Shift: Cột 1 = Cột 2 cũ, Cột 2 = Cột 3 cũ, Cột 3 trống
+                    // Xóa 16 rounds đầu (cột 1 cũ), giữ 32 rounds tiếp theo (cột 2+3 cũ)
+                    $rounds = array_slice($rounds, 16); // Giữ rounds[16-47], bây giờ có 32 rounds
                 }
                 
-                // Thêm round mới vào cuối (sẽ fill vào item 3, hoặc item mới nếu vừa shift)
+                // Thêm round mới vào cuối (sẽ fill vào cột 3, hoặc cột mới nếu vừa shift)
                 $rounds[] = [
                     'round_number' => $this->round_number,
                     'final_result' => $this->final_result,
                 ];
                 
-                // Đảm bảo không vượt quá 60 rounds
-                if (count($rounds) > 60) {
-                    $rounds = array_slice($rounds, -60); // Lấy 60 rounds cuối
+                // Đảm bảo không vượt quá 48 rounds
+                if (count($rounds) > 48) {
+                    $rounds = array_slice($rounds, -48); // Lấy 48 rounds cuối
                 }
             }
             
             // Lưu lại vào SystemSetting
-            \App\Models\SystemSetting::setValue('signal_grid_rounds', json_encode($rounds), 'Signal grid rounds (60 rounds: 3 items x 20 rounds each)');
+            \App\Models\SystemSetting::setValue('signal_grid_rounds', json_encode($rounds), 'Signal grid rounds (48 rounds: 3 columns x 16 rounds each, 4 rows x 4 items)');
         } catch (\Exception $e) {
             \Log::error("Error appending round to signal grid: " . $e->getMessage());
         }

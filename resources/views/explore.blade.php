@@ -129,7 +129,7 @@
         </div>
 
         <!-- Tab Content: Search -->
-        <div id="tab-content-search" class="tab-content space-y-4 px-1 pb-4">
+        <div id="tab-content-search" class="tab-content space-y-4 px-2 pb-4">
             <!-- Recent Rounds Results -->
             <div class="flex flex-col items-center gap-1">
                 <!-- Badge container (outside) -->
@@ -1538,7 +1538,8 @@
 
         // Load recent rounds for signal tab (chỉ gọi 1 lần khi mở tab lần đầu)
         // Load từ server để tất cả user thấy giống nhau
-        // Server trả về 48 rounds: 3 cột, mỗi cột 16 rounds (4 hàng x 4 items)
+        // Server trả về 48 rounds: Cột 1+2 (32 rounds), Cột 3 (16 rounds)
+        // Logic shift giữ nguyên như cũ, chỉ đổi từ 5 items/hàng thành 4 items/hàng
         async function loadRecentRounds() {
             try {
                 const response = await fetch('{{ route('explore.signal-grid-rounds') }}');
@@ -1888,8 +1889,10 @@
                         signalGridRounds[existingIndex].final_result = result;
                     } else {
                         // Thêm round mới vào cột 3
-                        // Logic: 3 cột, mỗi cột 16 rounds (4 hàng x 4 items)
-                        // Khi đầy (48 rounds), server sẽ shift tự động
+                        // Logic shift giữ nguyên như cũ (chỉ đổi từ 5 items/hàng thành 4 items/hàng):
+                        // - Cột 1+2: rounds[0-31] (mỗi cột 16 rounds = 4 hàng x 4 items)
+                        // - Cột 3: rounds[32-47] (16 rounds = 4 hàng x 4 items)
+                        // Khi cột 3 đầy (48 rounds), server sẽ shift: Cột 1 = rounds[16-31], Cột 2 = rounds[32-47], Cột 3 trống
                         signalGridRounds.push({
                             round_number: roundNumber,
                             final_result: result,
@@ -1907,10 +1910,11 @@
 
         // Update signal grid
         // Tab signal là một slider không bao giờ dừng
-        // Layout: 3 cột, mỗi cột 4 hàng x 4 items = 16 items/cột
-        // - Cột 1: rounds[0-15] (16 rounds)
-        // - Cột 2: rounds[16-31] (16 rounds)
-        // - Cột 3: rounds[32-47] (16 rounds)
+        // Layout: 3 cột, mỗi cột 4 hàng x 4 items = 16 items/cột (thay đổi từ 5 items/hàng)
+        // Logic shift giữ nguyên như cũ:
+        // - Cột 1+2 (cột 0+1 trong code): rounds[0-31] (mỗi cột 16 rounds = 4 hàng x 4 items)
+        // - Cột 3 (cột 2 trong code): rounds[32-47] (16 rounds = 4 hàng x 4 items)
+        // - Khi cột 3 đầy (48 rounds), server sẽ shift: Cột 1 = rounds[16-31], Cột 2 = rounds[32-47], Cột 3 trống và bắt đầu fill lại
         // Tổng: 3 cột x 4 hàng x 4 items = 48 items
         function updateSignalGridWithRounds() {
             const signalGrid = document.getElementById('signalGrid');
@@ -1935,9 +1939,9 @@
             // Tạo 3 cột, mỗi cột có 4 hàng, mỗi hàng 4 items = 16 items/cột
             // Fill theo cột dọc: cột 1 hàng 1, cột 1 hàng 2, ... cột 2 hàng 1, cột 2 hàng 2, ...
             // Layout: 3 cột x 4 hàng x 4 items = 48 items
-            // Cột 1: rounds[0-15] (fill dọc: hàng 1: 0-3, hàng 2: 4-7, hàng 3: 8-11, hàng 4: 12-15)
-            // Cột 2: rounds[16-31] (fill dọc: hàng 1: 16-19, hàng 2: 20-23, hàng 3: 24-27, hàng 4: 28-31)
-            // Cột 3: rounds[32-47] (fill dọc: hàng 1: 32-35, hàng 2: 36-39, hàng 3: 40-43, hàng 4: 44-47)
+            // Cột 1 (colIndex=0): rounds[0-15] (fill dọc: hàng 1: 0-3, hàng 2: 4-7, hàng 3: 8-11, hàng 4: 12-15)
+            // Cột 2 (colIndex=1): rounds[16-31] (fill dọc: hàng 1: 16-19, hàng 2: 20-23, hàng 3: 24-27, hàng 4: 28-31)
+            // Cột 3 (colIndex=2): rounds[32-47] (fill dọc: hàng 1: 32-35, hàng 2: 36-39, hàng 3: 40-43, hàng 4: 44-47)
             for (let colIndex = 0; colIndex < 3; colIndex++) {
                 // Tạo 4 hàng cho mỗi cột
                 for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
