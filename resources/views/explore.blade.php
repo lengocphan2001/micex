@@ -269,8 +269,7 @@
                     'thachanh': 'kcxanh',
                     'kimcuong': 'kcdo'
                 };
-                
-                console.log('Updating payout rates from API:', gemTypes);
+            
                 
                 gemTypes.forEach(gem => {
                     // Map type nếu là giá trị cũ
@@ -279,7 +278,6 @@
                     if (GEM_TYPES[mappedType]) {
                         GEM_TYPES[mappedType].payoutRate = parseFloat(gem.payout_rate);
                         GEM_TYPES[mappedType].randomRate = parseFloat(gem.random_rate); // Cập nhật random rate từ API
-                        console.log(`Updated ${mappedType}: payoutRate=${GEM_TYPES[mappedType].payoutRate}, randomRate=${GEM_TYPES[mappedType].randomRate}`);
                     } else {
                         console.warn(`GEM_TYPES['${mappedType}'] not found for gem type:`, gem);
                     }
@@ -287,10 +285,10 @@
                 
                 // Debug: Log final random rates for bettable gems
                 const bettableGems = ['kcxanh', 'daquy', 'kcdo'];
-                console.log('Final random rates for bettable gems:');
+                
                 bettableGems.forEach(type => {
                     if (GEM_TYPES[type]) {
-                        console.log(`  ${type}: ${GEM_TYPES[type].randomRate}%`);
+                        
                     }
                 });
                 
@@ -877,13 +875,12 @@
 
             // Debug log (chỉ log một vài lần để tránh spam)
             if (second % 10 === 0 || second === 31 || second === 60) {
-                console.log(`getGemForSecond: second=${second}, rand=${rand}, normalizedRand=${normalizedRand.toFixed(2)}, totalRate=${totalRate.toFixed(2)}, rates:`, rates);
             }
 
             for (const item of rates) {
                 if (normalizedRand <= item.cumulative) {
                     if (second % 10 === 0 || second === 31 || second === 60) {
-                        console.log(`getGemForSecond: selected ${item.type} for second ${second}`);
+                        
                     }
                     return item.type;
                 }
