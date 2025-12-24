@@ -28,19 +28,66 @@ class Promotion extends Model
      */
     public static function getActivePromotion($date = null)
     {
-        $date = $date ?? now();
+        // Use Asia/Ho_Chi_Minh timezone to get correct date
+        if ($date === null) {
+            $date = \Carbon\Carbon::now('Asia/Ho_Chi_Minh');
+        }
+        // Convert to date only (start of day) for proper comparison
+        $today = \Carbon\Carbon::parse($date)->timezone('Asia/Ho_Chi_Minh')->startOfDay();
+        $dateString = $today->format('Y-m-d');
         
-        return self::where('is_active', true)
-            ->where(function($query) use ($date) {
-                $query->whereNull('start_date')
-                      ->orWhere('start_date', '<=', $date);
-            })
-            ->where(function($query) use ($date) {
-                $query->whereNull('end_date')
-                      ->orWhere('end_date', '>=', $date);
-            })
+        // Get all active promotions and filter in PHP to ensure correct date comparison
+        $allActive = self::where('is_active', true)
             ->orderBy('created_at', 'desc')
-            ->first();
+            ->get();
+        
+        $promotion = $allActive->first(function($p) use ($today, $dateString) {
+            // Check if promotion is active for today
+            // Use date string comparison to avoid timezone issues
+            $startDateStr = $p->start_date ? $p->start_date->format('Y-m-d') : null;
+            $endDateStr = $p->end_date ? $p->end_date->format('Y-m-d') : null;
+            
+            // If no start_date, consider it as started
+            $started = !$startDateStr || $startDateStr <= $dateString;
+            // If no end_date, consider it as never ending
+            $notEnded = !$endDateStr || $endDateStr >= $dateString;
+            
+            $isActive = $started && $notEnded;
+            
+            // Debug for each promotion
+            \Log::info('Checking promotion', [
+                'promotion_id' => $p->id,
+                'today' => $dateString,
+                'start_date' => $startDateStr,
+                'end_date' => $endDateStr,
+                'started' => $started,
+                'notEnded' => $notEnded,
+                'isActive' => $isActive,
+            ]);
+            
+            return $isActive;
+        });
+        
+        // Debug logging
+        \Log::info('getActivePromotion', [
+            'date_string' => $dateString,
+            'today_vn' => \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d'),
+            'today_utc' => now()->format('Y-m-d'),
+            'found_promotion' => $promotion ? [
+                'id' => $promotion->id,
+                'start_date' => $promotion->start_date ? $promotion->start_date->format('Y-m-d') : null,
+                'end_date' => $promotion->end_date ? $promotion->end_date->format('Y-m-d') : null,
+            ] : null,
+            'all_active_promotions' => $allActive->map(function($p) {
+                return [
+                    'id' => $p->id,
+                    'start_date' => $p->start_date ? $p->start_date->format('Y-m-d') : null,
+                    'end_date' => $p->end_date ? $p->end_date->format('Y-m-d') : null,
+                ];
+            }),
+        ]);
+        
+        return $promotion;
     }
 
     /**

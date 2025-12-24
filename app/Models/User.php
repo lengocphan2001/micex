@@ -29,6 +29,7 @@ class User extends Authenticatable
         'transfer_code',
         'role',
         'balance',
+        'betting_requirement',
     ];
 
     /**
@@ -51,6 +52,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'balance' => 'decimal:2',
+            'betting_requirement' => 'decimal:2',
         ];
     }
 
@@ -132,61 +135,31 @@ class User extends Authenticatable
     }
 
     /**
-     * Calculate total betting amount since last deposit
-     * Returns the total amount of bets placed after the last approved deposit
+     * Calculate total betting amount (all time)
+     * Returns the total amount of bets + betting contributions
+     * Used to calculate remaining betting requirement: betting_requirement - total_betting
      */
     public function getTotalBettingSinceLastDeposit()
     {
-        $lastDeposit = $this->getLastApprovedDeposit();
-        
-        if (!$lastDeposit || !$lastDeposit->approved_at) {
-            // No deposit yet, return 0
-            return 0;
-        }
-
-        // Calculate total betting amount from bets created after the last deposit approval
-        return \App\Models\Bet::where('user_id', $this->id)
-            ->where('created_at', '>=', $lastDeposit->approved_at)
+        // Calculate total betting amount from all bets
+        $betsAmount = \App\Models\Bet::where('user_id', $this->id)
             ->sum('amount') ?? 0;
-    }
 
-    /**
-     * Get remaining betting requirement (số đá quý cần cược thêm)
-     * Returns the amount that still needs to be bet before withdrawal is allowed
-     */
-    public function getRemainingBettingRequirement()
-    {
-        $lastDeposit = $this->getLastApprovedDeposit();
-        
-        if (!$lastDeposit || !$lastDeposit->approved_at) {
-            // No deposit yet, return 0 (no requirement)
-            return 0;
-        }
+        // Calculate total betting contributions (from giftcode, promotion, etc.)
+        $contributionsAmount = \App\Models\BettingContribution::where('user_id', $this->id)
+            ->sum('amount') ?? 0;
 
-        $depositAmount = $lastDeposit->gem_amount ?? 0;
-        $totalBetting = $this->getTotalBettingSinceLastDeposit();
-        
-        // Return remaining amount needed (if negative, means requirement is met)
-        return max(0, $depositAmount - $totalBetting);
+        return $betsAmount + $contributionsAmount;
     }
 
     /**
      * Check if user has completed betting requirement
-     * Returns true if total betting >= deposit amount since last deposit
+     * Returns true if betting_requirement <= 0
      */
     public function hasCompletedBettingRequirement(): bool
     {
-        $lastDeposit = $this->getLastApprovedDeposit();
-        
-        if (!$lastDeposit || !$lastDeposit->approved_at) {
-            // No deposit yet, requirement is considered met
-            return true;
-        }
-
-        $depositAmount = $lastDeposit->gem_amount ?? 0;
-        $totalBetting = $this->getTotalBettingSinceLastDeposit();
-        
-        return $totalBetting >= $depositAmount;
+        $bettingRequirement = $this->betting_requirement ?? 0;
+        return $bettingRequirement <= 0;
     }
 
     /**

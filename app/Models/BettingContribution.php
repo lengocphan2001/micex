@@ -5,27 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class GiftcodeUsage extends Model
+class BettingContribution extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'giftcode_id',
         'user_id',
+        'giftcode_usage_id',
         'amount',
+        'source',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
     ];
-
-    /**
-     * Relationship: Giftcode
-     */
-    public function giftcode()
-    {
-        return $this->belongsTo(Giftcode::class);
-    }
 
     /**
      * Relationship: User
@@ -36,10 +29,10 @@ class GiftcodeUsage extends Model
     }
 
     /**
-     * Relationship: BettingContributions
+     * Relationship: GiftcodeUsage
      */
-    public function bettingContributions()
+    public function giftcodeUsage()
     {
-        return $this->hasMany(BettingContribution::class);
+        return $this->belongsTo(GiftcodeUsage::class);
     }
 }

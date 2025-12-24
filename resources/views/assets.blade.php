@@ -38,7 +38,7 @@
                     </p>
                 </div>
                 <div class="text-sm text-blue-100 flex items-center gap-1">
-                    Vòng cược chưa hoàn thành : <span class="font-semibold text-white">{{ number_format(auth()->user()->getRemainingBettingRequirement() ?? 0, 2, '.', ',') }}</span> <span class="text-yellow-300">
+                    Vòng cược chưa hoàn thành : <span class="font-semibold text-white" data-remaining-betting>{{ number_format(auth()->user() ? (auth()->user()->betting_requirement ?? 0) : 0, 2, '.', ',') }}</span> <span class="text-yellow-300">
                         <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-5 h-5 object-contain">
                     </span>
                 </div>
@@ -133,9 +133,50 @@
                             showToast(data.message, 'success');
                         }
                         
+                        // Update balance if provided
+                        if (data.balance !== undefined) {
+                            // Find and update balance display (if exists)
+                            const balanceElements = document.querySelectorAll('[data-balance]');
+                            balanceElements.forEach(el => {
+                                el.textContent = parseFloat(data.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$';
+                            });
+                            
+                            // Also update total assets if exists
+                            const totalAssetsEl = document.querySelector('.text-2xl.font-bold');
+                            if (totalAssetsEl && totalAssetsEl.textContent.includes('$')) {
+                                const parts = totalAssetsEl.innerHTML.split('<');
+                                totalAssetsEl.innerHTML = parseFloat(data.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (parts[1] || '');
+                            }
+                        }
+                        
+                        // Update betting requirement if provided
+                        if (data.betting_requirement !== undefined) {
+                            // Find the element showing betting requirement by data attribute
+                            const remainingBettingEl = document.querySelector('[data-remaining-betting]');
+                            if (remainingBettingEl) {
+                                const formattedValue = parseFloat(data.betting_requirement).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                remainingBettingEl.textContent = formattedValue;
+                            } else {
+                                // Try to find by text content
+                                const textToFind = 'Vòng cược chưa hoàn thành';
+                                const allDivs = document.querySelectorAll('div');
+                                for (const div of allDivs) {
+                                    if (div.textContent && div.textContent.includes(textToFind)) {
+                                        const span = div.querySelector('span.font-semibold.text-white');
+                                        if (span) {
+                                            const formattedValue = parseFloat(data.betting_requirement).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                            span.textContent = formattedValue;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Reload page after a short delay to ensure all data is updated
                         setTimeout(() => {
                             window.location.reload();
-                        }, 1000);
+                        }, 1500);
                     } else {
                         if (typeof showToast === 'function') {
                             showToast(data.message || 'Có lỗi xảy ra.', 'error');

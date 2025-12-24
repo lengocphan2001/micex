@@ -63,12 +63,13 @@ class WithdrawController extends Controller
                 ], 400);
             }
 
-            // Check betting requirement: user must complete betting rounds >= deposit amount since last deposit
-            if (!$user->hasCompletedBettingRequirement()) {
-                $remaining = $user->getRemainingBettingRequirement();
+            // Check betting requirement: betting_requirement must be 0 or less
+            $bettingRequirement = $user->betting_requirement ?? 0;
+            
+            if ($bettingRequirement > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Vòng cược chưa hoàn thành. Bạn cần đặt cược thêm " . number_format($remaining, 2, '.', ',') . " đá quý trước khi có thể rút tiền.",
+                    'message' => "Vòng cược chưa hoàn thành. Bạn cần đặt cược thêm " . number_format($bettingRequirement, 2, '.', ',') . " đá quý trước khi có thể rút tiền.",
                 ], 400);
             }
 

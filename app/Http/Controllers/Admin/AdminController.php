@@ -11,6 +11,7 @@ use App\Models\Giftcode;
 use App\Models\Notification;
 use App\Models\Round;
 use App\Models\CommissionRate;
+use App\Models\BettingContribution;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -688,7 +689,22 @@ class AdminController extends Controller
             $totalGemAmount = $baseGemAmount + $promotionBonus;
             
             $user->balance += $totalGemAmount;
+            
+            // Increase betting requirement: deposit + promotion
+            $user->betting_requirement = ($user->betting_requirement ?? 0) + $totalGemAmount;
+            
             $user->save();
+
+            // Create betting contribution for promotion bonus (if any)
+            // This counts towards betting requirement for withdrawal
+            if ($promotionBonus > 0) {
+                BettingContribution::create([
+                    'user_id' => $user->id,
+                    'giftcode_usage_id' => null, // Not from giftcode
+                    'amount' => $promotionBonus,
+                    'source' => 'promotion',
+                ]);
+            }
 
             // Create notification for user
             Notification::createDepositApproved($user, $depositRequest->amount, $totalGemAmount, $depositRequest->id);
@@ -905,6 +921,16 @@ class AdminController extends Controller
         $validated['is_active'] = true;
         $promotion = Promotion::create($validated);
 
+        // Debug: Log promotion creation
+        \Log::info('Promotion created', [
+            'id' => $promotion->id,
+            'deposit_percentage' => $promotion->deposit_percentage,
+            'start_date' => $promotion->start_date,
+            'end_date' => $promotion->end_date,
+            'is_active' => $promotion->is_active,
+            'now' => now()->format('Y-m-d'),
+        ]);
+
         // Send notification to all users about new promotion
         $users = User::all();
         foreach ($users as $user) {
@@ -934,8 +960,9 @@ class AdminController extends Controller
 
     /**
      * Create giftcodes
+     * Tạo 1 mã code duy nhất với quantity = số lượng (số lần có thể sử dụng)
      */
-    public function createGiftcodes(Request $request)
+public function createGiftcodes(Request $request)
     {
         $validated = $request->validate([
             'quantity' => 'required|integer|min:1|max:10000',
@@ -943,28 +970,21 @@ class AdminController extends Controller
             'expires_at' => 'nullable|date',
         ]);
 
-        $giftcodes = [];
-        for ($i = 0; $i < $validated['quantity']; $i++) {
-            // Generate unique code
-            do {
-                $code = strtoupper(substr(md5(uniqid(rand(), true)), 0, 7));
-            } while (Giftcode::where('code', $code)->exists());
+        // Generate unique code
+        do {
+            $code = strtoupper(substr(md5(uniqid(rand(), true)), 0, 7));
+        } while (Giftcode::where('code', $code)->exists());
 
-            $giftcodes[] = [
-                'code' => $code,
-                'quantity' => 1, // Each giftcode can be used once
-                'value' => $validated['value'],
-                'expires_at' => $validated['expires_at'],
-                'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
+        // Tạo 1 mã code duy nhất với quantity = số lượng nhập vào
+        Giftcode::create([
+            'code' => $code,
+            'quantity' => $validated['quantity'], // Số lần có thể sử dụng
+            'value' => $validated['value'],
+            'expires_at' => $validated['expires_at'],
+            'is_active' => true,
+        ]);
 
-        // Insert in batches for performance
-        Giftcode::insert($giftcodes);
-
-        return back()->with('success', "Đã tạo {$validated['quantity']} giftcode thành công.");
+        return back()->with('success', "Đã tạo giftcode {$code} thành công với số lượng {$validated['quantity']} lần sử dụng.");
     }
 
     /**

@@ -365,6 +365,10 @@ class ExploreController extends Controller
 
             // Deduct balance
             $user->balance -= $validated['amount'];
+            
+            // Decrease betting requirement by bet amount
+            $user->betting_requirement = max(0, ($user->betting_requirement ?? 0) - $validated['amount']);
+            
             $user->save();
 
             // Create bet (unique constraint will prevent duplicates)
@@ -394,9 +398,13 @@ class ExploreController extends Controller
 
             DB::commit();
 
+            // Refresh user to get updated betting_requirement
+            $user->refresh();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Đặt cược thành công!',
+                'betting_requirement' => $user->betting_requirement ?? 0,
                 'bet' => [
                     'id' => $bet->id,
                     'gem_type' => $bet->gem_type,

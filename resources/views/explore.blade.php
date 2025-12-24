@@ -129,7 +129,7 @@
         </div>
 
         <!-- Tab Content: Search -->
-        <div id="tab-content-search" class="tab-content space-y-4 px-2 pb-4">
+        <div id="tab-content-search" class="tab-content space-y-4 px-2  pb-4">
             <!-- Recent Rounds Results -->
             <div class="flex flex-col items-center gap-1">
                 <!-- Badge container (outside) -->

@@ -23,16 +23,21 @@
 
     <!-- Active Promotion Display -->
     @if($activePromotion)
-    <div class="card card-warning">
-        <div class="card-header">
-            <h3 class="card-title">
-                <i class="fas fa-gift"></i> Sự kiện khuyến mãi đang diễn ra
+    <div class="card card-warning" style="border: 3px solid #ffc107; box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);">
+        <div class="card-header" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+            <h3 class="card-title" style="color: #fff; font-weight: bold;">
+                <i class="fas fa-gift"></i> 🎉 SỰ KIỆN KHUYẾN MÃI ĐANG DIỄN RA
             </h3>
         </div>
         <div class="card-body">
-            <div class="alert alert-info">
-                <strong>Khuyến mãi nạp: {{ number_format($activePromotion->deposit_percentage, 2) }}%</strong><br>
-                <small>Thời gian: {{ \Carbon\Carbon::parse($activePromotion->start_date)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($activePromotion->end_date)->format('d/m/Y') }}</small>
+            <div class="alert alert-warning" style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%); border-color: #ffc107;">
+                <h4 style="color: #856404; margin: 0 0 10px 0;">
+                    <i class="fas fa-percentage"></i> <strong>Khuyến mãi nạp: {{ number_format($activePromotion->deposit_percentage, 2) }}%</strong>
+                </h4>
+                <p style="margin: 5px 0; color: #856404;">
+                    <i class="fas fa-calendar-alt"></i> 
+                    <strong>Thời gian:</strong> {{ \Carbon\Carbon::parse($activePromotion->start_date)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($activePromotion->end_date)->format('d/m/Y') }}
+                </p>
             </div>
             <form action="{{ route('admin.promotion.update', $activePromotion->id) }}" method="POST">
                 @csrf
@@ -137,10 +142,11 @@
                     <form action="{{ route('admin.giftcode.create') }}" method="POST">
                         @csrf
                         <div class="form-group">
-                            <label for="quantity">Số lượng giftcode</label>
+                            <label for="quantity">Số lượng (số lần sử dụng)</label>
                             <input type="number" min="1" max="10000" class="form-control @error('quantity') is-invalid @enderror" 
                                    id="quantity" name="quantity" 
-                                   value="{{ old('quantity', 1) }}" placeholder="Số lượng giftcode" required>
+                                   value="{{ old('quantity', 1) }}" placeholder="Số lần có thể sử dụng" required>
+                            <small class="form-text text-muted">Ví dụ: nhập 10 sẽ tạo 1 mã code có thể sử dụng 10 lần (mỗi user chỉ dùng được 1 lần)</small>
                             @error('quantity')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
