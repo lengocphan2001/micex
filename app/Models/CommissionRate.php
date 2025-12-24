@@ -14,7 +14,7 @@ class CommissionRate extends Model
     ];
 
     protected $casts = [
-        'rate' => 'decimal:2',
+        'rate' => 'float',
         'is_active' => 'boolean',
         'order' => 'integer',
     ];

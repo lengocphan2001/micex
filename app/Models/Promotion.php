@@ -11,6 +11,7 @@ class Promotion extends Model
 
     protected $fillable = [
         'deposit_percentage',
+        'betting_multiplier',
         'start_date',
         'end_date',
         'is_active',
@@ -18,6 +19,7 @@ class Promotion extends Model
 
     protected $casts = [
         'deposit_percentage' => 'decimal:2',
+        'betting_multiplier' => 'decimal:2',
         'start_date' => 'date',
         'end_date' => 'date',
         'is_active' => 'boolean',

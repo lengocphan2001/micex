@@ -50,11 +50,27 @@ case "$1" in
             sleep 1
         fi
         
+        # Kill any orphaned processes (không trong tmux)
+        echo "Killing any orphaned round:process-loop processes..."
+        pkill -f "artisan round:process-loop" 2>/dev/null
+        sleep 2
+        
+        # Double check - kill force nếu vẫn còn
+        PIDS=$(pgrep -f "artisan round:process-loop" 2>/dev/null)
+        if [ ! -z "$PIDS" ]; then
+            echo "Force killing remaining processes: $PIDS"
+            kill -9 $PIDS 2>/dev/null
+            sleep 1
+        fi
+        
         # Start lại
         tmux new-session -d -s "$SESSION_NAME" "cd $PROJECT_PATH && $COMMAND"
         
         if [ $? -eq 0 ]; then
             echo "✓ Session $SESSION_NAME restarted successfully!"
+            sleep 1
+            echo "Current processes:"
+            ps aux | grep "round:process-loop" | grep -v grep
         else
             echo "✗ Failed to restart session"
             exit 1

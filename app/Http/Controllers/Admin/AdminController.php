@@ -690,8 +690,18 @@ class AdminController extends Controller
             
             $user->balance += $totalGemAmount;
             
-            // Increase betting requirement: deposit + promotion
-            $user->betting_requirement = ($user->betting_requirement ?? 0) + $totalGemAmount;
+            // Calculate betting requirement:
+            // deposit + (promotion_bonus * betting_multiplier)
+            $bettingRequirementIncrease = $baseGemAmount;
+            if ($promotion && $promotionBonus > 0) {
+                $bettingMultiplier = $promotion->betting_multiplier ?? 1;
+                $bettingRequirementIncrease += $promotionBonus * $bettingMultiplier;
+            } else {
+                // If no promotion, just add promotion bonus (if any) with 1x multiplier
+                $bettingRequirementIncrease += $promotionBonus;
+            }
+            
+            $user->betting_requirement = ($user->betting_requirement ?? 0) + $bettingRequirementIncrease;
             
             $user->save();
 
@@ -949,6 +959,7 @@ class AdminController extends Controller
         
         $validated = $request->validate([
             'deposit_percentage' => 'required|numeric|min:0|max:100',
+            'betting_multiplier' => 'required|numeric|min:0',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);

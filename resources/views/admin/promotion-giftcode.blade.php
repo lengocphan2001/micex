@@ -33,6 +33,8 @@
             <div class="alert alert-warning" style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%); border-color: #ffc107;">
                 <h4 style="color: #856404; margin: 0 0 10px 0;">
                     <i class="fas fa-percentage"></i> <strong>Khuyến mãi nạp: {{ number_format($activePromotion->deposit_percentage, 2) }}%</strong>
+                    <br>
+                    <i class="fas fa-times-circle"></i> <strong>Vòng cược: {{ number_format($activePromotion->betting_multiplier ?? 1, 2) }}x</strong>
                 </h4>
                 <p style="margin: 5px 0; color: #856404;">
                     <i class="fas fa-calendar-alt"></i> 
@@ -48,6 +50,16 @@
                            id="edit_deposit_percentage" name="deposit_percentage" 
                            value="{{ old('deposit_percentage', $activePromotion->deposit_percentage) }}" required>
                     @error('deposit_percentage')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="form-group">
+                    <label for="edit_betting_multiplier">Vòng cược</label>
+                    <input type="number" step="0.01" min="0" class="form-control @error('betting_multiplier') is-invalid @enderror" 
+                           id="edit_betting_multiplier" name="betting_multiplier" 
+                           value="{{ old('betting_multiplier', $activePromotion->betting_multiplier ?? 1) }}" placeholder="Tăng vòng cược cho tiền khuyến mãi" required>
+                    <small class="form-text text-muted">Ví dụ: Nạp 100 đá quý, KM 50% = 50 đá quý, Vòng cược = 5 → Betting requirement = 100 + (50 × 5) = 350 đá quý</small>
+                    @error('betting_multiplier')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
@@ -102,6 +114,16 @@
                                    id="deposit_percentage" name="deposit_percentage" 
                                    value="{{ old('deposit_percentage') }}" placeholder="Phần % khuyến mãi nạp" required>
                             @error('deposit_percentage')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="form-group">
+                            <label for="betting_multiplier">Vòng cược</label>
+                            <input type="number" step="0.01" min="0" class="form-control @error('betting_multiplier') is-invalid @enderror" 
+                                   id="betting_multiplier" name="betting_multiplier" 
+                                   value="{{ old('betting_multiplier', 1) }}" placeholder="Tăng vòng cược cho tiền khuyến mãi" required>
+                            <small class="form-text text-muted">Ví dụ: Nạp 100 đá quý, KM 50% = 50 đá quý, Vòng cược = 5 → Betting requirement = 100 + (50 × 5) = 350 đá quý</small>
+                            @error('betting_multiplier')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>

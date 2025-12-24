@@ -76,7 +76,7 @@
                                     <input type="text" name="rates[{{ $rate->id }}][level]" value="{{ $rate->level }}" class="form-control" readonly>
                                 </td>
                                 <td>
-                                    <input type="number" name="rates[{{ $rate->id }}][rate]" value="{{ $rate->rate }}" class="form-control" min="0" max="100" step="0.01" required>
+                                    <input type="text" name="rates[{{ $rate->id }}][rate]" value="{{ $rate->rate }}" class="form-control commission-rate-input" pattern="^\d+(\.\d+)?$" min="0" max="100" required>
                                 </td>
                                 <td>
                                     <input type="number" name="rates[{{ $rate->id }}][order]" value="{{ $rate->order }}" class="form-control" min="0" required>
@@ -109,7 +109,7 @@
                     </div>
                     <div class="form-group mr-2">
                         <label for="new_rate" class="mr-2">Tỉ lệ (%):</label>
-                        <input type="number" name="rate" id="new_rate" class="form-control" min="0" max="100" step="0.01" required>
+                        <input type="text" name="rate" id="new_rate" class="form-control commission-rate-input" pattern="^\d+(\.\d+)?$" min="0" max="100" required>
                     </div>
                     <div class="form-group mr-2">
                         <label for="new_order" class="mr-2">Thứ tự:</label>
@@ -146,6 +146,44 @@
             });
         }
     }
+
+    // Handle input for commission rate fields - allow comma or dot as decimal separator
+    document.addEventListener('DOMContentLoaded', function() {
+        const rateInputs = document.querySelectorAll('.commission-rate-input');
+        
+        rateInputs.forEach(input => {
+            // Allow both comma and dot as decimal separator
+            input.addEventListener('input', function(e) {
+                let value = e.target.value;
+                // Replace comma with dot for consistency
+                value = value.replace(',', '.');
+                // Remove any non-numeric characters except dot
+                value = value.replace(/[^0-9.]/g, '');
+                // Ensure only one dot
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                // Check max value
+                if (parseFloat(value) > 100) {
+                    value = '100';
+                }
+                e.target.value = value;
+            });
+
+            // Validate on blur
+            input.addEventListener('blur', function(e) {
+                let value = e.target.value.trim();
+                if (value && !isNaN(value) && parseFloat(value) >= 0 && parseFloat(value) <= 100) {
+                    // Keep the value as is, no formatting
+                    e.target.value = value;
+                } else if (value && (isNaN(value) || parseFloat(value) < 0 || parseFloat(value) > 100)) {
+                    alert('Vui lòng nhập số từ 0 đến 100');
+                    e.target.focus();
+                }
+            });
+        });
+    });
 </script>
 @stop
 
