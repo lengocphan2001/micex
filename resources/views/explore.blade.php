@@ -129,7 +129,7 @@
         </div>
 
         <!-- Tab Content: Search -->
-        <div id="tab-content-search" class="tab-content space-y-4 px-4 pb-4">
+        <div id="tab-content-search" class="tab-content space-y-4 px-1 pb-4">
             <!-- Recent Rounds Results -->
             <div class="flex flex-col items-center gap-1">
                 <!-- Badge container (outside) -->
@@ -140,7 +140,7 @@
                 <!-- Rounds container -->
                 <div class="flex items-center justify-center w-full">
                     <div id="recentRoundsContainer" class="w-full rounded-[40px] bg-[#111111] py-2 flex items-center justify-center gap-1.5 overflow-x-auto border border-[#3958F5]" style="opacity: 1; transform: rotate(0deg);">
-                        <!-- 13 rounds will be populated by JavaScript -->
+                        <!-- Rounds will be populated by JavaScript (14 items on desktop, 12 items on mobile) -->
                         <div class="text-gray-400 text-xs p-1">Đang tải...</div>
                     </div>
                 </div>
@@ -150,9 +150,9 @@
             
         </div>
 
-        <div id="tab-content-signal" class="tab-content hidden space-y-4 px-4 pb-4">
-            <!-- Signal Grid: Hiển thị 30 rounds gần nhất, mỗi round là 1 icon -->
-            <div id="signalGrid" class="grid grid-cols-3 gap-0.5">
+        <div id="tab-content-signal" class="tab-content flex justify-center hidden space-y-4 px-4 pb-4">
+            <!-- Signal Grid: Hiển thị 48 rounds gần nhất (3 cột x 4 hàng x 4 items), mỗi round là 1 icon -->
+            <div id="signalGrid" class="grid grid-cols-3 gap-8">
                 <!-- Sẽ được tạo động từ API -->
             </div>
         </div>
@@ -326,7 +326,7 @@
     }
         let isPollingBet = false; // Flag để tránh polling bet nhiều lần
         let clientBetInfo = null; // Lưu thông tin bet ở client để layout xử lý khi round finish
-        let signalGridRounds = []; // Lưu 60 rounds để hiển thị trong grid Signal (chỉ ở client)
+        let signalGridRounds = []; // Lưu 48 rounds để hiển thị trong grid Signal (chỉ ở client)
         let signalTabLoaded = false; // Flag để biết tab Signal đã load chưa
         let minerVideoPhase = null; // phase hiện tại của miner video để tránh reset liên tục
         let randomIconInterval = null; // Interval để random icon nhanh trong 30 giây cuối
@@ -1541,14 +1541,14 @@
 
         // Load recent rounds for signal tab (chỉ gọi 1 lần khi mở tab lần đầu)
         // Load từ server để tất cả user thấy giống nhau
-        // Server trả về 60 rounds: cột 1+2 (40 rounds) và cột 3 (20 rounds)
+        // Server trả về 48 rounds: 3 cột, mỗi cột 16 rounds (4 hàng x 4 items)
         async function loadRecentRounds() {
             try {
                 const response = await fetch('{{ route('explore.signal-grid-rounds') }}');
                 const rounds = await response.json();
 
                 if (rounds && Array.isArray(rounds)) {
-                    // Lấy tất cả 60 rounds từ server
+                    // Lấy tất cả 48 rounds từ server
                     signalGridRounds = rounds;
                     updateSignalGridWithRounds();
                 }
@@ -1558,23 +1558,27 @@
             }
         }
         
-        // Load and display 13 recent rounds results
+        // Load and display recent rounds results (14 items on desktop, 12 items on mobile)
         async function loadRecentRoundsDisplay() {
             const container = document.getElementById('recentRoundsContainer');
             const badgesContainer = document.getElementById('recentRoundsBadges');
             if (!container || !badgesContainer) return;
             
+            // Detect desktop vs mobile (using window width, typically 768px is the breakpoint)
+            const isDesktop = window.innerWidth >= 768;
+            const historyRoundsCount = isDesktop ? 13 : 11; // Desktop: 13 history + 1 current = 14, Mobile: 11 history + 1 current = 12
+            
             try {
                 // Try to use signalGridRounds if available, otherwise fetch from API
                 let rounds = [];
                 if (signalGridRounds && signalGridRounds.length > 0) {
-                    // Get last 12 rounds (oldest to newest, left to right)
-                    rounds = signalGridRounds.slice(-12);
+                    // Get last N rounds (oldest to newest, left to right)
+                    rounds = signalGridRounds.slice(-historyRoundsCount);
                 } else {
                     const response = await fetch('{{ route('explore.signal-grid-rounds') }}');
                     const allRounds = await response.json();
                     if (allRounds && Array.isArray(allRounds) && allRounds.length > 0) {
-                        rounds = allRounds.slice(-12);
+                        rounds = allRounds.slice(-historyRoundsCount);
                     }
                 }
                 
@@ -1582,7 +1586,7 @@
                 container.innerHTML = '';
                 badgesContainer.innerHTML = '';
                 
-                // Display 12 rounds from history
+                // Display history rounds
                 rounds.forEach((round, index) => {
                     let result = round.admin_set_result || round.final_result || 'kcxanh';
                     
@@ -1868,13 +1872,13 @@
                 const data = await response.json();
 
                 if (data.success && data.rounds) {
-                    // Server trả về tất cả rounds sau khi append (có thể < 60 nếu chưa đầy, hoặc = 60 nếu đã shift)
+                    // Server trả về tất cả rounds sau khi append (có thể < 48 nếu chưa đầy, hoặc = 48 nếu đã shift)
                     // Cập nhật signalGridRounds từ server response
                     // Server đã xử lý shift nếu cần, nên chỉ cần cập nhật từ response
                     signalGridRounds = data.rounds;
-                    // Đảm bảo không vượt quá 60 rounds
-                    if (signalGridRounds.length > 60) {
-                        signalGridRounds = signalGridRounds.slice(-60);
+                    // Đảm bảo không vượt quá 48 rounds
+                    if (signalGridRounds.length > 48) {
+                        signalGridRounds = signalGridRounds.slice(-48);
                     }
                     // LUÔN update grid ngay lập tức (không cần check tab)
                     updateSignalGridWithRounds();
@@ -1887,16 +1891,16 @@
                         signalGridRounds[existingIndex].final_result = result;
                     } else {
                         // Thêm round mới vào cột 3
-                        // Logic: Cột 1+2 (40 rounds), Cột 3 (20 rounds)
-                        // Khi cột 3 đầy (60 rounds), server sẽ shift tự động
+                        // Logic: 3 cột, mỗi cột 16 rounds (4 hàng x 4 items)
+                        // Khi đầy (48 rounds), server sẽ shift tự động
                         signalGridRounds.push({
                             round_number: roundNumber,
                             final_result: result,
                         });
 
-                        // Nếu vượt quá 60 rounds, giữ 60 rounds cuối (server sẽ xử lý shift)
-                        if (signalGridRounds.length > 60) {
-                            signalGridRounds = signalGridRounds.slice(-60);
+                        // Nếu vượt quá 48 rounds, giữ 48 rounds cuối (server sẽ xử lý shift)
+                        if (signalGridRounds.length > 48) {
+                            signalGridRounds = signalGridRounds.slice(-48);
                         }
                     }
                     updateSignalGridWithRounds();
@@ -1906,11 +1910,11 @@
 
         // Update signal grid
         // Tab signal là một slider không bao giờ dừng
-        // Layout: 3 items (cột), mỗi item 4 hàng x 5 cột = 20 slots/item
-        // - Item 1: rounds[0-19] (20 rounds, đã fill đầy)
-        // - Item 2: rounds[20-39] (20 rounds, đã fill đầy)
-        // - Item 3: rounds[40-59] (20 rounds, đang fill)
-        // Khi item 3 đầy (60 rounds), server sẽ shift: Item 1 = rounds[20-39], Item 2 = rounds[40-59], Item 3 trống và bắt đầu fill lại
+        // Layout: 3 cột, mỗi cột 4 hàng x 4 items = 16 items/cột
+        // - Cột 1: rounds[0-15] (16 rounds)
+        // - Cột 2: rounds[16-31] (16 rounds)
+        // - Cột 3: rounds[32-47] (16 rounds)
+        // Tổng: 3 cột x 4 hàng x 4 items = 48 items
         function updateSignalGridWithRounds() {
             const signalGrid = document.getElementById('signalGrid');
             if (!signalGrid) return;
@@ -1922,17 +1926,21 @@
             const columns = [];
             for (let col = 0; col < 3; col++) {
                 const columnDiv = document.createElement('div');
-                columnDiv.className = 'flex flex-col gap-1';
+                columnDiv.className = 'flex flex-col gap-0.5';
+                // Đảm bảo mỗi cột là hình vuông: 4 hàng x 4 items
+                // Chiều rộng = 4 items * (w-6 + gap-0.5) = 4 * (24px + 2px) = 104px
+                // Chiều cao = 4 hàng * (h-6 + gap-0.5) = 4 * (24px + 2px) = 104px
+                columnDiv.style.aspectRatio = '1 / 1';
                 columns.push(columnDiv);
                 signalGrid.appendChild(columnDiv);
             }
 
-            // Tạo 3 cột, mỗi cột có 4 hàng, mỗi hàng 5 items = 20 items/cột
+            // Tạo 3 cột, mỗi cột có 4 hàng, mỗi hàng 4 items = 16 items/cột
             // Fill theo cột dọc: cột 1 hàng 1, cột 1 hàng 2, ... cột 2 hàng 1, cột 2 hàng 2, ...
-            // Layout: 3 cột x 4 hàng x 5 items = 60 items
-            // Cột 1: rounds[0-19] (fill dọc: hàng 1: 0-4, hàng 2: 5-9, hàng 3: 10-14, hàng 4: 15-19)
-            // Cột 2: rounds[20-39] (fill dọc: hàng 1: 20-24, hàng 2: 25-29, hàng 3: 30-34, hàng 4: 35-39)
-            // Cột 3: rounds[40-59] (fill dọc: hàng 1: 40-44, hàng 2: 45-49, hàng 3: 50-54, hàng 4: 55-59)
+            // Layout: 3 cột x 4 hàng x 4 items = 48 items
+            // Cột 1: rounds[0-15] (fill dọc: hàng 1: 0-3, hàng 2: 4-7, hàng 3: 8-11, hàng 4: 12-15)
+            // Cột 2: rounds[16-31] (fill dọc: hàng 1: 16-19, hàng 2: 20-23, hàng 3: 24-27, hàng 4: 28-31)
+            // Cột 3: rounds[32-47] (fill dọc: hàng 1: 32-35, hàng 2: 36-39, hàng 3: 40-43, hàng 4: 44-47)
             for (let colIndex = 0; colIndex < 3; colIndex++) {
                 // Tạo 4 hàng cho mỗi cột
                 for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
@@ -1944,12 +1952,12 @@
                         columns[colIndex].appendChild(rowDiv);
                     }
 
-                    // Tạo 5 items cho mỗi hàng
-                    for (let itemInRow = 0; itemInRow < 5; itemInRow++) {
+                    // Tạo 4 items cho mỗi hàng
+                    for (let itemInRow = 0; itemInRow < 4; itemInRow++) {
                         // Tính index trong mảng signalGridRounds
-                        // Fill theo cột dọc: colIndex * 20 + rowIndex * 5 + itemInRow
-                        // Cột 0: rounds[0-19], Cột 1: rounds[20-39], Cột 2: rounds[40-59]
-                        const roundIndex = colIndex * 20 + rowIndex * 5 + itemInRow;
+                        // Fill theo cột dọc: colIndex * 16 + rowIndex * 4 + itemInRow
+                        // Cột 0: rounds[0-15], Cột 1: rounds[16-31], Cột 2: rounds[32-47]
+                        const roundIndex = colIndex * 16 + rowIndex * 4 + itemInRow;
 
                         // Tạo item
                         const iconDiv = document.createElement('div');
