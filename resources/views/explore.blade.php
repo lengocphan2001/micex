@@ -270,6 +270,8 @@
                     'kimcuong': 'kcdo'
                 };
                 
+                console.log('Updating payout rates from API:', gemTypes);
+                
                 gemTypes.forEach(gem => {
                     // Map type nếu là giá trị cũ
                     const mappedType = typeMap[gem.type] || gem.type;
@@ -277,8 +279,21 @@
                     if (GEM_TYPES[mappedType]) {
                         GEM_TYPES[mappedType].payoutRate = parseFloat(gem.payout_rate);
                         GEM_TYPES[mappedType].randomRate = parseFloat(gem.random_rate); // Cập nhật random rate từ API
+                        console.log(`Updated ${mappedType}: payoutRate=${GEM_TYPES[mappedType].payoutRate}, randomRate=${GEM_TYPES[mappedType].randomRate}`);
+                    } else {
+                        console.warn(`GEM_TYPES['${mappedType}'] not found for gem type:`, gem);
                     }
                 });
+                
+                // Debug: Log final random rates for bettable gems
+                const bettableGems = ['kcxanh', 'daquy', 'kcdo'];
+                console.log('Final random rates for bettable gems:');
+                bettableGems.forEach(type => {
+                    if (GEM_TYPES[type]) {
+                        console.log(`  ${type}: ${GEM_TYPES[type].randomRate}%`);
+                    }
+                });
+                
                 // Update UI with new payout rates
                 updateGemCardsPayoutRates();
             }
@@ -813,8 +828,9 @@
         // Get gem type for a specific second based on seed
         // This must match the server-side logic exactly
         // Improved hash function to avoid consecutive duplicates
+        // CHỈ random từ 3 đá bettable (kcxanh, daquy, kcdo), KHÔNG bao gồm đá nổ hũ
         function getGemForSecond(seed, second) {
-            if (!seed) return 'thachanh';
+            if (!seed) return 'kcxanh';
 
             // If it's the last second (60) and admin has set a result, use that
             if (second === 60 && currentRound && currentRound.admin_set_result) {
@@ -836,24 +852,44 @@
             // Convert to 1-100 range with better distribution
             const rand = (Math.abs(hash) % 10000) % 100 + 1;
 
-            // Sử dụng random rates từ GEM_TYPES (đã được cập nhật từ API)
-            // Đảm bảo sắp xếp theo thứ tự để tổng = 100
+            // CHỈ sử dụng random rates từ 3 đá bettable (kcxanh, daquy, kcdo)
+            // KHÔNG bao gồm đá nổ hũ (thachanhtim, ngusac, cuoc)
+            const bettableGems = ['kcxanh', 'daquy', 'kcdo'];
             const rates = [];
-            Object.keys(GEM_TYPES).forEach(type => {
-                rates.push({
-                    type: type,
-                    rate: GEM_TYPES[type].randomRate || 33.33 // Fallback nếu chưa có
-                });
+            let totalRate = 0;
+            
+            bettableGems.forEach(type => {
+                if (GEM_TYPES[type] && GEM_TYPES[type].randomRate) {
+                    const rate = GEM_TYPES[type].randomRate;
+                    totalRate += rate;
+                    rates.push({
+                        type: type,
+                        rate: rate,
+                        cumulative: totalRate
+                    });
+                } else {
+                    console.warn(`getGemForSecond: GEM_TYPES['${type}'] not found or randomRate is missing`);
+                }
             });
 
-            let cumulative = 0;
+            // Normalize rand to totalRate range
+            const normalizedRand = (rand / 100) * totalRate;
+
+            // Debug log (chỉ log một vài lần để tránh spam)
+            if (second % 10 === 0 || second === 31 || second === 60) {
+                console.log(`getGemForSecond: second=${second}, rand=${rand}, normalizedRand=${normalizedRand.toFixed(2)}, totalRate=${totalRate.toFixed(2)}, rates:`, rates);
+            }
+
             for (const item of rates) {
-                cumulative += item.rate;
-                if (rand <= cumulative) {
+                if (normalizedRand <= item.cumulative) {
+                    if (second % 10 === 0 || second === 31 || second === 60) {
+                        console.log(`getGemForSecond: selected ${item.type} for second ${second}`);
+                    }
                     return item.type;
                 }
             }
 
+            console.warn(`getGemForSecond: No gem selected for second ${second}, returning 'kcxanh' as fallback`);
             return 'kcxanh';
         }
 
