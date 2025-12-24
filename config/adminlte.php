@@ -332,11 +332,6 @@ return [
             'icon' => 'fas fa-fw fa-user-tie',
                         ],
                         [
-            'text' => 'Banner',
-            'url' => 'admin/banner',
-            'icon' => 'fas fa-fw fa-image',
-                ],
-                [
             'text' => 'Slider',
             'url' => 'admin/sliders',
             'icon' => 'fas fa-fw fa-sliders-h',

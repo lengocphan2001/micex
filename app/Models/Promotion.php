@@ -28,12 +28,13 @@ class Promotion extends Model
      */
     public static function getActivePromotion($date = null)
     {
-        // Use Asia/Ho_Chi_Minh timezone to get correct date
+        // Use app timezone from config to get correct date
+        $appTimezone = config('app.timezone', 'Asia/Ho_Chi_Minh');
         if ($date === null) {
-            $date = \Carbon\Carbon::now('Asia/Ho_Chi_Minh');
+            $date = \Carbon\Carbon::now($appTimezone);
         }
         // Convert to date only (start of day) for proper comparison
-        $today = \Carbon\Carbon::parse($date)->timezone('Asia/Ho_Chi_Minh')->startOfDay();
+        $today = \Carbon\Carbon::parse($date)->timezone($appTimezone)->startOfDay();
         $dateString = $today->format('Y-m-d');
         
         // Get all active promotions and filter in PHP to ensure correct date comparison
@@ -71,7 +72,7 @@ class Promotion extends Model
         // Debug logging
         \Log::info('getActivePromotion', [
             'date_string' => $dateString,
-            'today_vn' => \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d'),
+            'today_app_timezone' => \Carbon\Carbon::now(config('app.timezone', 'Asia/Ho_Chi_Minh'))->format('Y-m-d'),
             'today_utc' => now()->format('Y-m-d'),
             'found_promotion' => $promotion ? [
                 'id' => $promotion->id,
