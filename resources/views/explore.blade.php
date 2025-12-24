@@ -12,9 +12,40 @@
             transition: all 0.3s ease;
         }
 
-        .gem-card.selected {
-            border: 2px solid #3b82f6;
-            background: rgba(59, 130, 246, 0.1);
+        .gem-card.selected[data-gem-type="kcxanh"] {
+            background: #0170CC;
+        }
+
+        .gem-card.selected[data-gem-type="daquy"] {
+            background: #7312E9;
+        }
+
+        .gem-card.selected[data-gem-type="kcdo"] {
+            background: #FE4555;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .refresh-spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Hide number input spinner */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
         }
     </style>
 @endpush
@@ -26,144 +57,161 @@
 @endsection
 
 @section('content')
-    <div class="px-4 py-4 space-y-4">
-        <!-- Top stats -->
-        <div class="grid grid-cols-2 gap-3">
-            <div class="bg-[#2d59ff] rounded-xl p-2 card-shadow flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="">
-                        <i class="fas fa-wallet text-white text-4xl"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs text-white/90">Đá quý</p>
-                        <p class="text-lg font-bold text-white" id="userBalance">
-                            {{ number_format(auth()->user()->balance ?? 0, 2, '.', ',') }}$</p>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-blue-500 rounded-xl p-2 card-shadow">
-                <p class="text-xs text-white/90 mb-2 text-center">Thời gian còn lại để khai thác</p>
-                <div class="flex items-center justify-center gap-2">
-                    <!-- Minutes: First digit -->
-                    <div class="bg-white text-gray-900 rounded-md w-12 h-8 flex items-center justify-center font-bold text-lg shadow"
-                        id="minute1">0</div>
-                    <!-- Minutes: Second digit -->
-                    <div class="bg-white text-gray-900 rounded-md w-12 h-8 flex items-center justify-center font-bold text-lg shadow"
-                        id="minute2">0</div>
-                    <!-- Colon separator -->
-                    <div
-                        class="bg-white text-gray-900 rounded-md w-10 h-8 flex items-center justify-center font-bold text-lg shadow">
-                        :</div>
-                    <!-- Seconds: First digit -->
-                    <div class="bg-white text-gray-900 rounded-md w-12 h-8 flex items-center justify-center font-bold text-lg shadow"
-                        id="second1">0</div>
-                    <!-- Seconds: Second digit -->
-                    <div class="bg-white text-gray-900 rounded-md w-12 h-8 flex items-center justify-center font-bold text-lg shadow"
-                        id="second2">0</div>
-                </div>
-            </div>
-        </div>
-        <p style="font-family: Inter; font-weight: 500; font-style: italic; font-size: 14px; line-height: 100%; letter-spacing: 0%;"
-            id="roundNumber">Kỳ số : -</p>
+    <div class="space-y-0">
+        <!-- Top Blue Header -->
+        <div class="bg-[#4262FF] rounded-t-xl h-2"></div>
 
-        <!-- Miner Video -->
-        <div class="rounded-2xl overflow-hidden card-shadow min-h-[384px]">
+        <!-- Miner Video (Black Center Area) -->
+        <div class="bg-black rounded-none overflow-hidden min-h-[253px] relative">
             <!-- MP4 cho 30 giây đầu -->
-            <video id="minerVideoFirst30" class="object-cover" muted autoplay loop playsinline preload="auto"
-                style="width: 419px; height: 384px; border-radius: 10px; opacity: 1; display: none;" aria-label="Miner Start">
+            <video id="minerVideoFirst30" class="object-cover w-full h-fit" muted autoplay loop playsinline preload="auto"
+                style="opacity: 1; display: none;" aria-label="Miner Start">
                 <source src="{{ asset('videos/222.mp4') }}" type="video/mp4">
             </video>
             <!-- MP4 cho 30 giây cuối -->
-            <video id="minerVideoLast30" class="object-cover" muted autoplay loop playsinline preload="auto"
-                style="width: 419px; height: 384px; border-radius: 10px; opacity: 1; display: none;" aria-label="Miner End">
+            <video id="minerVideoLast30" class="object-cover w-full h-fit" muted autoplay loop playsinline preload="auto"
+                style="opacity: 1; display: none;" aria-label="Miner End">
                 <source src="{{ asset('videos/111.mp4') }}" type="video/mp4">
             </video>
         </div>
 
-
-        <!-- Recent Rounds Results -->
-        <div class="flex items-center justify-center">
-            <div id="recentRoundsContainer" class="w-full rounded-[40px] bg-[#111111] py-2 flex items-center justify-center gap-1.5 overflow-x-auto" style="opacity: 1; transform: rotate(0deg);">
-                <!-- 13 rounds will be populated by JavaScript -->
-                <div class="text-gray-400 text-xs p-1">Đang tải...</div>
+        <!-- Bottom Blue Footer -->
+        <div class="bg-[#4262FF] rounded-b-xl p-4 flex items-center">
+            <!-- Left: Round Number -->
+            <div class="flex-1 text-white text-sm font-medium flex justify-start">
+                <span class="text-base italic" id="roundNumber">No : -</span>
+            </div>
+            
+            <!-- Vertical Dashed Divider (Center) -->
+            <div class="border-l-2 border-dashed border-[#37383B] h-8 mx-4"></div>
+            
+            <!-- Right: Timer -->
+            <div class="flex-1 flex items-center justify-end gap-1">
+                <!-- Minutes: First digit -->
+                <div class="bg-white text-[#3958F5] rounded w-6 h-8 flex items-center justify-center font-bold text-base shadow"
+                    id="minute1">0</div>
+                <!-- Minutes: Second digit -->
+                <div class="bg-white text-[#3958F5] rounded w-6 h-8 flex items-center justify-center font-bold text-base shadow"
+                    id="minute2">0</div>
+                <!-- Colon separator -->
+                <div class="bg-white text-[#3958F5] rounded w-6 h-8 flex items-center justify-center font-bold text-base shadow text-center">
+                    :
+                </div>
+                <!-- Seconds: First digit -->
+                <div class="bg-white text-[#3958F5] rounded w-6 h-8 flex items-center justify-center font-bold text-base shadow"
+                    id="second1">0</div>
+                <!-- Seconds: Second digit -->
+                <div class="bg-white text-[#3958F5] rounded w-6 h-8 flex items-center justify-center font-bold text-base shadow"
+                    id="second2">0</div>
             </div>
         </div>
 
+
+        <!-- Recent Rounds Results -->
         <!-- Tabs -->
-        <div class="flex items-center gap-8 px-1">
-            <button id="tab-search" class="tab-button text-white font-semibold border-b-2 border-blue-500 pb-2"
-                onclick="switchTab('search')">Search</button>
-            <button id="tab-signal" class="tab-button text-gray-400 font-semibold pb-2"
-                onclick="switchTab('signal')">Signal</button>
+        <div class="flex items-center gap-8 px-8 p-3">
+            <button id="tab-search" class="tab-button text-white font-semibold border-b-2 border-blue-500 cursor-pointer flex items-center gap-2"
+                onclick="switchTab('search')">
+                <span>Search</span>
+                <svg id="tab-search-icon" class="w-[34px] h-[34px] transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34" fill="none">
+                    <path d="M17 12.3958C17.5808 12.3958 18.0625 12.8775 18.0625 13.4583L18.0625 21.9583C18.0625 22.5392 17.5808 23.0208 17 23.0208C16.4192 23.0208 15.9375 22.5392 15.9375 21.9583L15.9375 13.4583C15.9375 12.8775 16.4192 12.3958 17 12.3958Z" fill="white"/>
+                    <path d="M17.0001 10.9792C17.2693 10.9792 17.5385 11.0783 17.751 11.2908L22.001 15.5408C22.4118 15.9517 22.4118 16.6317 22.001 17.0425C21.5901 17.4533 20.9101 17.4533 20.4993 17.0425L17.0001 13.5433L13.501 17.0425C13.0901 17.4533 12.4101 17.4533 11.9993 17.0425C11.5885 16.6317 11.5885 15.9517 11.9993 15.5408L16.2493 11.2908C16.4618 11.0783 16.731 10.9792 17.0001 10.9792Z" fill="white"/>
+                </svg>
+            </button>
+            <button id="tab-signal" class="tab-button text-gray-400 font-semibold cursor-pointer flex items-center gap-2"
+                onclick="switchTab('signal')">
+                <span>Signal</span>
+                <svg id="tab-signal-icon" class="w-[34px] h-[34px] transition-transform duration-300 rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34" fill="none">
+                    <path d="M17 12.3958C17.5808 12.3958 18.0625 12.8775 18.0625 13.4583L18.0625 21.9583C18.0625 22.5392 17.5808 23.0208 17 23.0208C16.4192 23.0208 15.9375 22.5392 15.9375 21.9583L15.9375 13.4583C15.9375 12.8775 16.4192 12.3958 17 12.3958Z" fill="white"/>
+                    <path d="M17.0001 10.9792C17.2693 10.9792 17.5385 11.0783 17.751 11.2908L22.001 15.5408C22.4118 15.9517 22.4118 16.6317 22.001 17.0425C21.5901 17.4533 20.9101 17.4533 20.4993 17.0425L17.0001 13.5433L13.501 17.0425C13.0901 17.4533 12.4101 17.4533 11.9993 17.0425C11.5885 16.6317 11.5885 15.9517 11.9993 15.5408L16.2493 11.2908C16.4618 11.0783 16.731 10.9792 17.0001 10.9792Z" fill="white"/>
+                </svg>
+            </button>
         </div>
 
         <!-- Tab Content: Search -->
-        <div id="tab-content-search" class="tab-content space-y-4">
-            <!-- Cards row - Radar with current result -->
-            <div class="grid grid-cols-2 gap-3">
-                <div class="bg-[#111111] rounded-xl card-shadow flex items-center justify-center overflow-hidden">
-                    <video class="w-full h-full object-cover" autoplay muted loop playsinline preload="auto" aria-label="Radar">
-                        <source src="{{ asset('videos/333.mp4') }}" type="video/mp4">
-                    </video>
+        <div id="tab-content-search" class="tab-content space-y-4 px-4 pb-4">
+            <!-- Recent Rounds Results -->
+            <div class="flex flex-col items-center gap-1">
+                <!-- Badge container (outside) -->
+                <div id="recentRoundsBadges" class="flex items-center justify-center gap-1.5 w-full px-2">
+                    <!-- Badges will be populated by JavaScript -->
                 </div>
-                <div class="bg-[#111111] rounded-xl p-2 card-shadow flex flex-col items-center justify-center gap-2"
-                    id="finalResultCard">
-                    <!-- Icon nhấp nháy lần lượt các loại đá (ở trên) -->
-                    <img src="{{ asset('images/icons/thachanh.png') }}" alt="Kết quả"
-                        class="w-10 h-10 object-contain flex-shrink-0" id="finalResultIcon" style="display: block;">
-                    <!-- Chữ "Chờ kết quả..." (ở dưới) -->
-                    <div class="text-center flex flex-col items-center justify-center" style="min-height: 32px;">
-                        <p class="text-white font-medium text-xs" id="finalResultName"></p>
-                        <p class="text-gray-400 text-xs" id="finalResultPayout"></p>
+                
+                <!-- Rounds container -->
+                <div class="flex items-center justify-center w-full">
+                    <div id="recentRoundsContainer" class="w-full rounded-[40px] bg-[#111111] py-2 flex items-center justify-center gap-1.5 overflow-x-auto border border-[#3958F5]" style="opacity: 1; transform: rotate(0deg);">
+                        <!-- 13 rounds will be populated by JavaScript -->
+                        <div class="text-gray-400 text-xs p-1">Đang tải...</div>
                     </div>
                 </div>
             </div>
-
-            <!-- Separator -->
-            <hr class="border-dotted border-white/30 border-t-2 my-4">
 
             <!-- Gem Cards -->
-            <div class="grid grid-cols-3 gap-2" id="gemCards">
-                <!-- Cards will be populated by JavaScript -->
-            </div>
-
-            <!-- Amount input -->
-            <div class="space-y-3">
-                <div class="text-sm text-gray-300 flex items-center gap-1">
-                    <p class="text-[#3958F5] font-medium text-sm leading-none tracking-normal">Số lượng </p>
-                    <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Gem" class="w-4 h-4 object-contain">
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="flex-1 px-3 flex items-center justify-between"
-                        style="width: 281px; height: 47px; border-radius: 5px; border: 0.5px solid #FFFFFF80;">
-                        <input type="number" min="0.01" step="0.01" value="10" id="betAmount"
-                            class="bg-transparent text-white w-full outline-none" placeholder="Nhập số lượng">
-                        <button onclick="clearBetAmount()" class="text-gray-400">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                    <button id="confirmBetBtn" onclick="placeBet()"
-                        class="text-white font-semibold cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity whitespace-nowrap"
-                        style="height: 47px; border-radius: 10px; background: #3958F5; padding-left: 16px; padding-right: 16px;">Đặt cược</button>
-                </div>
-                <div id="betInfo" class="text-xs text-gray-400 hidden">
-                    <p>Bạn đã đặt cược: <span id="betGemType" class="text-white"></span> - <span id="betAmountDisplay"
-                            class="text-red-600"></span> đá quý</p>
-                    <p>Nếu thắng, bạn sẽ nhận: <span id="betPayout" class="text-green-400"></span> đá quý</p>
-                </div>
-            </div>
+            
         </div>
 
-        <!-- Tab Content: Signal -->
-        <div id="tab-content-signal" class="tab-content hidden">
+        <div id="tab-content-signal" class="tab-content hidden space-y-4 px-4 pb-4">
             <!-- Signal Grid: Hiển thị 30 rounds gần nhất, mỗi round là 1 icon -->
             <div id="signalGrid" class="grid grid-cols-3 gap-0.5">
                 <!-- Sẽ được tạo động từ API -->
             </div>
         </div>
+
+        <div class="px-4 py-6 bg-[#111111] border-b border-white/10">
+            <div class="grid grid-cols-3 gap-2" id="gemCards">
+                <!-- Cards will be populated by JavaScript -->
+            </div>
+        </div>
+
+        
+
+        <!-- Balance Display -->
+        <div class="px-4 py-3">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center justify-center gap-2">
+                    <p class="text-[#FFFFFFB2] text-[14px] font-medium">
+                        Số dư:
+                    </p>
+                    <span id="userBalance" class="text-white text-[16px] font-medium">
+                        {{ number_format(auth()->user()->balance ?? 0, 2, '.', ',') }}$
+                    </span>
+                </div>
+                
+                <button onclick="refreshBalance()" class="text-center cursor-pointer hover:opacity-80 transition-opacity">
+                    <svg id="refreshBalanceIcon" xmlns="http://www.w3.org/2000/svg" width="15" height="16" viewBox="0 0 15 16" fill="none" class="transition-transform duration-300">
+                        <path d="M1.56689 11.1755C1.81326 11.5861 2.11437 11.9693 2.45655 12.3115C4.975 14.83 9.06747 14.83 11.5996 12.3115C12.6261 11.285 13.2147 9.98464 13.4063 8.65698" stroke="#707797" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M0.649902 6.82298C0.841523 5.48164 1.43008 4.19498 2.45662 3.16844C4.97507 0.64999 9.06754 0.64999 11.5997 3.16844C11.9555 3.5243 12.243 3.90757 12.4893 4.3045" stroke="#707797" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M1.30664 14.8299V11.1755H4.9611" stroke="#707797" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12.7492 0.650024V4.30449H9.09473" stroke="#707797" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Amount input -->
+        <div class="space-y-3 px-4">
+            <div class="flex items-center gap-3">
+                <div class="flex-1 px-3 flex items-center justify-between relative"
+                    style="height: 47px; border-radius: 5px; border: 0.5px solid #FFFFFF80;">
+                    <input type="number" min="0.01" step="0.01" value="10" id="betAmount"
+                        class="bg-transparent text-white w-full outline-none pr-16" placeholder="Giá trị">
+                    <button onclick="setMaxBetAmount()" class="absolute right-3 text-[#3958F5] font-medium text-sm hover:opacity-80">
+                        All
+                    </button>
+                </div>
+                <button id="confirmBetBtn" onclick="placeBet()"
+                    class="text-white font-semibold cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity whitespace-nowrap"
+                    style="height: 47px; width: 100px; border-radius: 10px; background: #3958F5; padding-left: 16px; padding-right: 16px;">Đặt cược</button>
+            </div>
+            <div id="betInfo" class="text-xs text-gray-400">
+                <p>Bạn đã đặt cược: <span id="betGemType" class="text-white"></span> - <span id="betAmountDisplay"
+                        class="text-red-600"></span> đá quý</p>
+                <p>Nếu thắng, bạn sẽ nhận: <span id="betPayout" class="text-green-400"></span> đá quý</p>
+            </div>
+        </div>
+
+        <!-- Tab Content: Signal -->
+        
     </div>
 @endsection
 
@@ -174,9 +222,9 @@
         // 3 đá thường: user có thể đặt cược
         // 3 đá nổ hũ: chỉ admin set, user không thể đặt cược
         const GEM_TYPES = {
-            'thachanh': {
-                name: 'Thạch Anh',
-                icon: '{{ asset('images/icons/thachanh.png') }}',
+            'kcxanh': {
+                name: 'Kim Cương Xanh',
+                icon: '{{ asset('images/icons/kcxanh.png') }}',
                 randomRate: 40,
                 payoutRate: 1.95
             },
@@ -186,9 +234,9 @@
                 randomRate: 30,
                 payoutRate: 5.95
             },
-            'kimcuong': {
-                name: 'Kim Cương',
-                icon: '{{ asset('images/icons/kimcuong.png') }}',
+            'kcdo': {
+                name: 'Kim Cương Đỏ',
+                icon: '{{ asset('images/icons/kcdo.png') }}',
                 randomRate: 30,
                 payoutRate: 1.95
             },
@@ -216,10 +264,19 @@
         // Update payout rates and random rates from API response
         function updatePayoutRates(gemTypes) {
             if (gemTypes && Array.isArray(gemTypes)) {
+                // Map giá trị cũ sang giá trị mới (backward compatibility)
+                const typeMap = {
+                    'thachanh': 'kcxanh',
+                    'kimcuong': 'kcdo'
+                };
+                
                 gemTypes.forEach(gem => {
-                    if (GEM_TYPES[gem.type]) {
-                        GEM_TYPES[gem.type].payoutRate = parseFloat(gem.payout_rate);
-                        GEM_TYPES[gem.type].randomRate = parseFloat(gem.random_rate); // Cập nhật random rate từ API
+                    // Map type nếu là giá trị cũ
+                    const mappedType = typeMap[gem.type] || gem.type;
+                    
+                    if (GEM_TYPES[mappedType]) {
+                        GEM_TYPES[mappedType].payoutRate = parseFloat(gem.payout_rate);
+                        GEM_TYPES[mappedType].randomRate = parseFloat(gem.random_rate); // Cập nhật random rate từ API
                     }
                 });
                 // Update UI with new payout rates
@@ -257,6 +314,7 @@
         let signalGridRounds = []; // Lưu 60 rounds để hiển thị trong grid Signal (chỉ ở client)
         let signalTabLoaded = false; // Flag để biết tab Signal đã load chưa
         let minerVideoPhase = null; // phase hiện tại của miner video để tránh reset liên tục
+        let randomIconInterval = null; // Interval để random icon nhanh trong 30 giây cuối
 
 
         // Initialize
@@ -335,22 +393,27 @@
         // Initialize gem cards (chỉ hiển thị 3 đá thường, không hiển thị đá nổ hũ)
         function initializeGemCards() {
             const container = document.getElementById('gemCards');
+            if (!container) return;
+            
             container.innerHTML = '';
 
             // Chỉ hiển thị 3 đá thường mà user có thể đặt cược
-            const bettableGemTypes = ['thachanh', 'daquy', 'kimcuong'];
+            const bettableGemTypes = ['kcxanh', 'daquy', 'kcdo'];
 
             bettableGemTypes.forEach(gemType => {
                 const gem = GEM_TYPES[gemType];
-                if (!gem) return;
+                if (!gem) {
+                    console.warn(`GEM_TYPES['${gemType}'] not found`);
+                    return;
+                }
 
                 const card = document.createElement('button');
                 card.className =
-                    'gem-card bg-gray-800 text-white rounded-xl py-3 text-sm hover:bg-gray-700 transition-colors';
+                    'gem-card bg-gray-800 text-white rounded-sm py-3 text-sm cursor-pointer transition-colors';
                 card.onclick = () => selectGemType(gemType);
                 card.innerHTML = `
-                ${gem.name}<br>
-                <span class="text-gray-400 text-xs payout-rate">${gem.payoutRate}x</span>
+                <span class="text-white text-xs font-medium">${gem.name}</span><br>
+                <span class="text-[#FFFFFF80] text-xs font-medium payout-rate">${gem.payoutRate}x</span>
             `;
                 card.dataset.gemType = gemType;
                 container.appendChild(card);
@@ -431,6 +494,21 @@
                 hideMyBet();
                 clearBetAmount();
                 selectedGemType = null;
+
+                // Reset icon in current round display
+                const currentIconImg = document.getElementById('currentRoundIconImg');
+                if (currentIconImg) {
+                    currentIconImg.style.display = 'none';
+                }
+
+                // Clear random icon interval when new round starts
+                if (randomIconInterval) {
+                    clearInterval(randomIconInterval);
+                    randomIconInterval = null;
+                }
+
+                // Reload recent rounds to update the list with finished round
+                loadRecentRoundsDisplay();
 
                 // Hiển thị lại button khi round mới bắt đầu
                 const confirmBtn = document.getElementById('confirmBetBtn');
@@ -548,6 +626,9 @@
 
                                     // Append kết quả mới vào signal grid
                                     appendRoundToSignalGrid(currentRound.round_number, data.result);
+                                    
+                                    // Update current round display to show final result
+                                    updateCurrentRoundDisplay();
                                 } else {
                                     // Nếu API không trả về result, tính từ seed
                                     currentRound.final_result = getGemForSecond(currentRound.seed, 60);
@@ -556,6 +637,9 @@
                                     // Append kết quả mới vào signal grid
                                     appendRoundToSignalGrid(currentRound.round_number, currentRound
                                         .final_result);
+                                    
+                                    // Update current round display to show final result
+                                    updateCurrentRoundDisplay();
                                 }
                             } catch (error) {
                                 // Nếu API lỗi, tính từ seed
@@ -565,6 +649,9 @@
                                 // Append kết quả mới vào signal grid
                                 appendRoundToSignalGrid(currentRound.round_number, currentRound
                                     .final_result);
+                                
+                                // Update current round display to show final result
+                                updateCurrentRoundDisplay();
                             }
 
                             currentRound._checkingBetResult = false;
@@ -582,8 +669,8 @@
             currentRound.current_second = currentSecond;
             currentRound.phase = phase;
 
-            // Update display
-            updateRoundDisplay(currentSecond, phase, 0);
+            // Update display (truyền countdown để tính remainingSeconds chính xác)
+            updateRoundDisplay(currentSecond, phase, 0, countdown);
 
         // Refresh result card each tick (để 5s cuối chuyển sang “Chờ kết quả...”)
         updateFinalResultCard();
@@ -594,7 +681,7 @@
         // Update round display
         // Countdown được tính toán dựa trên deadline (BASE_TIME)
         // Tất cả thiết bị sẽ hiển thị giống nhau vì dùng cùng BASE_TIME
-        function updateRoundDisplay(currentSecond = null, phase = null, breakRemaining = null) {
+        function updateRoundDisplay(currentSecond = null, phase = null, breakRemaining = null, countdown = null) {
             if (!currentRound) {
                 return;
             }
@@ -606,13 +693,16 @@
             const roundNumberEl = document.getElementById('roundNumber');
             if (roundNumberEl) {
                 const clientRoundNumber = calculateRoundNumber();
-                roundNumberEl.textContent = `Kỳ số : ${clientRoundNumber}`;
+                roundNumberEl.textContent = `No : ${clientRoundNumber}`;
             }
 
-            // Update countdown - tính từ deadline
+            // Update countdown - tính từ countdown được truyền vào hoặc từ deadline
             let remainingSeconds = 0;
-            if (ph === 'betting' || ph === 'result') {
-                // Tính countdown từ deadline
+            if (countdown !== null) {
+                // Sử dụng countdown được truyền vào (chính xác hơn)
+                remainingSeconds = Math.max(0, countdown);
+            } else if (ph === 'betting' || ph === 'result') {
+                // Tính countdown từ deadline nếu không có countdown được truyền vào
                 const now = Date.now();
                 const clientRoundNumber = calculateRoundNumber();
                 const deadline = calculateRoundDeadline(clientRoundNumber);
@@ -632,20 +722,33 @@
             if (second1El) second1El.textContent = Math.floor(seconds / 10);
             if (second2El) second2El.textContent = seconds % 10;
 
-            // Update bet button based on phase
+            // Update bet button based on remainingSeconds and sec
             const confirmBtn = document.getElementById('confirmBetBtn');
             if (confirmBtn) {
-                if (ph === 'result' || sec > 30) {
+                // Nếu round đã finish (remainingSeconds <= 0), enable button ngay
+                if (remainingSeconds <= 0) {
+                    if (myBet || clientBetInfo) {
+                        confirmBtn.disabled = true;
+                        confirmBtn.textContent = 'Đặt cược';
+                    } else {
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = 'Đặt cược';
+                    }
+                } else if ((sec > 30 && sec <= 60) || remainingSeconds <= 30) {
+                    // 30 giây cuối: disable và hiển thị countdown
+                    // Bao gồm cả khi sec > 30 hoặc remainingSeconds <= 30 (để hiển thị giây 60, 59)
                     confirmBtn.disabled = true;
-                    // Hiển thị đếm ngược trên button
+                    // Hiển thị đếm ngược trên button (bao gồm cả giây 60 và 59)
                     const mins = Math.floor(remainingSeconds / 60);
                     const secs = remainingSeconds % 60;
                     const formattedTime = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
                     confirmBtn.textContent = formattedTime;
                 } else if (myBet || clientBetInfo) {
+                    // Đã đặt cược
                     confirmBtn.disabled = true;
                     confirmBtn.textContent = 'Đặt cược';
                 } else {
+                    // 30 giây đầu (sec <= 30 và remainingSeconds > 30): enable button
                     confirmBtn.disabled = false;
                     confirmBtn.textContent = 'Đặt cược';
                 }
@@ -653,6 +756,9 @@
 
             // Update video source based on current second
             updateMinerVideo(sec);
+            
+            // Update current round display in recent rounds container
+            updateCurrentRoundDisplay();
         }
 
         // Update miner video based on current second
@@ -748,7 +854,7 @@
                 }
             }
 
-            return 'thachanh';
+            return 'kcxanh';
         }
 
         // Update radar result (client-side random based on seed)
@@ -767,13 +873,13 @@
         // Animation nhấp nháy các loại đá khi chờ kết quả
         let gemBlinkInterval = null;
         let currentBlinkGemIndex = 0;
-        const gemTypesArray = ['thachanh', 'daquy', 'kimcuong'];
+        const gemTypesArray = ['kcxanh', 'daquy', 'kcdo'];
 
         // Màu sắc cho mỗi loại đá (để tạo hiệu ứng nhấp nháy)
         const gemColors = {
-            'thachanh': 'rgba(255, 255, 255, 0.8)',
+            'kcxanh': 'rgba(1, 112, 204, 0.8)', // Blue (Kim Cương Xanh)
             'daquy': 'rgba(0, 191, 255, 0.8)', // Deep Sky Blue
-            'kimcuong': 'rgba(255, 255, 255, 1)', // White (diamond)
+            'kcdo': 'rgba(254, 69, 85, 0.8)', // Red (Kim Cương Đỏ)
         };
 
         function startGemBlinkAnimation() {
@@ -1176,6 +1282,48 @@
             document.getElementById('betAmount').value = '';
         }
 
+        // Set max bet amount (All button)
+        function setMaxBetAmount() {
+            const balanceEl = document.getElementById('userBalance');
+            if (balanceEl) {
+                // Lấy text từ element và parse số
+                const balanceText = balanceEl.textContent.replace(/[^0-9.]/g, '');
+                const balance = parseFloat(balanceText) || 0;
+                // Set giá trị tối đa
+                document.getElementById('betAmount').value = balance.toFixed(2);
+            }
+        }
+
+        // Refresh balance
+        async function refreshBalance() {
+            const refreshIcon = document.getElementById('refreshBalanceIcon');
+            
+            // Bắt đầu xoay icon
+            if (refreshIcon) {
+                refreshIcon.classList.add('refresh-spinning');
+            }
+            
+            try {
+                // Gọi API để lấy số dư mới nhất
+                const response = await fetch('{{ route('explore.my-bet') }}');
+                const data = await response.json();
+                
+                if (data.balance !== undefined) {
+                    const balanceEl = document.getElementById('userBalance');
+                    if (balanceEl) {
+                        balanceEl.textContent = parseFloat(data.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$';
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing balance:', error);
+            } finally {
+                // Dừng xoay icon
+                if (refreshIcon) {
+                    refreshIcon.classList.remove('refresh-spinning');
+                }
+            }
+        }
+
         // Place bet
         async function placeBet() {
             const confirmBtn = document.getElementById('confirmBetBtn');
@@ -1271,26 +1419,55 @@
             // Không cần await, để API chạy ở background
         }
 
-        // Tab switching function
+        // Tab switching function with toggle
         function switchTab(tabName) {
+            const tabContent = document.getElementById('tab-content-' + tabName);
+            const tabButton = document.getElementById('tab-' + tabName);
+            const tabIcon = document.getElementById('tab-' + tabName + '-icon');
+            const isCurrentlyActive = tabButton.classList.contains('text-white');
+            const isCurrentlyVisible = !tabContent.classList.contains('hidden');
+
+            // Nếu click vào tab đang active và đang hiển thị, toggle ẩn/hiện
+            if (isCurrentlyActive && isCurrentlyVisible) {
+                // Toggle visibility
+                tabContent.classList.toggle('hidden');
+                // Toggle icon rotation (rotate 180deg when hidden)
+                if (tabIcon) {
+                    if (tabContent.classList.contains('hidden')) {
+                        tabIcon.classList.add('rotate-180');
+                    } else {
+                        tabIcon.classList.remove('rotate-180');
+                    }
+                }
+                return;
+            }
+
+            // Nếu click vào tab khác hoặc tab đang ẩn, chuyển tab như bình thường
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.add('hidden');
             });
 
-            // Remove active state from all tabs
+            // Remove active state from all tabs and reset icons
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('text-white', 'border-b-2', 'border-blue-500');
                 button.classList.add('text-gray-400');
             });
+            document.querySelectorAll('[id$="-icon"]').forEach(icon => {
+                icon.classList.add('rotate-180');
+            });
 
             // Show selected tab content
-            document.getElementById('tab-content-' + tabName).classList.remove('hidden');
+            tabContent.classList.remove('hidden');
 
             // Add active state to selected tab
-            const activeTab = document.getElementById('tab-' + tabName);
-            activeTab.classList.remove('text-gray-400');
-            activeTab.classList.add('text-white', 'border-b-2', 'border-blue-500');
+            tabButton.classList.remove('text-gray-400');
+            tabButton.classList.add('text-white', 'border-b-2', 'border-blue-500');
+
+            // Rotate icon for active tab (pointing up when visible)
+            if (tabIcon) {
+                tabIcon.classList.remove('rotate-180');
+            }
 
             // Nếu chuyển sang tab Signal, chỉ load lần đầu nếu chưa có data
             if (tabName === 'signal') {
@@ -1326,38 +1503,58 @@
         // Load and display 13 recent rounds results
         async function loadRecentRoundsDisplay() {
             const container = document.getElementById('recentRoundsContainer');
-            if (!container) return;
+            const badgesContainer = document.getElementById('recentRoundsBadges');
+            if (!container || !badgesContainer) return;
             
             try {
                 // Try to use signalGridRounds if available, otherwise fetch from API
                 let rounds = [];
                 if (signalGridRounds && signalGridRounds.length > 0) {
-                    // Get last 13 rounds (oldest to newest, left to right)
-                    rounds = signalGridRounds.slice(-13);
+                    // Get last 12 rounds (oldest to newest, left to right)
+                    rounds = signalGridRounds.slice(-12);
                 } else {
                     const response = await fetch('{{ route('explore.signal-grid-rounds') }}');
                     const allRounds = await response.json();
                     if (allRounds && Array.isArray(allRounds) && allRounds.length > 0) {
-                        rounds = allRounds.slice(-13);
+                        rounds = allRounds.slice(-12);
                     }
                 }
                 
-                if (rounds.length === 0) {
-                    container.innerHTML = '<div class="text-gray-400 text-xs">Chưa có dữ liệu</div>';
-                    return;
-                }
-                
-                // Clear container
+                // Clear containers
                 container.innerHTML = '';
+                badgesContainer.innerHTML = '';
                 
-                // Display 13 rounds (or less if not enough data)
-                // Oldest on left, newest on right
+                // Display 12 rounds from history
                 rounds.forEach((round, index) => {
-                    const result = round.admin_set_result || round.final_result || 'thachanh';
-                    const gem = GEM_TYPES[result] || GEM_TYPES['thachanh'];
+                    const result = round.admin_set_result || round.final_result || 'kcxanh';
+                    const gem = GEM_TYPES[result] || GEM_TYPES['kcxanh'];
                     
+                    // Badge (only for the last round in history - index 11, outside container)
+                    if (index === rounds.length - 1) {
+                        const badge = document.createElement('div');
+                        badge.className = 'flex flex-col items-center';
+                        
+                        const payoutText = document.createElement('span');
+                        payoutText.className = 'text-gray-500 text-[10px]';
+                        payoutText.textContent = gem.payoutRate ? gem.payoutRate.toFixed(2) + 'x' : '1.95x';
+                        
+                        const arrow = document.createElement('div');
+                        arrow.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M13.4391 6H8.76658H4.55908C3.83908 6 3.47908 6.87 3.98908 7.38L7.87408 11.265C8.49658 11.8875 9.50908 11.8875 10.1316 11.265L11.6091 9.7875L14.0166 7.38C14.5191 6.87 14.1591 6 13.4391 6Z" fill="#636465"/></svg>';
+                        
+                        badge.appendChild(payoutText);
+                        badge.appendChild(arrow);
+                        badgesContainer.appendChild(badge);
+                    } else {
+                        // Empty space for badge alignment
+                        const emptyBadge = document.createElement('div');
+                        emptyBadge.className = 'flex-shrink-0';
+                        emptyBadge.style.width = '24px'; // Approximate badge width
+                        badgesContainer.appendChild(emptyBadge);
+                    }
+                    
+                    // Icon container (inside container)
                     const roundIcon = document.createElement('div');
-                    roundIcon.className = 'flex items-center justify-center bg-gray-700 rounded-full w-6 h-6 p-0.5 flex-shrink-0';
+                    roundIcon.className = 'flex items-center justify-center bg-[#24253A] rounded-full w-6 h-6 p-0.5 flex-shrink-0';
                     
                     const iconImg = document.createElement('img');
                     iconImg.src = gem.icon;
@@ -1367,15 +1564,184 @@
                     roundIcon.appendChild(iconImg);
                     container.appendChild(roundIcon);
                 });
+                
+                // Add empty space for badge alignment (for current round position)
+                const emptyBadgeCurrent = document.createElement('div');
+                emptyBadgeCurrent.className = 'flex-shrink-0';
+                emptyBadgeCurrent.style.width = '24px';
+                badgesContainer.appendChild(emptyBadgeCurrent);
+                
+                // Add current round icon container (inside container, will be updated dynamically)
+                // Background always visible, only icon is hidden/shown
+                const currentRoundIcon = document.createElement('div');
+                currentRoundIcon.className = 'flex items-center justify-center bg-[#24253A] rounded-full w-6 h-6 p-0.5 flex-shrink-0';
+                currentRoundIcon.id = 'currentRoundIcon';
+                
+                const currentIconImg = document.createElement('img');
+                // Set empty src initially to ensure no icon is displayed
+                currentIconImg.src = '';
+                currentIconImg.alt = 'Current';
+                currentIconImg.className = 'w-6 h-6 object-contain';
+                currentIconImg.id = 'currentRoundIconImg';
+                // Always hidden by default when append new empty slot
+                currentIconImg.style.display = 'none';
+                currentIconImg.style.visibility = 'hidden';
+                currentIconImg.style.opacity = '0';
+                
+                currentRoundIcon.appendChild(currentIconImg);
+                container.appendChild(currentRoundIcon);
+                
+                // Update current round display (will show icon if needed)
+                updateCurrentRoundDisplay();
             } catch (error) {
                 console.error('Error loading recent rounds:', error);
                 container.innerHTML = '<div class="text-gray-400 text-xs">Lỗi tải dữ liệu</div>';
+            }
+        }
+        
+        // Get random gem from 3 bettable gems only (kcxanh, daquy, kcdo)
+        function getRandomBettableGem(seed, second) {
+            if (!seed) return 'kcxanh';
+            
+            const bettableGems = ['kcxanh', 'daquy', 'kcdo'];
+            
+            // Hash function for random
+            const string = seed + '_' + second + '_bettable';
+            let hash = 0;
+            for (let i = 0; i < string.length; i++) {
+                const char = string.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & 0x7FFFFFFF;
+            }
+            hash = (hash * 31 + second * 17) & 0x7FFFFFFF;
+            const rand = (Math.abs(hash) % 10000) % 100 + 1;
+            
+            // Calculate rates for 3 bettable gems
+            const rates = [];
+            let totalRate = 0;
+            bettableGems.forEach(type => {
+                if (GEM_TYPES[type]) {
+                    const rate = GEM_TYPES[type].randomRate || 33.33;
+                    totalRate += rate;
+                    rates.push({ type, rate, cumulative: totalRate });
+                }
+            });
+            
+            // Normalize to 100
+            const normalizedRand = (rand / 100) * totalRate;
+            
+            for (const item of rates) {
+                if (normalizedRand <= item.cumulative) {
+                    return item.type;
+                }
+            }
+            
+            return 'kcxanh';
+        }
+        
+        // Random icon quickly (called every 200ms during last 30 seconds)
+        function randomIconQuickly() {
+            if (!currentRound) {
+                if (randomIconInterval) {
+                    clearInterval(randomIconInterval);
+                    randomIconInterval = null;
+                }
+                return;
+            }
+            
+            const currentIconImg = document.getElementById('currentRoundIconImg');
+            if (!currentIconImg) return;
+            
+            const sec = currentRound.current_second || 0;
+            const finalResult = currentRound.admin_set_result || currentRound.final_result;
+            
+            // Only random if in last 30 seconds and no final result yet
+            if (sec > 30 && sec <= 60 && !finalResult) {
+                // Use current time in milliseconds for faster random variation
+                const timeBasedSeed = currentRound.seed + '_' + Date.now() + '_' + Math.random();
+                const randomResult = getRandomBettableGem(timeBasedSeed, sec);
+                const gem = GEM_TYPES[randomResult] || GEM_TYPES['kcxanh'];
+                
+                currentIconImg.src = gem.icon;
+                currentIconImg.alt = gem.name;
+                currentIconImg.style.opacity = '1';
+            } else {
+                // Stop interval if conditions are no longer met
+                if (randomIconInterval) {
+                    clearInterval(randomIconInterval);
+                    randomIconInterval = null;
+                }
+            }
+        }
+        
+        // Update current round display (called every second when in last 30 seconds)
+        function updateCurrentRoundDisplay() {
+            if (!currentRound) {
+                // Clear interval if round is null
+                if (randomIconInterval) {
+                    clearInterval(randomIconInterval);
+                    randomIconInterval = null;
+                }
+                return;
+            }
+            
+            const currentRoundIcon = document.getElementById('currentRoundIcon');
+            const currentIconImg = document.getElementById('currentRoundIconImg');
+            if (!currentRoundIcon || !currentIconImg) return;
+            
+            const sec = currentRound.current_second || 0;
+            const ph = currentRound.phase || 'break';
+            
+            // Background always visible, only show/hide icon
+            const finalResult = currentRound.admin_set_result || currentRound.final_result;
+            
+            // If round has finished result (sec >= 60 and has result), show it
+            if (finalResult && sec >= 60) {
+                // Stop random interval
+                if (randomIconInterval) {
+                    clearInterval(randomIconInterval);
+                    randomIconInterval = null;
+                }
+                
+                const gem = GEM_TYPES[finalResult] || GEM_TYPES['kcxanh'];
+                currentIconImg.src = gem.icon;
+                currentIconImg.alt = gem.name;
+                currentIconImg.style.display = 'block';
+                currentIconImg.style.visibility = 'visible';
+                currentIconImg.style.opacity = '1';
+            } else if (sec > 30 && sec <= 60 && !finalResult) {
+                // Start fast random interval for last 30 seconds
+                if (!randomIconInterval) {
+                    randomIconInterval = setInterval(randomIconQuickly, 200); // Update every 200ms
+                }
+                currentIconImg.style.display = 'block';
+                currentIconImg.style.visibility = 'visible';
+                currentIconImg.style.opacity = '1';
+            } else {
+                // Stop random interval and hide icon
+                if (randomIconInterval) {
+                    clearInterval(randomIconInterval);
+                    randomIconInterval = null;
+                }
+                // Hide icon during first 30 seconds (1-30), break phase, or when no result yet
+                currentIconImg.style.display = 'none';
+                currentIconImg.style.visibility = 'hidden';
+                currentIconImg.style.opacity = '0';
+                // Clear src to ensure no icon is displayed
+                currentIconImg.src = '';
             }
         }
 
         // Append round result mới vào signal grid (lưu vào server)
         async function appendRoundToSignalGrid(roundNumber, result) {
             if (!result) return;
+
+            // Map giá trị cũ sang giá trị mới (backward compatibility)
+            const resultMap = {
+                'thachanh': 'kcxanh',
+                'kimcuong': 'kcdo'
+            };
+            result = resultMap[result] || result;
 
             try {
                 // Lấy CSRF token từ meta tag hoặc từ form
@@ -1512,7 +1878,7 @@
 
                         // Tạo item
                         const iconDiv = document.createElement('div');
-                        iconDiv.className = 'flex items-center justify-center bg-gray-700 rounded-full w-6 h-6 p-0.5';
+                        iconDiv.className = 'flex items-center justify-center bg-[#24253A] rounded-full w-6 h-6 p-0.5';
 
                         // Hiển thị icon nếu có round tại vị trí này
                         // Đảm bảo roundIndex hợp lệ và có data
@@ -1529,8 +1895,8 @@
                             } else {
                                 // Fallback
                                 const iconImg = document.createElement('img');
-                                iconImg.src = '{{ asset('images/icons/thachanh.png') }}';
-                                iconImg.alt = 'Thạch Anh';
+                                iconImg.src = '{{ asset('images/icons/kcxanh.png') }}';
+                                iconImg.alt = 'Kim Cương Xanh';
                                 iconImg.className = 'w-6 h-6 object-contain';
                                 iconDiv.appendChild(iconImg);
                             }

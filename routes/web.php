@@ -179,12 +179,15 @@ Route::middleware('auth')->group(function () {
         
         // Gem types mapping
         $gemTypes = [
-            'thachanh' => ['name' => 'Thạch Anh', 'icon' => 'thachanh.png'],
+            'kcxanh' => ['name' => 'Kim Cương Xanh', 'icon' => 'kcxanh.png'],
             'thachanhtim' => ['name' => 'Thạch Anh Tím', 'icon' => 'thachanhtim.png'],
             'ngusac' => ['name' => 'Ngũ Sắc', 'icon' => 'ngusac.png'],
             'daquy' => ['name' => 'Đá Quý', 'icon' => 'daquy.png'],
             'cuoc' => ['name' => 'Cuốc', 'icon' => 'cuoc.png'],
-            'kimcuong' => ['name' => 'Kim Cương', 'icon' => 'kimcuong.png'],
+            'kcdo' => ['name' => 'Kim Cương Đỏ', 'icon' => 'kcdo.png'],
+            // Backward compatibility: map old values to new ones
+            'thachanh' => ['name' => 'Kim Cương Xanh', 'icon' => 'kcxanh.png'],
+            'kimcuong' => ['name' => 'Kim Cương Đỏ', 'icon' => 'kcdo.png'],
         ];
         
         return view('transaction-history', compact('bets', 'gemTypes'));

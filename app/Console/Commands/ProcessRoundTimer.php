@@ -180,9 +180,9 @@ class ProcessRoundTimer extends Command
     private function getPayoutRates()
     {
         return [
-            'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', 1.95),
+            'kcxanh' => (float) SystemSetting::getValue('gem_payout_rate_kcxanh', SystemSetting::getValue('gem_payout_rate_thachanh', 1.95)),
             'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', 5.95),
-            'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', 1.95),
+            'kcdo' => (float) SystemSetting::getValue('gem_payout_rate_kcdo', SystemSetting::getValue('gem_payout_rate_kimcuong', 1.95)),
         ];
     }
     
@@ -230,7 +230,7 @@ class ProcessRoundTimer extends Command
      */
     private function getGemForSecond($seed, $second)
     {
-        if (!$seed) return 'thachanh';
+        if (!$seed) return 'kcxanh';
         
         // Improved hash function with better distribution
         $string = $seed . '_' . $second;
@@ -257,6 +257,6 @@ class ProcessRoundTimer extends Command
             }
         }
         
-        return 'thachanh';
+        return 'kcxanh';
     }
 }

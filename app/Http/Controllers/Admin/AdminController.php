@@ -120,9 +120,9 @@ class AdminController extends Controller
     {
         // Get current payout rates from database (3 đá thường)
         $payoutRates = [
-            'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', '1.95'),
+            'kcxanh' => (float) SystemSetting::getValue('gem_payout_rate_kcxanh', SystemSetting::getValue('gem_payout_rate_thachanh', '1.95')),
             'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', '5.95'),
-            'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', '1.95'),
+            'kcdo' => (float) SystemSetting::getValue('gem_payout_rate_kcdo', SystemSetting::getValue('gem_payout_rate_kimcuong', '1.95')),
         ];
         
         // Get payout rates for 3 đá nổ hũ (chỉ admin set, user không thể cược)
@@ -149,18 +149,18 @@ class AdminController extends Controller
     public function updatePayoutRates(Request $request)
     {
         $validated = $request->validate([
-            'thachanh' => 'required|numeric|min:1',
+            'kcxanh' => 'required|numeric|min:1',
             'daquy' => 'required|numeric|min:1',
-            'kimcuong' => 'required|numeric|min:1',
+            'kcdo' => 'required|numeric|min:1',
             'thachanhtim' => 'nullable|numeric|min:1',
             'ngusac' => 'nullable|numeric|min:1',
             'cuoc' => 'nullable|numeric|min:1',
         ]);
         
         // Save each rate to database (3 đá thường)
-        SystemSetting::setValue('gem_payout_rate_thachanh', (string) $validated['thachanh'], 'Tỉ lệ ăn cho thạch anh');
+        SystemSetting::setValue('gem_payout_rate_kcxanh', (string) $validated['kcxanh'], 'Tỉ lệ ăn cho kim cương xanh');
         SystemSetting::setValue('gem_payout_rate_daquy', (string) $validated['daquy'], 'Tỉ lệ ăn cho đá quý');
-        SystemSetting::setValue('gem_payout_rate_kimcuong', (string) $validated['kimcuong'], 'Tỉ lệ ăn cho kim cương');
+        SystemSetting::setValue('gem_payout_rate_kcdo', (string) $validated['kcdo'], 'Tỉ lệ ăn cho kim cương đỏ');
         
         // Save payout rates for 3 đá nổ hũ (nếu có)
         if (isset($validated['thachanhtim'])) {
@@ -179,9 +179,9 @@ class AdminController extends Controller
                 'success' => true,
                 'message' => 'Đã cập nhật tỉ lệ ăn thành công.',
                 'payout_rates' => [
-                    'thachanh' => (float) $validated['thachanh'],
+                    'kcxanh' => (float) $validated['kcxanh'],
                     'daquy' => (float) $validated['daquy'],
-                    'kimcuong' => (float) $validated['kimcuong'],
+                    'kcdo' => (float) $validated['kcdo'],
                 ],
             ]);
         }
@@ -197,7 +197,7 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'round_id' => 'required|exists:rounds,id',
-            'final_result' => 'required|in:thachanh,daquy,kimcuong,thachanhtim,ngusac,cuoc',
+            'final_result' => 'required|in:kcxanh,daquy,kcdo,thachanhtim,ngusac,cuoc',
         ]);
         
         $round = Round::findOrFail($validated['round_id']);
@@ -385,9 +385,9 @@ class AdminController extends Controller
         
         // Initialize all gem types with 0
         $allBetAmounts = [
-            'thachanh' => isset($betAmounts['thachanh']) ? (float) $betAmounts['thachanh'] : 0,
+            'kcxanh' => isset($betAmounts['kcxanh']) ? (float) $betAmounts['kcxanh'] : (isset($betAmounts['thachanh']) ? (float) $betAmounts['thachanh'] : 0),
             'daquy' => isset($betAmounts['daquy']) ? (float) $betAmounts['daquy'] : 0,
-            'kimcuong' => isset($betAmounts['kimcuong']) ? (float) $betAmounts['kimcuong'] : 0,
+            'kcdo' => isset($betAmounts['kcdo']) ? (float) $betAmounts['kcdo'] : (isset($betAmounts['kimcuong']) ? (float) $betAmounts['kimcuong'] : 0),
         ];
         
         return response()->json([
@@ -427,9 +427,9 @@ class AdminController extends Controller
         
         // Initialize all gem types with 0
         $allBetAmounts = [
-            'thachanh' => isset($betAmounts['thachanh']) ? (float) $betAmounts['thachanh'] : 0,
+            'kcxanh' => isset($betAmounts['kcxanh']) ? (float) $betAmounts['kcxanh'] : (isset($betAmounts['thachanh']) ? (float) $betAmounts['thachanh'] : 0),
             'daquy' => isset($betAmounts['daquy']) ? (float) $betAmounts['daquy'] : 0,
-            'kimcuong' => isset($betAmounts['kimcuong']) ? (float) $betAmounts['kimcuong'] : 0,
+            'kcdo' => isset($betAmounts['kcdo']) ? (float) $betAmounts['kcdo'] : (isset($betAmounts['kimcuong']) ? (float) $betAmounts['kimcuong'] : 0),
         ];
         
         return response()->json([

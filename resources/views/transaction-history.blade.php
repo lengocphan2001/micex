@@ -29,7 +29,7 @@
         @forelse($bets as $bet)
             @php
                 $gemType = $gemTypes[$bet->gem_type] ?? null;
-                $gemIcon = $gemType ? asset('images/icons/' . $gemType['icon']) : asset('images/icons/thachanh.png');
+                $gemIcon = $gemType ? asset('images/icons/' . $gemType['icon']) : asset('images/icons/kcxanh.png');
                 $gemName = $gemType ? $gemType['name'] : 'N/A';
                 
                 $profitAmount = 0;

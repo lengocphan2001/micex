@@ -34,9 +34,9 @@
                     <div class="row" id="realtimeBetAmounts">
                         @php
                             $gemTypes = [
-                                'thachanh' => ['name' => 'Thạch Anh', 'icon' => 'thachanh.png'],
+                                'kcxanh' => ['name' => 'Kim Cương Xanh', 'icon' => 'kcxanh.png'],
                                 'daquy' => ['name' => 'Đá Quý', 'icon' => 'daquy.png'],
-                                'kimcuong' => ['name' => 'Kim Cương', 'icon' => 'kimcuong.png'],
+                                'kcdo' => ['name' => 'Kim Cương Đỏ', 'icon' => 'kcdo.png'],
                             ];
                         @endphp
                         @foreach($gemTypes as $type => $gem)
@@ -71,14 +71,14 @@
                     <form id="updatePayoutRatesForm" action="{{ route('admin.intervene-results.update-rates') }}" method="POST">
                         @csrf
                         <div class="form-group">
-                            <label for="thachanh">
-                                <img src="{{ asset('images/icons/thachanh.png') }}" alt="Thạch Anh" class="d-inline-block" style="width: 24px; height: 24px;">
-                                Thạch Anh
+                            <label for="kcxanh">
+                                <img src="{{ asset('images/icons/kcxanh.png') }}" alt="Kim Cương Xanh" class="d-inline-block" style="width: 24px; height: 24px;">
+                                Kim Cương Xanh
                             </label>
-                            <input type="number" step="0.01" min="1" class="form-control @error('thachanh') is-invalid @enderror" 
-                                   id="thachanh" name="thachanh" 
-                                   value="{{ old('thachanh', $payoutRates['thachanh']) }}" required>
-                            @error('thachanh')
+                            <input type="number" step="0.01" min="1" class="form-control @error('kcxanh') is-invalid @enderror" 
+                                   id="kcxanh" name="kcxanh" 
+                                   value="{{ old('kcxanh', $payoutRates['kcxanh'] ?? ($payoutRates['thachanh'] ?? '1.95')) }}" required>
+                            @error('kcxanh')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -97,14 +97,14 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="kimcuong">
-                                <img src="{{ asset('images/icons/kimcuong.png') }}" alt="Kim Cương" class="d-inline-block" style="width: 24px; height: 24px;">
-                                Kim Cương
+                            <label for="kcdo">
+                                <img src="{{ asset('images/icons/kcdo.png') }}" alt="Kim Cương Đỏ" class="d-inline-block" style="width: 24px; height: 24px;">
+                                Kim Cương Đỏ
                             </label>
-                            <input type="number" step="0.01" min="1" class="form-control @error('kimcuong') is-invalid @enderror" 
-                                   id="kimcuong" name="kimcuong" 
-                                   value="{{ old('kimcuong', $payoutRates['kimcuong']) }}" required>
-                            @error('kimcuong')
+                            <input type="number" step="0.01" min="1" class="form-control @error('kcdo') is-invalid @enderror" 
+                                   id="kcdo" name="kcdo" 
+                                   value="{{ old('kcdo', $payoutRates['kcdo'] ?? ($payoutRates['kimcuong'] ?? '1.95')) }}" required>
+                            @error('kcdo')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -192,9 +192,9 @@
                                         <br><strong>Kết quả:</strong> 
                                         @php
                                             $gemNames = [
-                                                'thachanh' => 'Thạch Anh',
+                                                'kcxanh' => 'Kim Cương Xanh',
                                                 'daquy' => 'Đá Quý',
-                                                'kimcuong' => 'Kim Cương',
+                                                'kcdo' => 'Kim Cương Đỏ',
                                                 'thachanhtim' => 'Thạch Anh Tím (Nổ Hũ)',
                                                 'ngusac' => 'Ngũ Sắc (Nổ Hũ)',
                                                 'cuoc' => 'Cuốc (Nổ Hũ)',
@@ -223,9 +223,9 @@
                                     <div class="row" id="gemOptionsContainer">
                                         @php
                                             $gemOptions = [
-                                                'thachanh' => ['name' => 'Thạch Anh', 'icon' => 'thachanh.png', 'type' => 'normal'],
+                                                'kcxanh' => ['name' => 'Kim Cương Xanh', 'icon' => 'kcxanh.png', 'type' => 'normal'],
                                                 'daquy' => ['name' => 'Đá Quý', 'icon' => 'daquy.png', 'type' => 'normal'],
-                                                'kimcuong' => ['name' => 'Kim Cương', 'icon' => 'kimcuong.png', 'type' => 'normal'],
+                                                'kcdo' => ['name' => 'Kim Cương Đỏ', 'icon' => 'kcdo.png', 'type' => 'normal'],
                                             ];
                                             $jackpotOptions = [
                                                 'thachanhtim' => ['name' => 'Thạch Anh Tím (Nổ Hũ)', 'icon' => 'thachanhtim.png', 'type' => 'jackpot', 'rate' => $jackpotRates['thachanhtim'] ?? '10.00'],
@@ -300,9 +300,9 @@
     
     // Gem type names and icons
     const GEM_TYPES = {
-        'thachanh': { name: 'Thạch Anh', icon: '{{ asset("images/icons/thachanh.png") }}' },
+        'kcxanh': { name: 'Kim Cương Xanh', icon: '{{ asset("images/icons/kcxanh.png") }}' },
         'daquy': { name: 'Đá Quý', icon: '{{ asset("images/icons/daquy.png") }}' },
-        'kimcuong': { name: 'Kim Cương', icon: '{{ asset("images/icons/kimcuong.png") }}' },
+        'kcdo': { name: 'Kim Cương Đỏ', icon: '{{ asset("images/icons/kcdo.png") }}' },
     };
     
     let lastRoundId = null;

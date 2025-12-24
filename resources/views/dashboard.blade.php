@@ -166,8 +166,13 @@
         transform: translate(-50%, -50%);
         width: 240px;
         height: 240px;
-        background: radial-gradient(circle, rgba(147, 51, 234, 0.5) 0%, rgba(147, 51, 234, 0.2) 40%, transparent 70%);
+        background: linear-gradient(178.88deg, #3958F5 -160.95%, rgba(57, 88, 245, 0.01) 86.99%);
+        border: 1px solid;
+        border-image-source: linear-gradient(180deg, #3958F5 0%, rgba(102, 102, 102, 0) 100%);
+        border-image-slice: 1;
         border-radius: 50%;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
         pointer-events: none;
         z-index: 1;
         animation: giftPulse 3s ease-in-out infinite;

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('round_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->enum('gem_type', ['thachanh', 'thachanhtim', 'ngusac', 'daquy', 'cuoc', 'kimcuong']);
+            $table->enum('gem_type', ['kcxanh', 'thachanhtim', 'ngusac', 'daquy', 'cuoc', 'kcdo']);
             $table->decimal('amount', 15, 2); // Số đá quý đặt cược
             $table->decimal('payout_rate', 8, 2); // Tỉ lệ ăn
             $table->enum('status', ['pending', 'won', 'lost'])->default('pending');

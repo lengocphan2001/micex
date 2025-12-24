@@ -22,16 +22,16 @@ class ExploreController extends Controller
 
     // Tỉ lệ random cho mỗi loại đá (tổng = 100)
     private const GEM_RANDOM_RATES = [
-        'thachanh' => 40,      // 40%
+        'kcxanh' => 40,      // 40%
         'daquy' => 30,         // 30%
-        'kimcuong' => 30,      // 30%
+        'kcdo' => 30,      // 30%
     ];
 
     // Tỉ lệ ăn cho mỗi loại đá (default values, can be overridden from database)
     private const GEM_PAYOUT_RATES_DEFAULT = [
-        'thachanh' => 1.95,
+        'kcxanh' => 1.95,
         'daquy' => 5.95,
-        'kimcuong' => 1.95,
+        'kcdo' => 1.95,
     ];
     
     /**
@@ -40,9 +40,9 @@ class ExploreController extends Controller
     private function getPayoutRates()
     {
         return [
-            'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', self::GEM_PAYOUT_RATES_DEFAULT['thachanh']),
+            'kcxanh' => (float) SystemSetting::getValue('gem_payout_rate_kcxanh', SystemSetting::getValue('gem_payout_rate_thachanh', self::GEM_PAYOUT_RATES_DEFAULT['kcxanh'])),
             'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', self::GEM_PAYOUT_RATES_DEFAULT['daquy']),
-            'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', self::GEM_PAYOUT_RATES_DEFAULT['kimcuong']),
+            'kcdo' => (float) SystemSetting::getValue('gem_payout_rate_kcdo', SystemSetting::getValue('gem_payout_rate_kimcuong', self::GEM_PAYOUT_RATES_DEFAULT['kcdo'])),
         ];
     }
     
@@ -154,9 +154,9 @@ class ExploreController extends Controller
         try {
         $validated = $request->validate([
             'round_id' => 'required|exists:rounds,id',
-            'final_result' => 'required|in:thachanh,thachanhtim,ngusac,daquy,cuoc,kimcuong',
+            'final_result' => 'required|in:kcxanh,thachanhtim,ngusac,daquy,cuoc,kcdo',
             'results' => 'required|array|size:60', // Mảng chính xác 60 phần tử
-            'results.*' => 'nullable|in:thachanh,thachanhtim,ngusac,daquy,cuoc,kimcuong', // Cho phép null cho 30 giây đầu
+            'results.*' => 'nullable|in:kcxanh,thachanhtim,ngusac,daquy,cuoc,kcdo', // Cho phép null cho 30 giây đầu
         ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation failed for saveResult:', [
@@ -215,7 +215,7 @@ class ExploreController extends Controller
             }
             
             // 30 giây cuối: phải có giá trị hợp lệ
-            if (empty($result) || !in_array($result, ['thachanh', 'thachanhtim', 'ngusac', 'daquy', 'cuoc', 'kimcuong'])) {
+            if (empty($result) || !in_array($result, ['kcxanh', 'thachanhtim', 'ngusac', 'daquy', 'cuoc', 'kcdo'])) {
                 \Log::warning("Round {$round->id} result at second " . ($index + 1) . " is invalid: {$result}, filling with expected value");
                 // Fill with expected value (chỉ random từ giây 31-60)
                 if ($index >= 30) {
@@ -290,7 +290,7 @@ class ExploreController extends Controller
             }
         }
         
-        return 'thachanh';
+        return 'kcxanh';
     }
 
     /**
@@ -304,7 +304,7 @@ class ExploreController extends Controller
         }
 
         $validated = $request->validate([
-            'gem_type' => 'required|in:thachanh,daquy,kimcuong',
+            'gem_type' => 'required|in:kcxanh,daquy,kcdo',
             'amount' => 'required|numeric|min:0.01',
         ]);
 
@@ -509,6 +509,13 @@ class ExploreController extends Controller
             $result = $this->getGemForSecond($round->seed, 60, $round);
         }
         
+        // Map giá trị cũ sang giá trị mới (backward compatibility)
+        $resultMap = [
+            'thachanh' => 'kcxanh',
+            'kimcuong' => 'kcdo'
+        ];
+        $result = $resultMap[$result] ?? $result;
+        
         return response()->json([
             'round_number' => $round->round_number,
             'result' => $result,
@@ -561,7 +568,7 @@ class ExploreController extends Controller
     {
         $request->validate([
             'round_number' => 'required|integer',
-            'final_result' => 'required|in:thachanh,daquy,kimcuong,thachanhtim,ngusac,cuoc',
+            'final_result' => 'required|in:kcxanh,daquy,kcdo,thachanhtim,ngusac,cuoc',
         ]);
         
         // Lấy rounds hiện tại từ SystemSetting
@@ -638,9 +645,9 @@ class ExploreController extends Controller
         
         // Initialize all gem types with 0
         $allBetAmounts = [
-            'thachanh' => isset($betAmounts['thachanh']) ? (float) $betAmounts['thachanh'] : 0,
+            'kcxanh' => isset($betAmounts['kcxanh']) ? (float) $betAmounts['kcxanh'] : (isset($betAmounts['thachanh']) ? (float) $betAmounts['thachanh'] : 0),
             'daquy' => isset($betAmounts['daquy']) ? (float) $betAmounts['daquy'] : 0,
-            'kimcuong' => isset($betAmounts['kimcuong']) ? (float) $betAmounts['kimcuong'] : 0,
+            'kcdo' => isset($betAmounts['kcdo']) ? (float) $betAmounts['kcdo'] : (isset($betAmounts['kimcuong']) ? (float) $betAmounts['kimcuong'] : 0),
         ];
         
         return response()->json([
@@ -747,9 +754,9 @@ class ExploreController extends Controller
         
         // Get payout rates from database
         $payoutRates = [
-            'thachanh' => (float) SystemSetting::getValue('gem_payout_rate_thachanh', self::GEM_PAYOUT_RATES_DEFAULT['thachanh']),
+            'kcxanh' => (float) SystemSetting::getValue('gem_payout_rate_kcxanh', SystemSetting::getValue('gem_payout_rate_thachanh', self::GEM_PAYOUT_RATES_DEFAULT['kcxanh'])),
             'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', self::GEM_PAYOUT_RATES_DEFAULT['daquy']),
-            'kimcuong' => (float) SystemSetting::getValue('gem_payout_rate_kimcuong', self::GEM_PAYOUT_RATES_DEFAULT['kimcuong']),
+            'kcdo' => (float) SystemSetting::getValue('gem_payout_rate_kcdo', SystemSetting::getValue('gem_payout_rate_kimcuong', self::GEM_PAYOUT_RATES_DEFAULT['kcdo'])),
         ];
         
         // Calculate random rates from payout rates (inverse relationship)
@@ -785,6 +792,6 @@ class ExploreController extends Controller
         }
         
         // Fallback (should never reach here)
-        return 'thachanh';
+        return 'kcxanh';
     }
 }
