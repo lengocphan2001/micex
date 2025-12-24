@@ -1008,6 +1008,13 @@
             const finalResultIcon = document.getElementById('finalResultIcon');
             if (!finalResultIcon) return;
 
+            // Map giá trị cũ sang giá trị mới (backward compatibility)
+            const resultMap = {
+                'thachanh': 'kcxanh',
+                'kimcuong': 'kcdo'
+            };
+            gemType = resultMap[gemType] || gemType;
+
             const gem = GEM_TYPES[gemType];
             if (!gem) return;
 
@@ -1076,6 +1083,15 @@
                 }
             }
 
+            // Map giá trị cũ sang giá trị mới (backward compatibility)
+            const resultMap = {
+                'thachanh': 'kcxanh',
+                'kimcuong': 'kcdo'
+            };
+            if (resultToShow) {
+                resultToShow = resultMap[resultToShow] || resultToShow;
+            }
+
             // Trạng thái hiển thị:
             // - Nếu có kết quả round hiện tại: hiển thị ngay
             // - 5 giây cuối (56-60) và chưa có kết quả: hiển thị "Chờ kết quả..." + blink
@@ -1134,9 +1150,15 @@
 
             // Còn lại: hiển thị kết quả round trước (nếu có), nếu không thì chờ
             if (previousRoundResult) {
-                const gem = GEM_TYPES[previousRoundResult];
+                // Map giá trị cũ sang giá trị mới (backward compatibility)
+                const resultMap = {
+                    'thachanh': 'kcxanh',
+                    'kimcuong': 'kcdo'
+                };
+                const mappedPreviousResult = resultMap[previousRoundResult] || previousRoundResult;
+                const gem = GEM_TYPES[mappedPreviousResult];
                 if (gem) {
-                    startResultGemBlinkAnimation(previousRoundResult);
+                    startResultGemBlinkAnimation(mappedPreviousResult);
                     if (finalResultName) {
                         finalResultName.textContent = gem.name;
                     }
@@ -1562,7 +1584,15 @@
                 
                 // Display 12 rounds from history
                 rounds.forEach((round, index) => {
-                    const result = round.admin_set_result || round.final_result || 'kcxanh';
+                    let result = round.admin_set_result || round.final_result || 'kcxanh';
+                    
+                    // Map giá trị cũ sang giá trị mới (backward compatibility)
+                    const resultMap = {
+                        'thachanh': 'kcxanh',
+                        'kimcuong': 'kcdo'
+                    };
+                    result = resultMap[result] || result;
+                    
                     const gem = GEM_TYPES[result] || GEM_TYPES['kcxanh'];
                     
                     // Badge (only for the last round in history - index 11, outside container)
@@ -1729,7 +1759,16 @@
             const ph = currentRound.phase || 'break';
             
             // Background always visible, only show/hide icon
-            const finalResult = currentRound.admin_set_result || currentRound.final_result;
+            let finalResult = currentRound.admin_set_result || currentRound.final_result;
+            
+            // Map giá trị cũ sang giá trị mới (backward compatibility)
+            if (finalResult) {
+                const resultMap = {
+                    'thachanh': 'kcxanh',
+                    'kimcuong': 'kcdo'
+                };
+                finalResult = resultMap[finalResult] || finalResult;
+            }
             
             // If round has finished result (sec >= 60 and has result), show it
             if (finalResult && sec >= 60) {
@@ -1921,7 +1960,16 @@
                         if (roundIndex < signalGridRounds.length &&
                             signalGridRounds[roundIndex] &&
                             signalGridRounds[roundIndex].final_result) {
-                            const gem = GEM_TYPES[signalGridRounds[roundIndex].final_result];
+                            let result = signalGridRounds[roundIndex].final_result;
+                            
+                            // Map giá trị cũ sang giá trị mới (backward compatibility)
+                            const resultMap = {
+                                'thachanh': 'kcxanh',
+                                'kimcuong': 'kcdo'
+                            };
+                            result = resultMap[result] || result;
+                            
+                            const gem = GEM_TYPES[result];
                             if (gem) {
                                 const iconImg = document.createElement('img');
                                 iconImg.src = gem.icon;
