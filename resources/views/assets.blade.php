@@ -77,13 +77,13 @@
 <!-- Giftcode Success Modal -->
 <div id="giftcodeSuccessModal" class="fixed inset-0 z-[10000] flex items-center justify-center hidden">
     <!-- Backdrop -->
-    <div class="fixed inset-0 bg-black/70" onclick="closeGiftcodeModal()"></div>
+    <div class="fixed inset-0 bg-black/70" onclick="closeGiftcodeModal(event)"></div>
     
     <!-- Modal Content -->
     <div class="relative z-10 w-full max-w-sm mx-4 rounded-3xl overflow-visible" style="background: linear-gradient(114.45deg, #3958F5 3.99%, #111838 19.52%, #111838 78.39%, #3958F5 107.73%);">
         <!-- Close Button -->
-        <button onclick="closeGiftcodeModal()" class="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button onclick="closeGiftcodeModal(event)" class="absolute top-4 right-4 z-[50] w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors pointer-events-auto cursor-pointer">
+            <svg class="w-5 h-5 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
         </button>
@@ -269,7 +269,11 @@
         }
     }
 
-    function closeGiftcodeModal() {
+    function closeGiftcodeModal(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
         const modal = document.getElementById('giftcodeSuccessModal');
         if (modal) {
             modal.classList.remove('show');
