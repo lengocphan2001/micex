@@ -70,20 +70,20 @@
         <p class="text-xs text-white font-semibold">Mã QR</p>
         <div class="flex flex-col sm:flex-row sm:items-start gap-4">
             <div class="w-28 h-28 bg-white flex items-center justify-center rounded-lg overflow-hidden border border-gray-700 flex-shrink-0">
-                <img src="{{ asset('images/qr.png') }}" alt="QR code" class="w-full h-full object-contain">
+                <img src="{{ asset('images/image_2025-12-25_15-03-09.png') }}" alt="QR code" class="w-full h-full object-contain">
             </div>
             <div class="flex flex-col gap-1 items-start justify-start">
                 <div class="flex items-center gap-2">
                     <span class="text-gray-600 text-xs" style="font-weight: 500;">Ngân hàng :</span>
-                    <p class="text-white text-sm" style="font-weight: 500;"> VIETINBANK</p>    
+                    <p class="text-white text-sm" style="font-weight: 500;"> Techcombank</p>    
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="text-gray-600 text-xs" style="font-weight: 500;">Số tài khoản :</span>
-                    <p class="text-white text-sm" style="font-weight: 500;"> 103873872404</p>    
+                    <p class="text-white text-sm" style="font-weight: 500;"> 19072055160017</p>    
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="text-gray-600 text-xs" style="font-weight: 500;">Họ tên :</span>
-                    <p class="text-white text-sm" style="font-weight: 500;"> TRAN QUOC TRUNG</p>    
+                    <p class="text-white text-sm" style="font-weight: 500;"> TRAN VAN UY</p>    
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="text-gray-600 text-xs" style="font-weight: 500;">Nội dung :</span> 
