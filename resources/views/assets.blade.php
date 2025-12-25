@@ -73,7 +73,58 @@
         </div>
     </div>
 </div>
+
+<!-- Giftcode Success Modal -->
+<div id="giftcodeSuccessModal" class="fixed inset-0 z-[10000] flex items-center justify-center hidden">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black/70" onclick="closeGiftcodeModal()"></div>
+    
+    <!-- Modal Content -->
+    <div class="relative z-10 w-full max-w-sm mx-4 rounded-3xl overflow-visible" style="background: linear-gradient(114.45deg, #3958F5 3.99%, #111838 19.52%, #111838 78.39%, #3958F5 107.73%);">
+        <!-- Close Button -->
+        <button onclick="closeGiftcodeModal()" class="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+        
+        <!-- Image - Nổi lên trên -->
+        <div class="flex justify-center -mt-14 relative z-30">
+            <img src="{{ asset('images/icons/giftcodemodalnew.png') }}" alt="Gift" class="w-fit h-fit object-fit">
+        </div>
+        
+        <!-- Text Content -->
+        <div class="px-6 pt-4 pb-8 text-center">
+            <h2 class="text-white text-2xl font-bold mb-3">Chúc mừng bạn !</h2>
+            <p id="giftcodeAmount" class="text-green-400 text-3xl font-bold mb-3">0 USDT</p>
+            <p class="text-[#FFFFFF80] text-[13px] leading-relaxed">Nhận thưởng thành công từ mã quà tặng của Micex</p>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('styles')
+<style>
+    /* Giftcode Success Modal Animation */
+    #giftcodeSuccessModal {
+        opacity: 0;
+        transition: opacity 0.3s ease-out;
+    }
+    
+    #giftcodeSuccessModal.show {
+        opacity: 1;
+    }
+    
+    #giftcodeSuccessModal .relative {
+        transform: scale(0.9);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    #giftcodeSuccessModal.show .relative {
+        transform: scale(1);
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>
@@ -129,7 +180,10 @@
                     if (response.ok && data.message) {
                         giftcodeInput.value = '';
                         
-                        if (typeof showToast === 'function') {
+                        // Show success modal
+                        if (data.value !== undefined) {
+                            showGiftcodeModal(data.value);
+                        } else if (typeof showToast === 'function') {
                             showToast(data.message, 'success');
                         }
                         
@@ -173,10 +227,8 @@
                             }
                         }
                         
-                        // Reload page after a short delay to ensure all data is updated
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
+                        // Reload page after modal is closed (or after delay if no modal)
+                        // The modal will handle reload when closed
                     } else {
                         if (typeof showToast === 'function') {
                             showToast(data.message || 'Có lỗi xảy ra.', 'error');
@@ -193,6 +245,42 @@
             });
         }
     });
+
+    // Giftcode Success Modal Functions
+    function showGiftcodeModal(amount) {
+        const modal = document.getElementById('giftcodeSuccessModal');
+        const amountEl = document.getElementById('giftcodeAmount');
+        
+        if (modal && amountEl) {
+            // Format amount
+            const formattedAmount = parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            amountEl.textContent = formattedAmount + ' USDT';
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            
+            // Add animation
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    modal.classList.add('show');
+                });
+            });
+        }
+    }
+
+    function closeGiftcodeModal() {
+        const modal = document.getElementById('giftcodeSuccessModal');
+        if (modal) {
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+                // Reload page after modal closes
+                window.location.reload();
+            }, 300);
+        }
+    }
 </script>
 @endpush
 

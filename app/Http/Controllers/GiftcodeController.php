@@ -101,6 +101,7 @@ class GiftcodeController extends Controller
                 'message' => "Đã nhận " . number_format($giftcode->value, 2) . " đá quý từ giftcode thành công!",
                 'balance' => $user->balance,
                 'betting_requirement' => $user->betting_requirement ?? 0,
+                'value' => $giftcode->value,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
