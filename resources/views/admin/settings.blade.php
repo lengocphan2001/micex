@@ -66,12 +66,12 @@
                         name="lucky_money_max_gems" 
                         class="form-control @error('lucky_money_max_gems') is-invalid @enderror" 
                         value="{{ old('lucky_money_max_gems', $luckyMoneyMaxGems ?? 5) }}"
-                        min="1"
+                        min="0.1"
                         max="999"
-                        step="1"
+                        step="0.01"
                     >
                     <small class="form-text text-muted">
-                        Số đá quý tối đa mà user có thể nhận được khi mở lì xì. Giá trị random sẽ từ 1 đến số này. (Mặc định: 5)
+                        Số đá quý tối đa mà user có thể nhận được khi mở lì xì. Giá trị random sẽ từ 0.1 đến số này (hỗ trợ số thập phân). (Mặc định: 5)
                     </small>
                     @error('lucky_money_max_gems')
                         <div class="invalid-feedback">{{ $message }}</div>

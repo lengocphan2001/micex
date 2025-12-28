@@ -55,16 +55,20 @@ class LuckyMoneyController extends Controller
         }
 
         // Get max gems from system settings
-        $maxGems = (int) SystemSetting::getValue('lucky_money_max_gems', '5');
+        $maxGems = (float) SystemSetting::getValue('lucky_money_max_gems', '5');
         
-        if ($maxGems < 1) {
+        if ($maxGems < 0.1) {
             return response()->json([
                 'message' => 'Hệ thống chưa được cấu hình. Vui lòng liên hệ admin.',
             ], 400);
         }
 
-        // Generate random amount from 1 to maxGems
-        $amount = rand(1, $maxGems);
+        // Generate random amount from 0.1 to maxGems with 2 decimal places
+        // Convert to cents (multiply by 100) for integer random, then divide back
+        $minCents = 10; // 0.1 * 100
+        $maxCents = (int)($maxGems * 100);
+        $amountCents = mt_rand($minCents, $maxCents);
+        $amount = round($amountCents / 100, 2);
 
         DB::beginTransaction();
         try {
@@ -88,7 +92,7 @@ class LuckyMoneyController extends Controller
             $user->refresh();
 
             return response()->json([
-                'message' => "Chúc mừng! Bạn đã nhận được {$amount} đá quý!",
+                'message' => "Chúc mừng! Bạn đã nhận được " . number_format($amount, 2) . " đá quý!",
                 'amount' => $amount,
                 'balance' => $user->balance,
             ]);

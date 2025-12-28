@@ -1110,7 +1110,7 @@ public function createGiftcodes(Request $request)
     {
         $validated = $request->validate([
             'vnd_to_gem_rate' => 'required|numeric|min:1',
-            'lucky_money_max_gems' => 'nullable|integer|min:1|max:999',
+            'lucky_money_max_gems' => 'nullable|numeric|min:0.1|max:999',
         ]);
 
         SystemSetting::setValue(
@@ -1123,7 +1123,7 @@ public function createGiftcodes(Request $request)
             SystemSetting::setValue(
                 'lucky_money_max_gems',
                 (string) $validated['lucky_money_max_gems'],
-                'Số đá quý tối đa có thể nhận được khi mở lì xì (từ 1 đến giá trị này)'
+                'Số đá quý tối đa có thể nhận được khi mở lì xì (random từ 0.1 đến giá trị này, hỗ trợ số thập phân)'
             );
         }
 

@@ -501,7 +501,58 @@
             </div>
         </div>
     </div>
+
+    <!-- Lucky Money Success Modal -->
+    <div id="luckyMoneySuccessModal" class="fixed inset-0 z-[10000] flex items-center justify-center hidden">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/70" onclick="closeLuckyMoneyModal(event)"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative z-10 w-full max-w-sm mx-4 rounded-3xl overflow-visible" style="background: linear-gradient(114.45deg, #3958F5 3.99%, #111838 19.52%, #111838 78.39%, #3958F5 107.73%);">
+            <!-- Close Button -->
+            <button onclick="closeLuckyMoneyModal(event)" class="absolute top-4 right-4 z-[50] w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors pointer-events-auto cursor-pointer">
+                <svg class="w-5 h-5 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            
+            <!-- Image - Nổi lên trên -->
+            <div class="flex justify-center -mt-14 relative z-30">
+                <img src="{{ asset('images/icons/giftcodemodalnew.png') }}" alt="Lucky Money" class="w-fit h-fit object-fit">
+            </div>
+            
+            <!-- Text Content -->
+            <div class="px-6 pt-4 pb-8 text-center">
+                <h2 class="text-white text-2xl font-bold mb-3">Chúc mừng bạn !</h2>
+                <p id="luckyMoneyAmount" class="text-green-400 text-3xl font-bold mb-3">0 đá quý</p>
+                <p class="text-[#FFFFFF80] text-[13px] leading-relaxed">Nhận thưởng thành công từ lì xì của Micex</p>
+            </div>
+        </div>
+    </div>
 @endsection
+
+@push('styles')
+<style>
+    /* Lucky Money Success Modal Animation */
+    #luckyMoneySuccessModal {
+        opacity: 0;
+        transition: opacity 0.3s ease-out;
+    }
+    
+    #luckyMoneySuccessModal.show {
+        opacity: 1;
+    }
+    
+    #luckyMoneySuccessModal .relative {
+        transform: scale(0.9);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    #luckyMoneySuccessModal.show .relative {
+        transform: scale(1);
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>
@@ -818,19 +869,12 @@
                 const data = await response.json();
 
                 if (response.ok && data.message) {
-                    // Show success message
-                    if (typeof showToast === 'function') {
-                        showToast(data.message, 'success');
-                    }
+                    // Show success modal
+                    showLuckyMoneyModal(data.amount);
                     
                     // Update UI
                     openLuckyMoneyBtn.textContent = 'Đã mở';
                     dailyCounter.textContent = '0/1';
-                    
-                    // Reload page to update balance
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
                 } else {
                     const errorMsg = data.message || data.error || 'Có lỗi xảy ra';
                     if (typeof showToast === 'function') {
@@ -852,5 +896,48 @@
 
     // Load status on page load
     loadLuckyMoneyStatus();
+
+    // Lucky Money Modal Functions
+    function showLuckyMoneyModal(amount) {
+        const modal = document.getElementById('luckyMoneySuccessModal');
+        const amountElement = document.getElementById('luckyMoneyAmount');
+        
+        if (modal && amountElement) {
+            // Update amount
+            amountElement.textContent = number_format(amount, 2) + ' đá quý';
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            
+            // Trigger animation
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+        }
+    }
+
+    function closeLuckyMoneyModal(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        const modal = document.getElementById('luckyMoneySuccessModal');
+        if (modal) {
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+                // Reload page to update balance
+                window.location.reload();
+            }, 300);
+        }
+    }
+
+    function number_format(number, decimals) {
+        decimals = decimals || 2;
+        number = parseFloat(number);
+        return number.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
 </script>
 @endpush
