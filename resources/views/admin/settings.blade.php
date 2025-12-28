@@ -50,6 +50,39 @@
         </div>
     </div>
 
+    <!-- Lucky Money Settings -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3 class="card-title">Cài đặt Lì xì (Lucky Money)</h3>
+        </div>
+        <div class="card-body">
+            <form action="{{ route('admin.settings.update') }}" method="POST">
+                @csrf
+                <div class="form-group">
+                    <label for="lucky_money_max_gems">Số đá quý tối đa</label>
+                    <input 
+                        type="number" 
+                        id="lucky_money_max_gems" 
+                        name="lucky_money_max_gems" 
+                        class="form-control @error('lucky_money_max_gems') is-invalid @enderror" 
+                        value="{{ old('lucky_money_max_gems', $luckyMoneyMaxGems ?? 5) }}"
+                        min="1"
+                        max="999"
+                        step="1"
+                    >
+                    <small class="form-text text-muted">
+                        Số đá quý tối đa mà user có thể nhận được khi mở lì xì. Giá trị random sẽ từ 1 đến số này. (Mặc định: 5)
+                    </small>
+                    @error('lucky_money_max_gems')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <button type="submit" class="btn btn-primary">Lưu cài đặt</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Commission Rates Management -->
     <div class="card mt-4">
         <div class="card-header">

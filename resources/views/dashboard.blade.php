@@ -381,7 +381,7 @@
     @endguest
 
     <!-- Gift/Reward Section -->
-    <div class="mx-4 mt-3 rounded-xl p-6 relative overflow-hidden" style="background-color: #111111;">
+    <div class="mx-4 mt-3 rounded-xl p-6 relative overflow-hidden" style="background-color: #15192A;">
         <!-- Spotlight Effect -->
         <div class="gift-spotlight"></div>
         <!-- Light Effect -->
@@ -414,6 +414,43 @@
                 <div class="flex items-center gap-2">
                     <div id="countdown-seconds" class="bg-gray-700 px-2 py-1 rounded font-mono font-bold text-center" style="min-width: 2.5rem;">00</div>
                     <span class="text-gray-400">giây</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lucky Money Banner -->
+    <div class="mx-4 mt-4 relative" id="luckyMoneyBanner">
+        <div class="rounded-[20px] border border-blue-400/50 bg-gradient-to-br from-[#0a0e1a] to-[#15192A] overflow-hidden max-w-full" 
+             style="border-width: 1px; height: 191px;">
+            <div class="flex h-full items-center justify-center">
+                <!-- Left side - Lucky Money Image -->
+                <div class="flex-shrink-0 flex items-center justify-center h-[80%]">
+                    <img src="{{ asset('images/luckymoney.png') }}" alt="Lucky Money" class="w-full h-full object-contain">
+                </div>
+                
+                <!-- Right side - Content -->
+                <div class="flex-1 flex flex-col justify-between p-4 text-white h-full" style="height: 100%;">
+                    <!-- Title and Description -->
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">
+                            Mở lì xì cùng <span class="text-blue-400">Micex</span>
+                        </h3>
+                        <p class="text-[12px] text-[#FFFFFF] mb-4">
+                            Phần thưởng lên tới <span class="text-blue-400 font-bold">999</span> USDT đang chờ bạn trong hôm nay ?
+                        </p>
+                    </div>
+                    
+                    <!-- Button and Counter -->
+                    <div class="flex flex-col gap-2">
+                        <button id="openLuckyMoneyBtn" 
+                                class="w-fit px-12 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-1 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Mở
+                        </button>
+                        <div class="text-right">
+                            <span class="text-xs text-gray-400">Hôm nay : <span id="dailyCounter">1/1</span></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -679,5 +716,141 @@
     // Update countdown immediately and then every second
     updateCountdown();
     setInterval(updateCountdown, 1000);
+
+    // Lucky Money functionality
+    const openLuckyMoneyBtn = document.getElementById('openLuckyMoneyBtn');
+    const dailyCounter = document.getElementById('dailyCounter');
+
+    // Load lucky money status
+    function loadLuckyMoneyStatus() {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+            || document.querySelector('input[name="_token"]')?.value;
+
+        fetch('/api/lucky-money/status', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken || '',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.has_opened_today) {
+                openLuckyMoneyBtn.disabled = true;
+                openLuckyMoneyBtn.textContent = 'Đã mở';
+                dailyCounter.textContent = '0/1';
+            } else {
+                openLuckyMoneyBtn.disabled = false;
+                openLuckyMoneyBtn.textContent = 'Mở';
+                dailyCounter.textContent = '1/1';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading lucky money status:', error);
+        });
+    }
+
+    // Open lucky money
+    if (openLuckyMoneyBtn) {
+        openLuckyMoneyBtn.addEventListener('click', async function() {
+            if (openLuckyMoneyBtn.disabled) {
+                return;
+            }
+
+            openLuckyMoneyBtn.disabled = true;
+            openLuckyMoneyBtn.textContent = 'Đang mở...';
+
+            // Get CSRF token with fallback
+            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+                || document.querySelector('input[name="_token"]')?.value;
+
+            try {
+                let response = await fetch('/api/lucky-money/open', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken || '',
+                    },
+                });
+
+                // Handle 419 CSRF token mismatch
+                if (response.status === 419) {
+                    // Try to refresh token and retry once
+                    try {
+                        const refreshResponse = await fetch('/csrf-token', {
+                            method: 'GET',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Accept': 'application/json',
+                            },
+                        });
+                        
+                        if (refreshResponse.ok) {
+                            const refreshData = await refreshResponse.json();
+                            if (refreshData && refreshData.token) {
+                                // Update meta tag
+                                const metaTag = document.querySelector('meta[name="csrf-token"]');
+                                if (metaTag) {
+                                    metaTag.setAttribute('content', refreshData.token);
+                                }
+                                csrfToken = refreshData.token;
+                                
+                                // Retry request with new token
+                                response = await fetch('/api/lucky-money/open', {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': csrfToken,
+                                    },
+                                });
+                            }
+                        }
+                    } catch (refreshError) {
+                        console.error('Failed to refresh CSRF token:', refreshError);
+                    }
+                }
+
+                const data = await response.json();
+
+                if (response.ok && data.message) {
+                    // Show success message
+                    if (typeof showToast === 'function') {
+                        showToast(data.message, 'success');
+                    }
+                    
+                    // Update UI
+                    openLuckyMoneyBtn.textContent = 'Đã mở';
+                    dailyCounter.textContent = '0/1';
+                    
+                    // Reload page to update balance
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    const errorMsg = data.message || data.error || 'Có lỗi xảy ra';
+                    if (typeof showToast === 'function') {
+                        showToast(errorMsg, 'error');
+                    }
+                    openLuckyMoneyBtn.disabled = false;
+                    openLuckyMoneyBtn.textContent = 'Mở';
+                }
+            } catch (error) {
+                console.error('Error opening lucky money:', error);
+                if (typeof showToast === 'function') {
+                    showToast('Có lỗi xảy ra khi mở hộp quà. Vui lòng thử lại.', 'error');
+                }
+                openLuckyMoneyBtn.disabled = false;
+                openLuckyMoneyBtn.textContent = 'Mở';
+            }
+        });
+    }
+
+    // Load status on page load
+    loadLuckyMoneyStatus();
 </script>
 @endpush

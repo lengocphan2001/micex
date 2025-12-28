@@ -342,6 +342,12 @@ return [
             'icon' => 'fas fa-fw fa-gift',
         ],
         [
+            'text' => 'Tài khoản Marketing',
+            'url' => 'admin/marketing-accounts',
+            'icon' => 'fas fa-fw fa-bullhorn',
+            'active' => ['admin/marketing-accounts'],
+        ],
+        [
             'text' => 'Cài đặt hệ thống',
             'url' => 'admin/settings',
             'icon' => 'fas fa-fw fa-cog',

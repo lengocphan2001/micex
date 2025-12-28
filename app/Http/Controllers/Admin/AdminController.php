@@ -846,9 +846,91 @@ class AdminController extends Controller
     /**
      * Agent page
      */
-    public function agent()
+    public function agent(Request $request)
     {
-        return view('admin.agent');
+        $query = User::whereHas('referrals')
+            ->withCount('referrals')
+            ->orderBy('created_at', 'desc');
+
+        // Search by username (referral_code, name, email, phone_number)
+        if ($request->filled('username')) {
+            $searchTerm = $request->username;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('referral_code', 'like', "%{$searchTerm}%")
+                  ->orWhere('name', 'like', "%{$searchTerm}%")
+                  ->orWhere('email', 'like', "%{$searchTerm}%")
+                  ->orWhere('phone_number', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Filter by date
+        $dateFilter = $request->get('date_filter', 'all');
+        if ($dateFilter === 'today') {
+            $query->whereDate('created_at', today());
+        } elseif ($dateFilter === '7days') {
+            $query->where('created_at', '>=', now()->subDays(7));
+        }
+
+        $agents = $query->get();
+
+        // Calculate total first deposit for each agent's referrals
+        foreach ($agents as $agent) {
+            $referralIds = $agent->referrals()->pluck('id');
+            
+            // Get first deposit for each referral
+            $firstDeposits = DepositRequest::whereIn('user_id', $referralIds)
+                ->where('status', 'approved')
+                ->select('user_id', DB::raw('MIN(approved_at) as first_approved_at'))
+                ->groupBy('user_id')
+                ->get();
+
+            $totalFirstDeposit = 0;
+            foreach ($firstDeposits as $firstDeposit) {
+                $deposit = DepositRequest::where('user_id', $firstDeposit->user_id)
+                    ->where('status', 'approved')
+                    ->where('approved_at', $firstDeposit->first_approved_at)
+                    ->first();
+                
+                if ($deposit) {
+                    $totalFirstDeposit += $deposit->gem_amount ?? ($deposit->amount / SystemSetting::getVndToGemRate());
+                }
+            }
+            
+            $agent->total_first_deposit = $totalFirstDeposit;
+        }
+
+        return view('admin.agent', compact('agents'));
+    }
+
+    /**
+     * Give reward to agent
+     */
+    public function giveAgentReward(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+        ], [
+            'amount.required' => 'Vui lòng nhập số lượng.',
+            'amount.numeric' => 'Số lượng phải là số.',
+            'amount.min' => 'Số lượng phải lớn hơn 0.',
+        ]);
+
+        $agent = User::findOrFail($id);
+
+        DB::beginTransaction();
+        try {
+            // Add balance to agent
+            $agent->balance += $validated['amount'];
+            $agent->save();
+            
+            DB::commit();
+            
+            return back()->with('success', 'Đã thưởng ' . number_format($validated['amount'], 2) . ' đá quý cho đại lý thành công.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error giving agent reward: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra khi thưởng cho đại lý.');
+        }
     }
 
     /**
@@ -1016,8 +1098,9 @@ public function createGiftcodes(Request $request)
     public function settings()
     {
         $vndToGemRate = SystemSetting::getValue('vnd_to_gem_rate', '1000');
+        $luckyMoneyMaxGems = SystemSetting::getValue('lucky_money_max_gems', '5');
         $commissionRates = CommissionRate::orderBy('order')->orderBy('level')->get();
-        return view('admin.settings', compact('vndToGemRate', 'commissionRates'));
+        return view('admin.settings', compact('vndToGemRate', 'luckyMoneyMaxGems', 'commissionRates'));
     }
 
     /**
@@ -1027,6 +1110,7 @@ public function createGiftcodes(Request $request)
     {
         $validated = $request->validate([
             'vnd_to_gem_rate' => 'required|numeric|min:1',
+            'lucky_money_max_gems' => 'nullable|integer|min:1|max:999',
         ]);
 
         SystemSetting::setValue(
@@ -1034,6 +1118,14 @@ public function createGiftcodes(Request $request)
             (string) $validated['vnd_to_gem_rate'],
             'Tỉ lệ quy đổi: số VND cần để đổi được 1 đá quý'
         );
+
+        if (isset($validated['lucky_money_max_gems'])) {
+            SystemSetting::setValue(
+                'lucky_money_max_gems',
+                (string) $validated['lucky_money_max_gems'],
+                'Số đá quý tối đa có thể nhận được khi mở lì xì (từ 1 đến giá trị này)'
+            );
+        }
 
         return back()->with('success', 'Cập nhật cài đặt thành công.');
     }
@@ -1106,5 +1198,149 @@ public function createGiftcodes(Request $request)
         }
 
         return back()->with('success', 'Xóa tỉ lệ hoa hồng thành công.');
+    }
+
+    /**
+     * Marketing accounts management page
+     */
+    public function marketingAccounts()
+    {
+        $marketingAccounts = User::where('role', 'marketing')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return view('admin.marketing-accounts', compact('marketingAccounts'));
+    }
+
+    /**
+     * Create marketing account
+     */
+    public function createMarketingAccount(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:6',
+        ], [
+            'email.required' => 'Vui lòng nhập email.',
+            'email.email' => 'Email không hợp lệ.',
+            'email.unique' => 'Email này đã được sử dụng.',
+            'password.required' => 'Vui lòng nhập mật khẩu.',
+            'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự.',
+        ]);
+
+        // Generate unique username from email (before @)
+        $username = explode('@', $validated['email'])[0];
+        $baseUsername = $username;
+        $counter = 1;
+        
+        // Ensure username is unique
+        while (User::where('email', 'like', $username . '@%')->exists()) {
+            $username = $baseUsername . $counter;
+            $counter++;
+        }
+
+        // Generate unique phone number for marketing account (format: MKT + timestamp + random, max 20 chars)
+        // phone_number column has max length of 20, so we use shorter format
+        $timestamp = time();
+        $random = rand(1000, 9999);
+        $phoneNumber = 'MKT' . $timestamp . $random;
+        // Ensure it doesn't exceed 20 characters
+        if (strlen($phoneNumber) > 20) {
+            $phoneNumber = 'MKT' . substr($timestamp, -10) . $random;
+        }
+        while (User::where('phone_number', $phoneNumber)->exists()) {
+            $random = rand(1000, 9999);
+            $phoneNumber = 'MKT' . substr($timestamp, -10) . $random;
+        }
+
+        // Generate unique referral code
+        do {
+            $referralCode = strtoupper(substr(md5(uniqid(rand(), true)), 0, 8));
+        } while (User::where('referral_code', $referralCode)->exists());
+
+        // Generate unique transfer code
+        do {
+            $transferCode = '0x' . substr(md5(uniqid(rand(), true)), 0, 12);
+        } while (User::where('transfer_code', $transferCode)->exists());
+
+        // Create marketing account
+        $marketingAccount = User::create([
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'phone_number' => $phoneNumber,
+            'role' => 'marketing',
+            'balance' => 0,
+            'betting_requirement' => 0,
+            'name' => $username,
+            'display_name' => $username,
+            'referral_code' => $referralCode,
+            'transfer_code' => $transferCode,
+        ]);
+
+        return back()->with('success', 'Tạo tài khoản marketing thành công.');
+    }
+
+    /**
+     * Update marketing account balance (add or subtract)
+     */
+    public function updateMarketingBalance(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'type' => 'required|in:add,subtract',
+        ], [
+            'amount.required' => 'Vui lòng nhập số lượng.',
+            'amount.numeric' => 'Số lượng phải là số.',
+            'amount.min' => 'Số lượng phải lớn hơn 0.',
+            'type.required' => 'Vui lòng chọn loại thao tác.',
+            'type.in' => 'Loại thao tác không hợp lệ.',
+        ]);
+
+        $marketingAccount = User::where('id', $id)
+            ->where('role', 'marketing')
+            ->firstOrFail();
+
+        DB::beginTransaction();
+        try {
+            if ($validated['type'] === 'add') {
+                $marketingAccount->balance += $validated['amount'];
+            } else {
+                if ($marketingAccount->balance < $validated['amount']) {
+                    return back()->with('error', 'Số dư không đủ để trừ.');
+                }
+                $marketingAccount->balance -= $validated['amount'];
+            }
+            
+            $marketingAccount->save();
+            
+            DB::commit();
+            
+            return back()->with('success', $validated['type'] === 'add' 
+                ? 'Đã cộng ' . number_format($validated['amount'], 2) . ' đá quý thành công.' 
+                : 'Đã trừ ' . number_format($validated['amount'], 2) . ' đá quý thành công.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error updating marketing balance: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra khi cập nhật số dư.');
+        }
+    }
+
+    /**
+     * Delete marketing account
+     */
+    public function deleteMarketingAccount($id)
+    {
+        $marketingAccount = User::where('id', $id)
+            ->where('role', 'marketing')
+            ->firstOrFail();
+
+        // Check if account has balance
+        if ($marketingAccount->balance > 0) {
+            return back()->with('error', 'Không thể xóa tài khoản có số dư. Vui lòng rút hết số dư trước.');
+        }
+
+        $marketingAccount->delete();
+
+        return back()->with('success', 'Đã xóa tài khoản marketing thành công.');
     }
 }

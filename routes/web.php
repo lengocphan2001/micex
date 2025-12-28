@@ -44,10 +44,10 @@ Route::get('/csrf-token', function () {
 // Authentication Routes
 Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
-    Route::post('/register', [RegisterController::class, 'register']);
+    Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:5,1');
     
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [LoginController::class, 'login']);
+    Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:5,1');
     
     // Password Reset Routes
     Route::get('/password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
@@ -112,10 +112,15 @@ Route::middleware('auth')->group(function () {
         $vndToGemRate = \App\Models\SystemSetting::getVndToGemRate();
         // Get active promotion
         $activePromotion = \App\Models\Promotion::getActivePromotion();
-        return view('deposit.bank', compact('user', 'vndToGemRate', 'activePromotion'));
+        // Get latest pending deposit request for countdown
+        $pendingDeposit = \App\Models\DepositRequest::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->first();
+        return view('deposit.bank', compact('user', 'vndToGemRate', 'activePromotion', 'pendingDeposit'));
     })->name('deposit.bank');
 
-    Route::post('/deposit/submit', [DepositController::class, 'submit'])->name('deposit.submit');
+    Route::post('/deposit/submit', [DepositController::class, 'submit'])->name('deposit.submit')->middleware('throttle:10,1');
     Route::get('/deposit/check-status/{id}', [DepositController::class, 'checkStatus'])->name('deposit.check-status');
 
     // Withdraw screen
@@ -279,7 +284,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/subordinate-system', [\App\Http\Controllers\SubordinateSystemController::class, 'index'])->name('subordinate-system');
     Route::get('/subordinate-system/check-withdraw-status', [\App\Http\Controllers\SubordinateSystemController::class, 'checkWithdrawStatus'])->name('subordinate-system.check-withdraw-status');
-    Route::post('/subordinate-system/withdraw-commission', [\App\Http\Controllers\SubordinateSystemController::class, 'withdrawCommission'])->name('subordinate-system.withdraw-commission');
+    Route::post('/subordinate-system/withdraw-commission', [\App\Http\Controllers\SubordinateSystemController::class, 'withdrawCommission'])->name('subordinate-system.withdraw-commission')->middleware('throttle:5,1');
 
     Route::post('/me/bank-link', [ProfileController::class, 'bankLink'])->name('me.bank.submit');
     Route::post('/me/change-login-password', [ProfileController::class, 'changeLoginPassword'])->name('me.change-login-password.submit');
@@ -289,6 +294,10 @@ Route::middleware('auth')->group(function () {
 
     // Giftcode
     Route::post('/giftcode/redeem', [\App\Http\Controllers\GiftcodeController::class, 'redeem'])->name('giftcode.redeem');
+
+    // Lucky Money
+    Route::get('/api/lucky-money/status', [\App\Http\Controllers\LuckyMoneyController::class, 'getStatus'])->name('lucky-money.status');
+    Route::post('/api/lucky-money/open', [\App\Http\Controllers\LuckyMoneyController::class, 'open'])->name('lucky-money.open');
 
     // Logout route
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
@@ -324,6 +333,7 @@ Route::prefix('admin')->name('admin.')->middleware('set.admin.guard')->group(fun
         Route::post('/withdraw/{id}/approve', [AdminController::class, 'approveWithdraw'])->name('withdraw.approve');
         Route::post('/withdraw/{id}/reject', [AdminController::class, 'rejectWithdraw'])->name('withdraw.reject');
         Route::get('/agent', [AdminController::class, 'agent'])->name('agent');
+        Route::post('/agent/{id}/reward', [AdminController::class, 'giveAgentReward'])->name('agent.reward');
         Route::get('/banner', [AdminController::class, 'banner'])->name('banner');
         Route::get('/promotion-giftcode', [AdminController::class, 'promotionGiftcode'])->name('promotion-giftcode');
         Route::post('/promotion-giftcode/promotion', [AdminController::class, 'createPromotion'])->name('promotion.create');
@@ -336,6 +346,12 @@ Route::prefix('admin')->name('admin.')->middleware('set.admin.guard')->group(fun
         Route::post('/settings/commission-rates', [AdminController::class, 'updateCommissionRates'])->name('settings.commission-rates.update');
         Route::post('/settings/commission-rates/add', [AdminController::class, 'addCommissionRate'])->name('settings.commission-rates.add');
         Route::delete('/settings/commission-rates/{id}', [AdminController::class, 'deleteCommissionRate'])->name('settings.commission-rates.delete');
+        
+        // Marketing Accounts Management
+        Route::get('/marketing-accounts', [AdminController::class, 'marketingAccounts'])->name('marketing-accounts');
+        Route::post('/marketing-accounts/create', [AdminController::class, 'createMarketingAccount'])->name('marketing-accounts.create');
+        Route::post('/marketing-accounts/{id}/update-balance', [AdminController::class, 'updateMarketingBalance'])->name('marketing-accounts.update-balance');
+        Route::delete('/marketing-accounts/{id}', [AdminController::class, 'deleteMarketingAccount'])->name('marketing-accounts.delete');
         
         // Slider Management
         Route::resource('sliders', SliderController::class);

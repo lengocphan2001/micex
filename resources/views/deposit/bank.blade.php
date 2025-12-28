@@ -466,6 +466,49 @@
         stopPolling();
     });
 
+    // Check for pending deposit on page load and resume countdown
+    @if(isset($pendingDeposit) && $pendingDeposit)
+        (function() {
+            const pendingDepositCreatedAt = {{ $pendingDeposit->created_at->timestamp }} * 1000; // Convert to milliseconds
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - pendingDepositCreatedAt) / 1000);
+            const totalSeconds = 30 * 60; // 30 minutes
+            remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+            
+            if (remainingSeconds > 0) {
+                // Continue countdown if still within 30 minutes
+                isCountdownActive = true;
+                if (countdownBtn) {
+                    countdownBtn.disabled = true;
+                    countdownBtn.classList.add('opacity-70', 'cursor-not-allowed');
+                }
+                
+                // Show processing status
+                const processingStatus = document.getElementById('processingStatus');
+                if (processingStatus) {
+                    processingStatus.classList.remove('hidden');
+                }
+                
+                // Start countdown immediately
+                renderCountdown();
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                }
+                countdownInterval = setInterval(tickCountdown, 1000);
+                
+                // Start polling for status
+                startLongPolling({{ $pendingDeposit->id }});
+            } else {
+                // Countdown expired, reset button
+                if (countdownBtn) {
+                    countdownBtn.textContent = 'Nạp';
+                    countdownBtn.disabled = false;
+                    countdownBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                }
+            }
+        })();
+    @endif
+
     // Handle form submit
     const depositForm = document.getElementById('depositForm');
     if (depositForm) {

@@ -90,11 +90,11 @@
                     statusText.classList.add('hidden');
                 }
 
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+                let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
                     || document.querySelector('input[name="_token"]')?.value;
 
                 try {
-                    const response = await fetch('{{ route("me.send-fund-password-verification-code") }}', {
+                    let response = await fetch('{{ route("me.send-fund-password-verification-code") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -103,6 +103,45 @@
                             'X-CSRF-TOKEN': csrfToken || '',
                         },
                     });
+
+                    // Handle 419 CSRF token mismatch
+                    if (response.status === 419) {
+                        // Try to refresh token and retry once
+                        try {
+                            const refreshResponse = await fetch('/csrf-token', {
+                                method: 'GET',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Accept': 'application/json',
+                                },
+                            });
+                            
+                            if (refreshResponse.ok) {
+                                const refreshData = await refreshResponse.json();
+                                if (refreshData && refreshData.token) {
+                                    // Update meta tag
+                                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                                    if (metaTag) {
+                                        metaTag.setAttribute('content', refreshData.token);
+                                    }
+                                    csrfToken = refreshData.token;
+                                    
+                                    // Retry request with new token
+                                    response = await fetch('{{ route("me.send-fund-password-verification-code") }}', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-Requested-With': 'XMLHttpRequest',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': csrfToken,
+                                        },
+                                    });
+                                }
+                            }
+                        } catch (refreshError) {
+                            console.error('Failed to refresh CSRF token:', refreshError);
+                        }
+                    }
 
                     const data = await response.json();
 
