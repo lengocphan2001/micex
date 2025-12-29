@@ -848,6 +848,7 @@ class AdminController extends Controller
      */
     public function agent(Request $request)
     {
+        // Get users who have at least one F1 (direct referral)
         $query = User::whereHas('referrals')
             ->withCount('referrals')
             ->orderBy('created_at', 'desc');
@@ -873,18 +874,18 @@ class AdminController extends Controller
 
         $agents = $query->get();
 
-        // Calculate total first deposit for each agent's entire network (F1, F2, F3...)
+        // Calculate total first deposit for each agent's F1 only (not entire network)
         foreach ($agents as $agent) {
-            // Get all subordinate IDs recursively (entire network)
-            $allNetworkIds = $this->getAllSubordinateIds($agent->id);
+            // Get only F1 IDs (direct referrals)
+            $f1Ids = $agent->referrals()->pluck('id');
             
-            if (empty($allNetworkIds)) {
+            if ($f1Ids->isEmpty()) {
                 $agent->total_first_deposit = 0;
                 continue;
             }
             
-            // Get first deposit for each user in the network
-            $firstDeposits = DepositRequest::whereIn('user_id', $allNetworkIds)
+            // Get first deposit for each F1 user
+            $firstDeposits = DepositRequest::whereIn('user_id', $f1Ids)
                 ->where('status', 'approved')
                 ->select('user_id', DB::raw('MIN(approved_at) as first_approved_at'))
                 ->groupBy('user_id')
