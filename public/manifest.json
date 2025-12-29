@@ -1,0 +1,25 @@
+{
+  "name": "Micex",
+  "short_name": "Micex",
+  "description": "Micex - Crypto Mining Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#181A20",
+  "theme_color": "#181A20",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/icons/metalogo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icons/metalogo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

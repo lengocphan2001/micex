@@ -6,11 +6,18 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Micex')</title>
     
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    
     <!-- iOS Meta Tags - Ẩn URL khi thêm vào màn hình chính -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Micex">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#181A20">
     <link rel="apple-touch-icon" href="{{ asset('images/icons/metalogo.png') }}">
+    <link rel="apple-touch-icon" sizes="192x192" href="{{ asset('images/icons/metalogo.png') }}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{{ asset('images/icons/metalogo.png') }}">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ asset('images/icons/metalogo.png') }}">
@@ -504,6 +511,67 @@
             }
         });
         })(); // End IIFE
+        
+        // Prevent address bar from showing when switching tabs on iOS
+        (function() {
+            // Check if running in standalone mode (added to home screen)
+            const isStandalone = window.navigator.standalone || 
+                (window.matchMedia('(display-mode: standalone)').matches) ||
+                document.referrer.includes('android-app://');
+            
+            if (isStandalone) {
+                // Prevent address bar from appearing
+                let lastScrollTop = 0;
+                let ticking = false;
+                
+                function preventAddressBar() {
+                    if (!ticking) {
+                        window.requestAnimationFrame(function() {
+                            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                            
+                            // If user scrolls, try to keep address bar hidden
+                            if (Math.abs(scrollTop - lastScrollTop) > 5) {
+                                // Force scroll to top slightly to hide address bar
+                                if (scrollTop > 0 && scrollTop < 100) {
+                                    window.scrollTo(0, 1);
+                                }
+                            }
+                            
+                            lastScrollTop = scrollTop;
+                            ticking = false;
+                        });
+                        
+                        ticking = true;
+                    }
+                }
+                
+                // Prevent address bar on page load
+                window.addEventListener('load', function() {
+                    setTimeout(function() {
+                        window.scrollTo(0, 1);
+                    }, 0);
+                });
+                
+                // Prevent address bar on visibility change (tab switch)
+                document.addEventListener('visibilitychange', function() {
+                    if (!document.hidden) {
+                        setTimeout(function() {
+                            window.scrollTo(0, 1);
+                        }, 100);
+                    }
+                });
+                
+                // Prevent address bar on focus
+                window.addEventListener('focus', function() {
+                    setTimeout(function() {
+                        window.scrollTo(0, 1);
+                    }, 100);
+                });
+                
+                // Monitor scroll to keep address bar hidden
+                window.addEventListener('scroll', preventAddressBar, { passive: true });
+            }
+        })();
     </script>
 </body>
 </html>
