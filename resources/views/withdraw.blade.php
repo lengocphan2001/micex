@@ -205,6 +205,15 @@
                 return;
             }
 
+            if (gemAmount < 5) {
+                if (typeof showToast === 'function') {
+                    showToast('Số tiền rút tối thiểu là 5 đá quý.', 'error');
+                } else {
+                    alert('Số tiền rút tối thiểu là 5 đá quý.');
+                }
+                return;
+            }
+
             if (gemAmount > userBalance) {
                 if (typeof showToast === 'function') {
                     showToast('Số dư không đủ để rút tiền.', 'error');

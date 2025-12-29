@@ -22,12 +22,12 @@ class WithdrawController extends Controller
 
         try {
             $validated = $request->validate([
-                'gem_amount' => 'required|numeric|min:0.01',
+                'gem_amount' => 'required|numeric|min:5',
                 'fund_password' => 'required|string',
             ], [
                 'gem_amount.required' => 'Vui lòng nhập số lượng đá quý muốn rút.',
                 'gem_amount.numeric' => 'Số lượng đá quý phải là số.',
-                'gem_amount.min' => 'Số lượng đá quý phải lớn hơn 0.',
+                'gem_amount.min' => 'Số tiền rút tối thiểu là 5 đá quý.',
                 'fund_password.required' => 'Vui lòng nhập mật khẩu quỹ.',
             ]);
 
