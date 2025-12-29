@@ -441,9 +441,23 @@ class AdminController extends Controller
     /**
      * Member list page
      */
-    public function memberList()
+    public function memberList(Request $request)
     {
-        $users = User::where('role', 'user')->paginate(20);
+        $query = User::where('role', 'user');
+
+        // Search by username or referral_code
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('referral_code', 'like', "%{$searchTerm}%")
+                  ->orWhere('name', 'like', "%{$searchTerm}%")
+                  ->orWhere('display_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('email', 'like', "%{$searchTerm}%")
+                  ->orWhere('phone_number', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        $users = $query->orderBy('created_at', 'desc')->paginate(20);
         return view('admin.member-list', compact('users'));
     }
 
@@ -938,6 +952,57 @@ class AdminController extends Controller
             \Log::error('Error giving agent reward: ' . $e->getMessage());
             return back()->with('error', 'Có lỗi xảy ra khi thưởng cho đại lý.');
         }
+    }
+
+    /**
+     * Get F1 details for an agent
+     */
+    public function getAgentF1Details($id)
+    {
+        $agent = User::findOrFail($id);
+        
+        // Get F1 users (direct referrals)
+        $f1Users = $agent->referrals()->get();
+        
+        $f1Details = [];
+        foreach ($f1Users as $f1User) {
+            // Get first deposit amount
+            $firstDeposit = DepositRequest::where('user_id', $f1User->id)
+                ->where('status', 'approved')
+                ->orderBy('approved_at', 'asc')
+                ->first();
+            
+            $firstDepositAmount = 0;
+            if ($firstDeposit) {
+                $firstDepositAmount = $firstDeposit->gem_amount ?? ($firstDeposit->amount / SystemSetting::getVndToGemRate());
+            }
+            
+            // Get total betting amount (khối lượng giao dịch)
+            $totalBetting = $f1User->getTotalBettingSinceLastDeposit();
+            
+            // Check bank account status
+            $hasBankAccount = !empty($f1User->bank_name) && !empty($f1User->bank_account);
+            
+            $f1Details[] = [
+                'id' => $f1User->id,
+                'username' => $f1User->referral_code ?? $f1User->name ?? $f1User->email,
+                'display_name' => $f1User->display_name ?? '-',
+                'balance' => $f1User->balance ?? 0,
+                'first_deposit_amount' => $firstDepositAmount,
+                'total_betting' => $totalBetting,
+                'has_bank_account' => $hasBankAccount,
+                'bank_status' => $hasBankAccount ? 'Đã liên kết' : 'Chưa liên kết',
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'agent' => [
+                'id' => $agent->id,
+                'name' => $agent->referral_code ?? $agent->name ?? $agent->email,
+            ],
+            'f1_details' => $f1Details,
+        ]);
     }
 
     /**

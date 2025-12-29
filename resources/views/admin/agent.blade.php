@@ -91,9 +91,19 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge badge-success" style="background-color: #28a745; padding: 0.5rem 1rem; border-radius: 20px;">
-                                        {{ number_format($agent->total_first_deposit ?? 0, 2) }} USDT
-                                    </span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge badge-success" style="background-color: #28a745; padding: 0.5rem 1rem; border-radius: 20px;">
+                                            {{ number_format($agent->total_first_deposit ?? 0, 2) }} USDT
+                                        </span>
+                                        <button 
+                                            type="button" 
+                                            class="btn btn-sm btn-info" 
+                                            onclick="showF1DetailsModal({{ $agent->id }})"
+                                            title="Xem chi tiết F1"
+                                        >
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
                                 </td>
                                 <td>
                                     <form action="{{ route('admin.agent.reward', $agent->id) }}" method="POST" class="d-flex gap-2">
@@ -119,6 +129,44 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- F1 Details Modal -->
+    <div id="f1DetailsModal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chi tiết F1 - <span id="modalAgentName"></span></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Display Name</th>
+                                    <th>Số dư</th>
+                                    <th>Số tiền nạp đầu</th>
+                                    <th>Khối lượng giao dịch</th>
+                                    <th>Trạng thái liên kết ngân hàng</th>
+                                </tr>
+                            </thead>
+                            <tbody id="f1DetailsTableBody">
+                                <tr>
+                                    <td colspan="6" class="text-center">Đang tải...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                </div>
             </div>
         </div>
     </div>
@@ -157,6 +205,74 @@
             }
             document.body.removeChild(textArea);
         });
+    }
+
+    function showF1DetailsModal(agentId) {
+        const modal = $('#f1DetailsModal');
+        const tableBody = document.getElementById('f1DetailsTableBody');
+        
+        // Show modal
+        modal.modal('show');
+        
+        // Set loading state
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Đang tải...</td></tr>';
+        
+        // Fetch F1 details
+        fetch(`/admin/api/agent/${agentId}/f1-details`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.f1_details) {
+                // Update agent name
+                document.getElementById('modalAgentName').textContent = data.agent.name;
+                
+                // Build table rows
+                if (data.f1_details.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Không có F1 nào</td></tr>';
+                } else {
+                    let html = '';
+                    data.f1_details.forEach(f1 => {
+                        html += `
+                            <tr>
+                                <td>${escapeHtml(f1.username)}</td>
+                                <td>${escapeHtml(f1.display_name)}</td>
+                                <td>${formatNumber(f1.balance)} đá quý</td>
+                                <td>${formatNumber(f1.first_deposit_amount)} đá quý</td>
+                                <td>${formatNumber(f1.total_betting)} đá quý</td>
+                                <td>
+                                    <span class="badge ${f1.has_bank_account ? 'badge-success' : 'badge-warning'}">
+                                        ${escapeHtml(f1.bank_status)}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tableBody.innerHTML = html;
+                }
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Có lỗi xảy ra khi tải dữ liệu</td></tr>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading F1 details:', error);
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Có lỗi xảy ra khi tải dữ liệu</td></tr>';
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatNumber(number) {
+        return parseFloat(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 </script>
 @stop

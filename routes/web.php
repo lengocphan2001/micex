@@ -334,6 +334,7 @@ Route::prefix('admin')->name('admin.')->middleware('set.admin.guard')->group(fun
         Route::post('/withdraw/{id}/reject', [AdminController::class, 'rejectWithdraw'])->name('withdraw.reject');
         Route::get('/agent', [AdminController::class, 'agent'])->name('agent');
         Route::post('/agent/{id}/reward', [AdminController::class, 'giveAgentReward'])->name('agent.reward');
+        Route::get('/api/agent/{id}/f1-details', [AdminController::class, 'getAgentF1Details'])->name('agent.f1-details');
         Route::get('/banner', [AdminController::class, 'banner'])->name('banner');
         Route::get('/promotion-giftcode', [AdminController::class, 'promotionGiftcode'])->name('promotion-giftcode');
         Route::post('/promotion-giftcode/promotion', [AdminController::class, 'createPromotion'])->name('promotion.create');

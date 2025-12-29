@@ -7,6 +7,33 @@
 @stop
 
 @section('content')
+    <!-- Search Section -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="GET" action="{{ route('admin.member-list') }}" class="d-flex align-items-end gap-2">
+                <div class="form-group mb-0 flex-grow-1">
+                    <label for="search">Tìm kiếm (Username hoặc Mã giới thiệu)</label>
+                    <input 
+                        type="text" 
+                        id="search" 
+                        name="search" 
+                        class="form-control" 
+                        placeholder="Nhập username hoặc mã giới thiệu"
+                        value="{{ request('search') }}"
+                    >
+                </div>
+                <div class="form-group mb-0">
+                    <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+                </div>
+                @if(request('search'))
+                <div class="form-group mb-0">
+                    <a href="{{ route('admin.member-list') }}" class="btn btn-secondary">Xóa bộ lọc</a>
+                </div>
+                @endif
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <table class="table table-bordered table-striped">
