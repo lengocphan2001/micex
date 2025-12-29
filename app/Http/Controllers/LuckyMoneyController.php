@@ -23,7 +23,7 @@ class LuckyMoneyController extends Controller
         }
 
         $hasOpenedToday = LuckyMoneyOpen::hasOpenedToday($user->id);
-        $maxGems = (int) SystemSetting::getValue('lucky_money_max_gems', '5');
+        $maxGems = (float) SystemSetting::getValue('lucky_money_max_gems', '5');
         
         // Get today's date (resets at 7 AM)
         $today = LuckyMoneyOpen::getTodayDate();

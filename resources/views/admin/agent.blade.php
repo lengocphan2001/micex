@@ -4,7 +4,6 @@
 
 @section('content_header')
     <h1>Quản lý đại lý</h1>
-    <p class="text-muted">Trang quản lý đại lý sẽ được phát triển tại đây.</p>
 @stop
 
 @section('content')

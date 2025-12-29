@@ -873,12 +873,18 @@ class AdminController extends Controller
 
         $agents = $query->get();
 
-        // Calculate total first deposit for each agent's referrals
+        // Calculate total first deposit for each agent's entire network (F1, F2, F3...)
         foreach ($agents as $agent) {
-            $referralIds = $agent->referrals()->pluck('id');
+            // Get all subordinate IDs recursively (entire network)
+            $allNetworkIds = $this->getAllSubordinateIds($agent->id);
             
-            // Get first deposit for each referral
-            $firstDeposits = DepositRequest::whereIn('user_id', $referralIds)
+            if (empty($allNetworkIds)) {
+                $agent->total_first_deposit = 0;
+                continue;
+            }
+            
+            // Get first deposit for each user in the network
+            $firstDeposits = DepositRequest::whereIn('user_id', $allNetworkIds)
                 ->where('status', 'approved')
                 ->select('user_id', DB::raw('MIN(approved_at) as first_approved_at'))
                 ->groupBy('user_id')
@@ -1108,17 +1114,29 @@ public function createGiftcodes(Request $request)
      */
     public function updateSettings(Request $request)
     {
-        $validated = $request->validate([
-            'vnd_to_gem_rate' => 'required|numeric|min:1',
-            'lucky_money_max_gems' => 'nullable|numeric|min:0.1|max:999',
-        ]);
+        $rules = [];
+        
+        // Only validate fields that are present in the request
+        if ($request->has('vnd_to_gem_rate')) {
+            $rules['vnd_to_gem_rate'] = 'required|numeric|min:1';
+        }
+        
+        if ($request->has('lucky_money_max_gems')) {
+            $rules['lucky_money_max_gems'] = 'required|numeric|min:0.1|max:999';
+        }
+        
+        $validated = $request->validate($rules);
 
-        SystemSetting::setValue(
-            'vnd_to_gem_rate',
-            (string) $validated['vnd_to_gem_rate'],
-            'Tỉ lệ quy đổi: số VND cần để đổi được 1 đá quý'
-        );
+        // Update VND to Gem rate if provided
+        if (isset($validated['vnd_to_gem_rate'])) {
+            SystemSetting::setValue(
+                'vnd_to_gem_rate',
+                (string) $validated['vnd_to_gem_rate'],
+                'Tỉ lệ quy đổi: số VND cần để đổi được 1 đá quý'
+            );
+        }
 
+        // Update Lucky Money max gems if provided
         if (isset($validated['lucky_money_max_gems'])) {
             SystemSetting::setValue(
                 'lucky_money_max_gems',

@@ -69,6 +69,7 @@
                         min="0.1"
                         max="999"
                         step="0.01"
+                        required
                     >
                     <small class="form-text text-muted">
                         Số đá quý tối đa mà user có thể nhận được khi mở lì xì. Giá trị random sẽ từ 0.1 đến số này (hỗ trợ số thập phân). (Mặc định: 5)
