@@ -790,30 +790,23 @@ class AdminController extends Controller
 
         DB::beginTransaction();
         try {
-            // Check if user has enough balance
-            $user = $withdrawRequest->user;
-            if ($user->balance < $withdrawRequest->gem_amount) {
-                return back()->with('error', 'Số dư của user không đủ để thực hiện rút tiền.');
-            }
-
             // Update withdraw request status
+            // Note: Balance was already deducted when user submitted the withdraw request (pending status)
+            // So we don't need to deduct balance again here
             $withdrawRequest->status = 'approved';
             $withdrawRequest->approved_by = Auth::guard('admin')->id();
             $withdrawRequest->approved_at = now();
             $withdrawRequest->notes = $request->input('notes');
             $withdrawRequest->save();
 
-            // Deduct balance from user
-            $user->balance -= $withdrawRequest->gem_amount;
-            $user->save();
-
             // Create notification for user
+            $user = $withdrawRequest->user;
             $vndAmount = $withdrawRequest->gem_amount * SystemSetting::getVndToGemRate();
             Notification::createWithdrawApproved($user, $vndAmount, $withdrawRequest->gem_amount, $withdrawRequest->id);
 
             DB::commit();
 
-            return back()->with('success', 'Đã duyệt yêu cầu rút tiền và trừ số dư của user.');
+            return back()->with('success', 'Đã duyệt yêu cầu rút tiền thành công.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
@@ -833,24 +826,26 @@ class AdminController extends Controller
 
         DB::beginTransaction();
         try {
+            // Update withdraw request status
             $withdrawRequest->status = 'rejected';
             $withdrawRequest->approved_by = Auth::guard('admin')->id();
             $withdrawRequest->approved_at = now();
             $withdrawRequest->notes = $request->input('notes');
             $withdrawRequest->save();
 
-            // KHÔNG cần hoàn lại balance vì khi user tạo withdraw request, balance CHƯA bị trừ
-            // Balance chỉ bị trừ khi admin approve request
-            // Nếu reject, chỉ cần đổi status, không cần thay đổi balance
+            // Refund balance to user because balance was deducted when user submitted withdraw request
+            // When admin rejects, we need to return the money back to user
+            $user = $withdrawRequest->user;
+            $user->balance += $withdrawRequest->gem_amount;
+            $user->save();
 
             // Create notification for user
-            $user = $withdrawRequest->user;
             $vndAmount = $withdrawRequest->gem_amount * SystemSetting::getVndToGemRate();
             Notification::createWithdrawRejected($user, $vndAmount, $withdrawRequest->gem_amount, $withdrawRequest->id, $request->input('notes'));
 
             DB::commit();
 
-            return back()->with('success', 'Đã từ chối yêu cầu rút tiền.');
+            return back()->with('success', 'Đã từ chối yêu cầu rút tiền và hoàn lại số dư cho user.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
@@ -943,6 +938,18 @@ class AdminController extends Controller
             // Add balance to agent
             $agent->balance += $validated['amount'];
             $agent->save();
+            
+            // Create notification for agent
+            Notification::create([
+                'user_id' => $agent->id,
+                'type' => 'agent_reward',
+                'title' => 'Nhận thưởng đại lý',
+                'message' => "Bạn đã nhận được " . number_format($validated['amount'], 2, ',', '.') . " đá quý từ hệ thống. Cảm ơn bạn đã đóng góp cho hệ thống!",
+                'data' => [
+                    'amount' => $validated['amount'],
+                    'agent_id' => $agent->id,
+                ],
+            ]);
             
             DB::commit();
             

@@ -79,16 +79,42 @@ class WithdrawController extends Controller
             // Calculate VND amount based on rate
             $vndAmount = $validated['gem_amount'] * $vndToGemRate;
 
-            // Create withdraw request
-            $withdrawRequest = WithdrawRequest::create([
-                'user_id' => $user->id,
-                'gem_amount' => $validated['gem_amount'],
-                'amount' => $vndAmount,
-                'bank_name' => $user->bank_name,
-                'bank_account' => $user->bank_account,
-                'bank_full_name' => $user->bank_full_name,
-                'status' => 'pending',
-            ]);
+            // Use database transaction to ensure balance is deducted atomically
+            \Illuminate\Support\Facades\DB::beginTransaction();
+            try {
+                // Lock user row to prevent race condition
+                $user = \App\Models\User::where('id', $user->id)->lockForUpdate()->first();
+                
+                // Check balance again after lock (in case it changed)
+                if ($user->balance < $validated['gem_amount']) {
+                    \Illuminate\Support\Facades\DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Số dư không đủ để rút tiền.',
+                    ], 400);
+                }
+
+                // Deduct balance immediately when creating withdraw request (pending)
+                // This prevents user from using the money for betting while withdraw is pending
+                $user->balance -= $validated['gem_amount'];
+                $user->save();
+
+                // Create withdraw request
+                $withdrawRequest = WithdrawRequest::create([
+                    'user_id' => $user->id,
+                    'gem_amount' => $validated['gem_amount'],
+                    'amount' => $vndAmount,
+                    'bank_name' => $user->bank_name,
+                    'bank_account' => $user->bank_account,
+                    'bank_full_name' => $user->bank_full_name,
+                    'status' => 'pending',
+                ]);
+
+                \Illuminate\Support\Facades\DB::commit();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\DB::rollBack();
+                throw $e;
+            }
 
             // Return JSON for AJAX requests
             if ($request->ajax() || $request->wantsJson()) {
