@@ -97,7 +97,7 @@ class Round extends Model
     public static function getOrCreateRoundByNumber($roundNumber)
     {
         // Sử dụng lock để tránh race condition khi nhiều process cùng tạo round
-        return \DB::transaction(function () use ($roundNumber) {
+        $round = \DB::transaction(function () use ($roundNumber) {
             $expectedSeed = 'round_' . $roundNumber;
             
             // CHỈ tìm round có seed deterministic (round_ + roundNumber)
@@ -162,6 +162,66 @@ class Round extends Model
         
         return $round;
         });
+        
+        // Cleanup old rounds sau khi tạo round mới (ngoài transaction để tránh deadlock)
+        // Chỉ cleanup khi round vừa được tạo trong transaction này
+        try {
+            self::cleanupOldRounds();
+        } catch (\Exception $e) {
+            // Log error nhưng không throw để không ảnh hưởng đến việc tạo round
+            \Log::warning('Error cleaning up old rounds: ' . $e->getMessage());
+        }
+        
+        return $round;
+    }
+
+    /**
+     * Cleanup old rounds - chỉ giữ lại tối đa 60 rounds gần nhất
+     * Xóa các round cũ nhất, nhưng chỉ xóa các round đã finish và không có bets
+     */
+    public static function cleanupOldRounds()
+    {
+        // Đếm tổng số rounds
+        $totalRounds = self::count();
+        
+        // Nếu có nhiều hơn 60 rounds, cần xóa các round cũ
+        if ($totalRounds > 60) {
+            // Lấy 60 rounds gần nhất (theo round_number desc)
+            $latestRounds = self::orderBy('round_number', 'desc')
+                ->limit(60)
+                ->pluck('id')
+                ->toArray();
+            
+            // Xóa các round không nằm trong danh sách 60 rounds gần nhất
+            // Nhưng chỉ xóa các round đã finish và không có bets
+            $roundsToDelete = self::whereNotIn('id', $latestRounds)
+                ->where('status', 'finished')
+                ->whereDoesntHave('bets')
+                ->get();
+            
+            foreach ($roundsToDelete as $round) {
+                $round->delete();
+            }
+            
+            // Nếu vẫn còn nhiều hơn 60 rounds sau khi xóa các round không có bets
+            // Xóa các round cũ nhất (đã finish) ngay cả khi có bets (nhưng chỉ khi bets đã được xử lý)
+            $remainingCount = self::count();
+            if ($remainingCount > 60) {
+                $excessCount = $remainingCount - 60;
+                $oldestRounds = self::orderBy('round_number', 'asc')
+                    ->where('status', 'finished')
+                    ->limit($excessCount)
+                    ->get();
+                
+                foreach ($oldestRounds as $round) {
+                    // Chỉ xóa nếu tất cả bets đã được xử lý (không còn pending)
+                    $pendingBets = $round->bets()->where('status', 'pending')->count();
+                    if ($pendingBets === 0) {
+                        $round->delete();
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -217,6 +277,9 @@ class Round extends Model
         
         // Process all bets for this round
         $this->processBets();
+        
+        // Cleanup old rounds sau khi finish round
+        self::cleanupOldRounds();
     }
     
     /**
@@ -435,5 +498,72 @@ class Round extends Model
         }
         
         \Log::info("Finished processing bets for round {$this->id}");
+    }
+
+    /**
+     * Random kết quả dựa vào tổng tiền đặt cược
+     * Đá có nhiều tiền đặt cược nhất sẽ KHÔNG được random (không thắng)
+     * Random trong 2 đá còn lại
+     */
+    public function randomResultBasedOnBets()
+    {
+        // Lấy tất cả bets của round này
+        $bets = $this->bets()->where('status', 'pending')->get();
+        
+        // Tính tổng tiền đặt cược cho mỗi đá
+        $betAmounts = [
+            'kcxanh' => 0,
+            'daquy' => 0,
+            'kcdo' => 0,
+        ];
+        
+        foreach ($bets as $bet) {
+            if (isset($betAmounts[$bet->gem_type])) {
+                $betAmounts[$bet->gem_type] += (float) $bet->amount;
+            }
+        }
+        
+        // Tìm đá có nhiều tiền nhất
+        $maxAmount = max($betAmounts);
+        $excludedGems = [];
+        
+        foreach ($betAmounts as $gemType => $amount) {
+            if ($amount === $maxAmount && $maxAmount > 0) {
+                $excludedGems[] = $gemType;
+            }
+        }
+        
+        // Nếu có nhiều đá cùng số tiền cao nhất, loại trừ tất cả
+        // Nếu không có bets nào, random bình thường trong cả 3 đá
+        $availableGems = ['kcxanh', 'daquy', 'kcdo'];
+        
+        if (!empty($excludedGems)) {
+            // Loại trừ đá có nhiều tiền nhất
+            $availableGems = array_diff($availableGems, $excludedGems);
+        }
+        
+        // Nếu chỉ còn 1 đá, dùng đá đó
+        if (count($availableGems) === 1) {
+            return reset($availableGems);
+        }
+        
+        // Nếu còn 2 đá, random trong 2 đá đó
+        // Nếu không có bets nào (cả 3 đá đều có thể), random trong cả 3 đá
+        // Sử dụng seed của round để đảm bảo deterministic
+        $seed = $this->seed . '_final_result';
+        $hash = 0;
+        for ($i = 0; $i < strlen($seed); $i++) {
+            $char = ord($seed[$i]);
+            $hash = (($hash << 5) - $hash) + $char;
+            $hash = $hash & 0x7FFFFFFF;
+        }
+        
+        $rand = (abs($hash) % 10000) % 100 + 1;
+        
+        // Random trong các đá còn lại
+        $availableGemsArray = array_values($availableGems);
+        $index = ($rand - 1) % count($availableGemsArray);
+        
+        return $availableGemsArray[$index];
     }
 }

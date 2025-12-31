@@ -1179,7 +1179,15 @@ public function createGiftcodes(Request $request)
         $vndToGemRate = SystemSetting::getValue('vnd_to_gem_rate', '1000');
         $luckyMoneyMaxGems = SystemSetting::getValue('lucky_money_max_gems', '5');
         $commissionRates = CommissionRate::orderBy('order')->orderBy('level')->get();
-        return view('admin.settings', compact('vndToGemRate', 'luckyMoneyMaxGems', 'commissionRates'));
+        
+        // Get maintenance settings
+        $depositMaintenance = SystemSetting::getValue('deposit_maintenance', 'false');
+        $withdrawMaintenance = SystemSetting::getValue('withdraw_maintenance', 'false');
+        
+        $depositMaintenanceData = json_decode($depositMaintenance, true) ?: ['enabled' => false, 'start_date' => '', 'end_date' => '', 'message' => ''];
+        $withdrawMaintenanceData = json_decode($withdrawMaintenance, true) ?: ['enabled' => false, 'start_date' => '', 'end_date' => '', 'message' => ''];
+        
+        return view('admin.settings', compact('vndToGemRate', 'luckyMoneyMaxGems', 'commissionRates', 'depositMaintenanceData', 'withdrawMaintenanceData'));
     }
 
     /**
@@ -1219,6 +1227,44 @@ public function createGiftcodes(Request $request)
         }
 
         return back()->with('success', 'Cập nhật cài đặt thành công.');
+    }
+
+    /**
+     * Update maintenance settings
+     */
+    public function updateMaintenance(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|in:deposit,withdraw',
+            'enabled' => 'nullable|in:1',
+            'start_date' => 'required|date',
+            'start_time' => 'required|date_format:H:i',
+            'end_date' => 'required|date',
+            'end_time' => 'required|date_format:H:i',
+            'message' => 'nullable|string|max:500',
+        ]);
+
+        $enabled = $request->has('enabled') && $request->enabled == '1';
+        $startDateTime = $validated['start_date'] . ' ' . $validated['start_time'];
+        $endDateTime = $validated['end_date'] . ' ' . $validated['end_time'];
+
+        if ($validated['type'] === 'deposit') {
+            SystemSetting::setDepositMaintenance(
+                $enabled,
+                $startDateTime,
+                $endDateTime,
+                $validated['message'] ?? null
+            );
+        } else {
+            SystemSetting::setWithdrawMaintenance(
+                $enabled,
+                $startDateTime,
+                $endDateTime,
+                $validated['message'] ?? null
+            );
+        }
+
+        return back()->with('success', 'Cập nhật bảo trì thành công.');
     }
 
     /**

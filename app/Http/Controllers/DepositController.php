@@ -19,6 +19,18 @@ class DepositController extends Controller
             return redirect()->route('login')->with('error', 'Bạn chưa đăng nhập. Vui lòng đăng nhập lại.');
         }
 
+        // Check if deposit is under maintenance
+        if (SystemSetting::isDepositMaintenance()) {
+            $message = SystemSetting::getDepositMaintenanceMessage();
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $message,
+                ], 503);
+            }
+            return back()->with('error', $message)->withInput();
+        }
+
         try {
             $validated = $request->validate([
                 'amount' => 'required|numeric|min:100000|max:500000000',

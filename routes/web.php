@@ -117,7 +117,10 @@ Route::middleware('auth')->group(function () {
             ->where('status', 'pending')
             ->orderBy('created_at', 'desc')
             ->first();
-        return view('deposit.bank', compact('user', 'vndToGemRate', 'activePromotion', 'pendingDeposit'));
+        // Check maintenance
+        $isMaintenance = \App\Models\SystemSetting::isDepositMaintenance();
+        $maintenanceMessage = \App\Models\SystemSetting::getDepositMaintenanceMessage();
+        return view('deposit.bank', compact('user', 'vndToGemRate', 'activePromotion', 'pendingDeposit', 'isMaintenance', 'maintenanceMessage'));
     })->name('deposit.bank');
 
     Route::post('/deposit/submit', [DepositController::class, 'submit'])->name('deposit.submit')->middleware('throttle:10,1');
@@ -130,7 +133,10 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('login');
         }
         $vndToGemRate = \App\Models\SystemSetting::getVndToGemRate();
-        return view('withdraw', compact('user', 'vndToGemRate'));
+        // Check maintenance
+        $isMaintenance = \App\Models\SystemSetting::isWithdrawMaintenance();
+        $maintenanceMessage = \App\Models\SystemSetting::getWithdrawMaintenanceMessage();
+        return view('withdraw', compact('user', 'vndToGemRate', 'isMaintenance', 'maintenanceMessage'));
     })->name('withdraw');
 
     Route::post('/withdraw/submit', [\App\Http\Controllers\WithdrawController::class, 'submit'])->name('withdraw.submit');
@@ -344,6 +350,7 @@ Route::prefix('admin')->name('admin.')->middleware('set.admin.guard')->group(fun
         Route::get('/promotion-giftcode/giftcode/{id}/history', [AdminController::class, 'getGiftcodeHistory'])->name('giftcode.history');
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
         Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+        Route::post('/settings/maintenance', [AdminController::class, 'updateMaintenance'])->name('settings.maintenance.update');
         Route::post('/settings/commission-rates', [AdminController::class, 'updateCommissionRates'])->name('settings.commission-rates.update');
         Route::post('/settings/commission-rates/add', [AdminController::class, 'addCommissionRate'])->name('settings.commission-rates.add');
         Route::delete('/settings/commission-rates/{id}', [AdminController::class, 'deleteCommissionRate'])->name('settings.commission-rates.delete');

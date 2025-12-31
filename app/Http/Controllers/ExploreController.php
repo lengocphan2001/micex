@@ -486,7 +486,8 @@ class ExploreController extends Controller
 
     /**
      * Get round result (admin_set_result or final_result)
-     * Client sẽ gọi API này khi round finish để lấy kết quả
+     * Client sẽ gọi API này khi đến giây 60 để lấy kết quả
+     * Nếu round chưa finish, sẽ random kết quả dựa vào tổng tiền đặt cược và finish round
      */
     public function getRoundResult(Request $request)
     {
@@ -505,16 +506,31 @@ class ExploreController extends Controller
             ], 404);
         }
         
+        // Nếu round chưa finish và đã đến giây 60, finish round với kết quả random
+        if ($round->status === 'running' && !$round->final_result) {
+            // Refresh để lấy admin_set_result mới nhất
+            $round->refresh();
+            
+            // Ưu tiên admin_set_result nếu có, nếu không thì random dựa vào tổng tiền đặt cược
+            $finalResult = null;
+            if ($round->admin_set_result) {
+                $finalResult = $round->admin_set_result;
+            } else {
+                // Random dựa vào tổng tiền đặt cược: đá có nhiều tiền nhất sẽ không thắng
+                $finalResult = $round->randomResultBasedOnBets();
+            }
+            
+            // Finish round với kết quả
+            $round->finish($finalResult);
+            $round->refresh();
+        }
+        
         // Ưu tiên admin_set_result, nếu không có thì dùng final_result
-        // Nếu không có cả hai, tính random từ seed (giây 60)
         $result = null;
         if ($round->admin_set_result) {
             $result = $round->admin_set_result;
         } else if ($round->final_result) {
             $result = $round->final_result;
-        } else {
-            // Tính random từ seed (giây 60)
-            $result = $this->getGemForSecond($round->seed, 60, $round);
         }
         
         // Map giá trị cũ sang giá trị mới (backward compatibility)

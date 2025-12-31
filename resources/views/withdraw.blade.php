@@ -104,6 +104,15 @@
             </div>
         @endif
 
+        @if ($isMaintenance ?? false)
+            <div class="mb-4 bg-yellow-500/15 border border-yellow-500 text-yellow-200 text-sm rounded-lg px-3 py-2">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>{{ $maintenanceMessage ?? 'Hệ thống rút tiền đang bảo trì. Vui lòng thử lại sau.' }}</span>
+                </div>
+            </div>
+        @endif
+
         <!-- Status -->
         <div id="processingStatus" class="text-xs text-gray-300 flex items-center gap-2 hidden">
             Đang được xử lý
@@ -114,7 +123,7 @@
         <form id="withdrawForm" action="{{ route('withdraw.submit') }}" method="POST" class="w-full">
             @csrf
             <input type="hidden" id="gemAmountInputHidden" name="gem_amount" value="">
-            <button type="submit" id="withdrawBtn" class="w-full bg-[#2d59ff] hover:bg-[#2448d1] text-white font-semibold py-3 rounded-full text-base shadow">
+            <button type="submit" id="withdrawBtn" class="w-full bg-[#2d59ff] hover:bg-[#2448d1] text-white font-semibold py-3 rounded-full text-base shadow {{ ($isMaintenance ?? false) ? 'opacity-50 cursor-not-allowed' : '' }}" {{ ($isMaintenance ?? false) ? 'disabled' : '' }}>
                 Xác nhận rút tiền
             </button>
         </form>
@@ -191,6 +200,17 @@
     if (withdrawForm) {
         withdrawForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            // Check maintenance
+            @if ($isMaintenance ?? false)
+                const maintenanceMessage = @json($maintenanceMessage ?? 'Hệ thống rút tiền đang bảo trì. Vui lòng thử lại sau.');
+                if (typeof showToast === 'function') {
+                    showToast(maintenanceMessage, 'error');
+                } else {
+                    alert(maintenanceMessage);
+                }
+                return;
+            @endif
 
             const gemAmount = parseAmount(gemAmountInput?.value || '');
             const fundPassword = fundPasswordInput?.value || '';

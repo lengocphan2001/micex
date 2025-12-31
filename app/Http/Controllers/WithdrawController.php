@@ -20,6 +20,18 @@ class WithdrawController extends Controller
             return redirect()->route('login')->with('error', 'Bạn chưa đăng nhập. Vui lòng đăng nhập lại.');
         }
 
+        // Check if withdraw is under maintenance
+        if (SystemSetting::isWithdrawMaintenance()) {
+            $message = SystemSetting::getWithdrawMaintenanceMessage();
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 503);
+            }
+            return back()->with('error', $message)->withInput();
+        }
+
         try {
             $validated = $request->validate([
                 'gem_amount' => 'required|numeric|min:5',

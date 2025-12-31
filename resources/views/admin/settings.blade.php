@@ -154,6 +154,114 @@
             </div>
         </div>
     </div>
+
+    <!-- Maintenance Settings -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3 class="card-title">Bảo trì nạp / rút tiền</h3>
+        </div>
+        <div class="card-body">
+            <!-- Deposit Maintenance -->
+            <div class="mb-4">
+                <h4>Bảo trì nạp tiền</h4>
+                <form action="{{ route('admin.settings.maintenance.update') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="type" value="deposit">
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" name="enabled" value="1" id="deposit_maintenance_enabled" class="form-check-input" {{ $depositMaintenanceData['enabled'] ? 'checked' : '' }}>
+                            <label class="form-check-label" for="deposit_maintenance_enabled">Bật bảo trì</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="deposit_start_date">Ngày bắt đầu</label>
+                                <input type="date" name="start_date" id="deposit_start_date" class="form-control" value="{{ isset($depositMaintenanceData['start_date']) ? \Carbon\Carbon::parse($depositMaintenanceData['start_date'])->format('Y-m-d') : '' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="deposit_start_time">Giờ bắt đầu</label>
+                                <input type="time" name="start_time" id="deposit_start_time" class="form-control" value="{{ isset($depositMaintenanceData['start_date']) ? \Carbon\Carbon::parse($depositMaintenanceData['start_date'])->format('H:i') : '' }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="deposit_end_date">Ngày kết thúc</label>
+                                <input type="date" name="end_date" id="deposit_end_date" class="form-control" value="{{ isset($depositMaintenanceData['end_date']) ? \Carbon\Carbon::parse($depositMaintenanceData['end_date'])->format('Y-m-d') : '' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="deposit_end_time">Giờ kết thúc</label>
+                                <input type="time" name="end_time" id="deposit_end_time" class="form-control" value="{{ isset($depositMaintenanceData['end_date']) ? \Carbon\Carbon::parse($depositMaintenanceData['end_date'])->format('H:i') : '' }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="deposit_message">Thông báo</label>
+                        <textarea name="message" id="deposit_message" class="form-control" rows="2" placeholder="Hệ thống nạp tiền đang bảo trì. Vui lòng thử lại sau.">{{ $depositMaintenanceData['message'] ?? '' }}</textarea>
+                        <small class="form-text text-muted">Thông báo sẽ hiển thị cho user khi hệ thống đang bảo trì</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Lưu cài đặt</button>
+                </form>
+            </div>
+
+            <hr>
+
+            <!-- Withdraw Maintenance -->
+            <div>
+                <h4>Bảo trì rút tiền</h4>
+                <form action="{{ route('admin.settings.maintenance.update') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="type" value="withdraw">
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" name="enabled" value="1" id="withdraw_maintenance_enabled" class="form-check-input" {{ $withdrawMaintenanceData['enabled'] ? 'checked' : '' }}>
+                            <label class="form-check-label" for="withdraw_maintenance_enabled">Bật bảo trì</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="withdraw_start_date">Ngày bắt đầu</label>
+                                <input type="date" name="start_date" id="withdraw_start_date" class="form-control" value="{{ isset($withdrawMaintenanceData['start_date']) ? \Carbon\Carbon::parse($withdrawMaintenanceData['start_date'])->format('Y-m-d') : '' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="withdraw_start_time">Giờ bắt đầu</label>
+                                <input type="time" name="start_time" id="withdraw_start_time" class="form-control" value="{{ isset($withdrawMaintenanceData['start_date']) ? \Carbon\Carbon::parse($withdrawMaintenanceData['start_date'])->format('H:i') : '' }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="withdraw_end_date">Ngày kết thúc</label>
+                                <input type="date" name="end_date" id="withdraw_end_date" class="form-control" value="{{ isset($withdrawMaintenanceData['end_date']) ? \Carbon\Carbon::parse($withdrawMaintenanceData['end_date'])->format('Y-m-d') : '' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="withdraw_end_time">Giờ kết thúc</label>
+                                <input type="time" name="end_time" id="withdraw_end_time" class="form-control" value="{{ isset($withdrawMaintenanceData['end_date']) ? \Carbon\Carbon::parse($withdrawMaintenanceData['end_date'])->format('H:i') : '' }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="withdraw_message">Thông báo</label>
+                        <textarea name="message" id="withdraw_message" class="form-control" rows="2" placeholder="Hệ thống rút tiền đang bảo trì. Vui lòng thử lại sau.">{{ $withdrawMaintenanceData['message'] ?? '' }}</textarea>
+                        <small class="form-text text-muted">Thông báo sẽ hiển thị cho user khi hệ thống đang bảo trì</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Lưu cài đặt</button>
+                </form>
+            </div>
+        </div>
+    </div>
 @stop
 
 @section('js')

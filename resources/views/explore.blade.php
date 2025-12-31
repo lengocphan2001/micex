@@ -592,39 +592,21 @@
                     phase = 'result';
                 }
 
-                // Chỉ lưu kết quả random vào mảng từ giây 31-59 (29 giây cuối)
-                // KHÔNG lưu kết quả cho giây 60, đợi kết quả từ server (admin_set_result hoặc final_result)
-                if (currentSecond > 30 && currentSecond < 60) {
-                    // Giây 31-59: lưu random bình thường
-                    const gemType = getGemForSecond(currentRound.seed, currentSecond);
-                    if (!roundResults[currentSecond - 1]) {
-                        roundResults[currentSecond - 1] = gemType;
-                    }
-                }
+                // KHÔNG random ở client nữa - kết quả sẽ được quyết định ở backend
+                // Chỉ hiển thị "Chờ kết quả..." trong 30 giây cuối
 
-                // Giây 60: KHÔNG lưu random, đợi kết quả từ server
-                // Nếu có admin_set_result hoặc final_result, lưu vào roundResults[59]
-                if (currentSecond === 60) {
-                    const resultToShow = currentRound.admin_set_result || currentRound.final_result;
-                    if (resultToShow) {
-                        roundResults[59] = resultToShow;
-                    }
-                }
-
-                // Nếu round vừa finish (countdown = 0 hoặc currentSecond >= 60)
-                if (currentSecond >= 60 || countdown === 0) {
-                    // Round đã finish, call API để lấy admin_set_result
-                    // Nếu có admin_set_result thì dùng, nếu không thì dùng random
+                // Giây 60: Gọi API để random kết quả (nếu admin không set) hoặc lấy kết quả admin đã set
+                if (currentSecond === 60 || countdown === 0) {
+                    // Round đã finish, call API để random/lấy kết quả
                     if (!currentRound._checkingBetResult) {
                         currentRound._checkingBetResult = true;
 
-                        // Đợi một chút để server xử lý xong round finish
-                        setTimeout(async () => {
-                            // Gọi API để lấy kết quả round (admin_set_result hoặc random)
+                        // Gọi API ngay để random kết quả dựa vào tổng tiền đặt cược
+                        (async () => {
                             try {
                                 const response = await fetch(
                                     `{{ route('explore.round-result') }}?round_number=${currentRound.round_number}`
-                                    );
+                                );
                                 const data = await response.json();
 
                                 if (data.result) {
@@ -643,32 +625,53 @@
                                     // Update current round display to show final result
                                     updateCurrentRoundDisplay();
                                 } else {
-                                    // Nếu API không trả về result, tính từ seed
-                                    currentRound.final_result = getGemForSecond(currentRound.seed, 60);
-                                    updateFinalResultCard();
-
-                                    // Append kết quả mới vào signal grid
-                                    appendRoundToSignalGrid(currentRound.round_number, currentRound
-                                        .final_result);
-                                    
-                                    // Update current round display to show final result
-                                    updateCurrentRoundDisplay();
+                                    // Nếu API không trả về result, thử lại sau 1 giây
+                                    setTimeout(async () => {
+                                        try {
+                                            const retryResponse = await fetch(
+                                                `{{ route('explore.round-result') }}?round_number=${currentRound.round_number}`
+                                            );
+                                            const retryData = await retryResponse.json();
+                                            if (retryData.result) {
+                                                currentRound.final_result = retryData.result;
+                                                if (retryData.admin_set_result) {
+                                                    currentRound.admin_set_result = retryData.admin_set_result;
+                                                }
+                                                updateFinalResultCard();
+                                                appendRoundToSignalGrid(currentRound.round_number, retryData.result);
+                                                updateCurrentRoundDisplay();
+                                            }
+                                        } catch (retryError) {
+                                            console.error('Error retrying round result:', retryError);
+                                        }
+                                    }, 1000);
                                 }
                             } catch (error) {
-                                // Nếu API lỗi, tính từ seed
-                                currentRound.final_result = getGemForSecond(currentRound.seed, 60);
-                                updateFinalResultCard();
-
-                                // Append kết quả mới vào signal grid
-                                appendRoundToSignalGrid(currentRound.round_number, currentRound
-                                    .final_result);
-                                
-                                // Update current round display to show final result
-                                updateCurrentRoundDisplay();
+                                console.error('Error fetching round result:', error);
+                                // Thử lại sau 1 giây
+                                setTimeout(async () => {
+                                    try {
+                                        const retryResponse = await fetch(
+                                            `{{ route('explore.round-result') }}?round_number=${currentRound.round_number}`
+                                        );
+                                        const retryData = await retryResponse.json();
+                                        if (retryData.result) {
+                                            currentRound.final_result = retryData.result;
+                                            if (retryData.admin_set_result) {
+                                                currentRound.admin_set_result = retryData.admin_set_result;
+                                            }
+                                            updateFinalResultCard();
+                                            appendRoundToSignalGrid(currentRound.round_number, retryData.result);
+                                            updateCurrentRoundDisplay();
+                                        }
+                                    } catch (retryError) {
+                                        console.error('Error retrying round result:', retryError);
+                                    }
+                                }, 1000);
                             }
 
                             currentRound._checkingBetResult = false;
-                        }, 1000);
+                        })();
                     }
                     return;
                 }

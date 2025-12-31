@@ -124,16 +124,17 @@ class ProcessRoundTimer extends Command
                     // Refresh round để lấy admin_set_result mới nhất từ database
                     $round->refresh();
                     
-                    // Ưu tiên admin_set_result nếu có, nếu không thì tính từ seed
+                    // Ưu tiên admin_set_result nếu có, nếu không thì random dựa vào tổng tiền đặt cược
                     $finalResult = null;
                     if ($round->admin_set_result) {
                         // Admin đã set result, dùng admin_set_result
                         $finalResult = $round->admin_set_result;
                         $this->info("Round {$round->round_number} using admin_set_result: {$finalResult}");
-            } else {
-                        // Admin chưa set, tính từ seed
-                        $finalResult = $this->getGemForSecond($round->seed, 60);
-                        $this->info("Round {$round->round_number} using random result from seed: {$finalResult}");
+                    } else {
+                        // Admin chưa set, random dựa vào tổng tiền đặt cược
+                        // Đá có nhiều tiền nhất sẽ không thắng, random trong 2 đá còn lại
+                        $finalResult = $round->randomResultBasedOnBets();
+                        $this->info("Round {$round->round_number} using random result based on bets: {$finalResult}");
                     }
                     
                     // Finish the round (this will process bets and update commission)

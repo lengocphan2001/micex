@@ -119,6 +119,15 @@
         </div>
     @endif
 
+    @if ($isMaintenance ?? false)
+        <div class="mb-4 bg-yellow-500/15 border border-yellow-500 text-yellow-200 text-sm rounded-lg px-3 py-2">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>{{ $maintenanceMessage ?? 'Hệ thống nạp tiền đang bảo trì. Vui lòng thử lại sau.' }}</span>
+            </div>
+        </div>
+    @endif
+
     <!-- Status -->
     <div id="processingStatus" class="text-xs text-gray-300 flex items-center gap-2 hidden">
         Đang được xử lý
@@ -130,7 +139,7 @@
         @csrf
         <input type="hidden" id="depositAmountInput" name="amount" value="">
         <input type="hidden" id="transferCodeInput" name="transfer_code" value="{{ $user->transfer_code ?? '' }}">
-        <button type="submit" id="depositCountdown" class="w-full bg-[#2d59ff] hover:bg-[#2448d1] text-white font-semibold py-3 rounded-full text-base shadow">
+        <button type="submit" id="depositCountdown" class="w-full bg-[#2d59ff] hover:bg-[#2448d1] text-white font-semibold py-3 rounded-full text-base shadow {{ ($isMaintenance ?? false) ? 'opacity-50 cursor-not-allowed' : '' }}" {{ ($isMaintenance ?? false) ? 'disabled' : '' }}>
             Nạp
         </button>
     </form>
@@ -227,6 +236,18 @@
             if (e) e.preventDefault();
             return false;
         }
+
+        // Check maintenance
+        @if ($isMaintenance ?? false)
+            if (e) e.preventDefault();
+            const maintenanceMessage = @json($maintenanceMessage ?? 'Hệ thống nạp tiền đang bảo trì. Vui lòng thử lại sau.');
+            if (typeof showToast === 'function') {
+                showToast(maintenanceMessage, 'error');
+            } else {
+                alert(maintenanceMessage);
+            }
+            return false;
+        @endif
         
         const amount = parseAmount(amountInput?.value || '');
         if (!amount || amount < 100000 || amount > 500000000) {
