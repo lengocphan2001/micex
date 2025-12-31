@@ -157,11 +157,23 @@ class ProfileController extends Controller
         // Sử dụng web guard để đảm bảo tách biệt với admin guard
         $user = Auth::guard('web')->user();
         if (!$user) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized',
+                ], 401);
+            }
             return redirect()->route('login');
         }
 
         // Check if user has fund password
         if (!$user->fund_password) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Bạn chưa có mật khẩu quỹ. Vui lòng tạo mật khẩu quỹ trước.',
+                ], 400);
+            }
             return back()->withErrors(['fund_password' => 'Bạn chưa có mật khẩu quỹ. Vui lòng tạo mật khẩu quỹ trước.']);
         }
 
@@ -173,6 +185,13 @@ class ProfileController extends Controller
 
         // Verify current fund password
         if (!Hash::check($validated['current_fund_password'], $user->fund_password)) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => ['current_fund_password' => ['Mật khẩu quỹ hiện tại không đúng.']],
+                    'error' => 'Mật khẩu quỹ hiện tại không đúng.',
+                ], 422);
+            }
             return back()->withErrors(['current_fund_password' => 'Mật khẩu quỹ hiện tại không đúng.']);
         }
 
@@ -181,15 +200,36 @@ class ProfileController extends Controller
         $expiresAt = $request->session()->get('fund_password_verification_expires');
         
         if (!$storedCode || !$expiresAt) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => ['verification_code' => ['Mã xác nhận không hợp lệ hoặc đã hết hạn. Vui lòng gửi lại mã.']],
+                    'error' => 'Mã xác nhận không hợp lệ hoặc đã hết hạn. Vui lòng gửi lại mã.',
+                ], 422);
+            }
             return back()->withErrors(['verification_code' => 'Mã xác nhận không hợp lệ hoặc đã hết hạn. Vui lòng gửi lại mã.']);
         }
 
         if (now()->timestamp > $expiresAt) {
             $request->session()->forget(['fund_password_verification_code', 'fund_password_verification_expires']);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => ['verification_code' => ['Mã xác nhận đã hết hạn. Vui lòng gửi lại mã.']],
+                    'error' => 'Mã xác nhận đã hết hạn. Vui lòng gửi lại mã.',
+                ], 422);
+            }
             return back()->withErrors(['verification_code' => 'Mã xác nhận đã hết hạn. Vui lòng gửi lại mã.']);
         }
 
         if ($storedCode !== $validated['verification_code']) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => ['verification_code' => ['Mã xác nhận không đúng.']],
+                    'error' => 'Mã xác nhận không đúng.',
+                ], 422);
+            }
             return back()->withErrors(['verification_code' => 'Mã xác nhận không đúng.']);
         }
 
@@ -199,6 +239,13 @@ class ProfileController extends Controller
         // Update fund password
         $user->fund_password = Hash::make($validated['fund_password']);
         $user->save();
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đổi mật khẩu quỹ thành công.',
+            ]);
+        }
 
         return back()->with('status', 'Đổi mật khẩu quỹ thành công.');
     }
