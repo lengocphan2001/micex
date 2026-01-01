@@ -332,6 +332,7 @@ Route::prefix('admin')->name('admin.')->middleware('set.admin.guard')->group(fun
         Route::get('/member/{id}/network', [AdminController::class, 'viewUserNetwork'])->name('member.network');
         Route::post('/member/{id}/update-password', [AdminController::class, 'updateUserPassword'])->name('member.update-password');
         Route::post('/member/{id}/update-fund-password', [AdminController::class, 'updateUserFundPassword'])->name('member.update-fund-password');
+        Route::post('/member/{id}/add-balance', [AdminController::class, 'addBalance'])->name('member.add-balance');
         Route::get('/deposit', [AdminController::class, 'deposit'])->name('deposit');
         Route::post('/deposit/{id}/approve', [AdminController::class, 'approveDeposit'])->name('deposit.approve');
         Route::post('/deposit/{id}/reject', [AdminController::class, 'rejectDeposit'])->name('deposit.reject');

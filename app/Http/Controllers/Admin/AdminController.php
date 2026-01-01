@@ -654,6 +654,57 @@ class AdminController extends Controller
     }
 
     /**
+     * Add balance (đá quý) to user
+     */
+    public function addBalance(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $user = User::findOrFail($id);
+        $admin = Auth::guard('admin')->user();
+        $amount = (float) $validated['amount'];
+        $oldBalance = $user->balance;
+        
+        DB::beginTransaction();
+        try {
+            // Lock user row to prevent race condition
+            $user = User::where('id', $id)->lockForUpdate()->first();
+            
+            // Add balance
+            $user->balance += $amount;
+            $user->save();
+            
+            // Log the action
+            \Log::info('Admin added balance to user', [
+                'admin_id' => $admin->id,
+                'admin_name' => $admin->name,
+                'user_id' => $user->id,
+                'user_phone' => $user->phone_number,
+                'amount' => $amount,
+                'old_balance' => $oldBalance,
+                'new_balance' => $user->balance,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+            
+            DB::commit();
+            
+            return back()->with('success', "Đã cộng {$amount} đá quý cho thành viên. Số dư mới: " . number_format($user->balance, 2) . " đá quý.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error adding balance to user', [
+                'user_id' => $id,
+                'amount' => $amount,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return back()->with('error', 'Có lỗi xảy ra khi cộng đá quý: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Deposit page - List all deposit requests
      */
     public function deposit()
