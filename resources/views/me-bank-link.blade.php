@@ -151,6 +151,10 @@
                 const formData = new FormData(createFundPasswordForm);
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
                     || createFundPasswordForm.querySelector('input[name="_token"]')?.value;
+                // Ensure Blade `_token` matches the header token (Laravel prioritizes `_token`)
+                if (csrfToken) {
+                    formData.set('_token', csrfToken);
+                }
                 
                 try {
                     const response = await fetch('{{ route("me.create-fund-password.submit") }}', {

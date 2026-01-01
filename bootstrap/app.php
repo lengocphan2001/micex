@@ -18,17 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         
         // Exclude logout from CSRF verification (both user and admin logout)
-        // Temporarily exclude register and login for testing
         $middleware->validateCsrfTokens(except: [
             'logout',
             'admin/logout',
-            'register',
-            'login',
-            'deposit/submit',
-            'withdraw/submit',
-            'me/send-fund-password-verification-code',
-            'giftcode/redeem',
-            'admin/intervene-results/set-round-result',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -24,12 +24,13 @@ Route::get('/', function () {
 Route::get('/csrf-token', function () {
     try {
         $request = request();
-        
-        // Regenerate token if session exists
-        if ($request->hasSession()) {
-            $request->session()->regenerateToken();
-        }
-        
+
+        // IMPORTANT:
+        // Do NOT regenerate the CSRF token here.
+        // Regenerating the token during normal browsing can desync already-rendered
+        // Blade forms that still contain an older hidden `_token`, causing 419 errors.
+        // This endpoint is only meant to expose the current token for JS clients.
+
         return response()->json([
             'token' => csrf_token(),
         ]);

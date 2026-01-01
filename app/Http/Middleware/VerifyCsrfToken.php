@@ -12,14 +12,7 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        // Logout route - allow even with expired token
-        'logout',
-        // Temporarily exclude register and login for testing
-        'register',
-        'login',
-        // Exclude deposit submit from CSRF
-        'deposit/submit',
-        // Exclude fund password routes from CSRF
-        'me/send-fund-password-verification-code',
+        // Keep this list minimal. We handle "expired token" UX in the global
+        // exception handler, and CSRF should protect all state-changing routes.
     ];
 }

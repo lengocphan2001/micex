@@ -231,6 +231,10 @@
 
                 // Create FormData
                 const formData = new FormData(changeFundPasswordForm);
+                // Ensure Blade `_token` matches the header token (Laravel prioritizes `_token`)
+                if (csrfToken) {
+                    formData.set('_token', csrfToken);
+                }
 
                 try {
                     let response = await fetch(changeFundPasswordForm.action, {
