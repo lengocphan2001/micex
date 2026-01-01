@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'guest.admin' => \App\Http\Middleware\RedirectIfAdminAuthenticated::class,
             'set.admin.guard' => \App\Http\Middleware\SetAdminGuard::class,
+            'single.session' => \App\Http\Middleware\EnsureSingleDeviceSession::class,
         ]);
         
         // Exclude logout from CSRF verification (both user and admin logout)

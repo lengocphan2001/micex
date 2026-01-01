@@ -56,7 +56,7 @@ Route::middleware('guest')->group(function () {
 });
 
 // Protected routes for authenticated users
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'single.session'])->group(function () {
     // Dashboard - default
     Route::get('/dashboard', function () {
         $user = \Illuminate\Support\Facades\Auth::guard('web')->user();

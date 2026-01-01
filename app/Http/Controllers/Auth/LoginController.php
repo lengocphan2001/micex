@@ -70,6 +70,11 @@ class LoginController extends Controller
         // Regenerate CSRF token after session regeneration
         $request->session()->regenerateToken();
 
+        // Enforce single-device login: pin the current session id as the only active session
+        $user->forceFill([
+            'current_session_id' => $request->session()->getId(),
+        ])->save();
+
         return redirect()->intended('/dashboard');
     }
 
