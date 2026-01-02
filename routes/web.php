@@ -24,13 +24,13 @@ Route::get('/', function () {
 Route::get('/csrf-token', function () {
     try {
         $request = request();
-
+        
         // IMPORTANT:
         // Do NOT regenerate the CSRF token here.
         // Regenerating the token during normal browsing can desync already-rendered
         // Blade forms that still contain an older hidden `_token`, causing 419 errors.
         // This endpoint is only meant to expose the current token for JS clients.
-
+        
         return response()->json([
             'token' => csrf_token(),
         ]);
@@ -43,7 +43,7 @@ Route::get('/csrf-token', function () {
 })->middleware('web');
 
 // Authentication Routes
-Route::middleware('guest')->group(function () {
+Route::middleware(['guest', 'no.store'])->group(function () {
     Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
     Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:5,1');
     
@@ -56,7 +56,7 @@ Route::middleware('guest')->group(function () {
 });
 
 // Protected routes for authenticated users
-Route::middleware(['auth', 'single.session'])->group(function () {
+Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
     // Dashboard - default
     Route::get('/dashboard', function () {
         $user = \Illuminate\Support\Facades\Auth::guard('web')->user();

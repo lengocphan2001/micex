@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class EnsureSingleDeviceSession
 {
@@ -21,6 +22,11 @@ class EnsureSingleDeviceSession
 
         $user = Auth::guard('web')->user();
         $sessionId = $request->session()->getId();
+
+        // If feature isn't migrated yet, do nothing (prevents deploy-time errors).
+        if (!Schema::hasColumn('users', 'current_session_id')) {
+            return $next($request);
+        }
 
         // If we can't determine a session id, fail open (avoid accidental lockouts).
         if (!$sessionId) {

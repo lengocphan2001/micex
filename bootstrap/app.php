@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest.admin' => \App\Http\Middleware\RedirectIfAdminAuthenticated::class,
             'set.admin.guard' => \App\Http\Middleware\SetAdminGuard::class,
             'single.session' => \App\Http\Middleware\EnsureSingleDeviceSession::class,
+            'no.store' => \App\Http\Middleware\NoStoreResponse::class,
         ]);
         
         // Exclude logout from CSRF verification (both user and admin logout)
@@ -34,6 +35,16 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'Phiên đăng nhập đã hết hạn. Vui lòng tải lại trang và thử lại.',
                     'requires_refresh' => true,
                 ], 419);
+            }
+
+            // For normal web requests: never show the 419 "Page Expired" screen.
+            // Regenerate the token and redirect back (or to login) with a friendly message.
+            try {
+                if ($request->hasSession()) {
+                    $request->session()->regenerateToken();
+                }
+            } catch (\Throwable $t) {
+                // ignore
             }
             
             // Handle logout - allow it even with expired token
@@ -78,8 +89,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 419);
             }
             
-            return redirect()->back()
-                ->withInput($request->except('password', '_token'))
-                ->with('error', 'Phiên đăng nhập đã hết hạn. Vui lòng thử lại.');
+            // Prefer referer to avoid redirecting to "/" when back URL is missing.
+            $referer = $request->headers->get('referer');
+            if ($referer) {
+                return redirect()->to($referer)
+                    ->withInput($request->except('password', '_token'))
+                    ->with('error', 'Phiên đăng nhập đã hết hạn. Vui lòng thử lại.');
+            }
+
+            return redirect()->route('login')
+                ->with('error', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         });
     })->create();

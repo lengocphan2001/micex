@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Schema;
 
 class LoginController extends Controller
 {
@@ -71,9 +72,11 @@ class LoginController extends Controller
         $request->session()->regenerateToken();
 
         // Enforce single-device login: pin the current session id as the only active session
-        $user->forceFill([
-            'current_session_id' => $request->session()->getId(),
-        ])->save();
+        if (Schema::hasColumn('users', 'current_session_id')) {
+            $user->forceFill([
+                'current_session_id' => $request->session()->getId(),
+            ])->save();
+        }
 
         return redirect()->intended('/dashboard');
     }
