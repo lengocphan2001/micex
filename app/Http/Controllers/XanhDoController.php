@@ -69,6 +69,8 @@ class XanhDoController extends Controller
         $validated = $request->validate([
             'gem_type' => 'required|in:kcxanh,daquy,kcdo',
             'amount' => 'required|numeric|min:0.01',
+            'bet_type' => 'nullable|in:number,color',
+            'bet_value' => 'nullable|string|max:10', // For number bets: '0'-'9'
         ]);
 
         $round = Round::getCurrentRound(self::GAME_KEY);
@@ -99,22 +101,17 @@ class XanhDoController extends Controller
             'daquy' => (float) SystemSetting::getValue('gem_payout_rate_daquy', 5.95),
             'kcdo' => (float) SystemSetting::getValue('gem_payout_rate_kcdo', SystemSetting::getValue('gem_payout_rate_kimcuong', 1.95)),
         ];
+        
+        // Number bets have fixed payout rate of 9.75
+        $numberBetPayoutRate = 9.75;
 
         DB::beginTransaction();
         try {
             $user = User::where('id', $user->id)->lockForUpdate()->first();
 
-            $existingBet = Bet::where('round_id', $round->id)
-                ->where('user_id', $user->id)
-                ->lockForUpdate()
-                ->first();
-
-            if ($existingBet) {
-                DB::rollBack();
-                return response()->json([
-                    'error' => 'Bạn đã đặt cược trong phiên này rồi.',
-                ], 400);
-            }
+            // Allow multiple bets with same gem_type in xanhdo game
+            // Each selection (number or color) is a separate bet
+            // No need to check for duplicate gem_type
 
             if ($user->balance < $validated['amount']) {
                 DB::rollBack();
@@ -127,12 +124,19 @@ class XanhDoController extends Controller
             $user->betting_requirement = max(0, ($user->betting_requirement ?? 0) - $validated['amount']);
             $user->save();
 
+            // Determine payout rate: number bets = 9.75, color bets = color rate
+            $payoutRate = ($validated['bet_type'] === 'number') 
+                ? $numberBetPayoutRate 
+                : ($payoutRates[$validated['gem_type']] ?? 1.95);
+
             $bet = Bet::create([
                 'round_id' => $round->id,
                 'user_id' => $user->id,
                 'gem_type' => $validated['gem_type'],
+                'bet_type' => $validated['bet_type'] ?? null,
+                'bet_value' => $validated['bet_value'] ?? null,
                 'amount' => $validated['amount'],
-                'payout_rate' => $payoutRates[$validated['gem_type']] ?? 1.95,
+                'payout_rate' => $payoutRate,
                 'status' => 'pending',
             ]);
 
@@ -160,7 +164,7 @@ class XanhDoController extends Controller
     }
 
     /**
-     * Get user's bet for current XanhDo round + balance
+     * Get user's bets for current XanhDo round + balance
      */
     public function getMyBet()
     {
@@ -172,49 +176,29 @@ class XanhDoController extends Controller
         $user->refresh();
         $round = Round::getCurrentRound(self::GAME_KEY);
 
-        $bet = null;
+        $bets = [];
         if ($round) {
-            $bet = Bet::where('round_id', $round->id)
+            $bets = Bet::where('round_id', $round->id)
                 ->where('user_id', $user->id)
                 ->with('round')
-                ->first();
-        }
-
-        if (!$bet) {
-            // fallback: last bet in this game (join rounds)
-            $bet = Bet::where('user_id', $user->id)
-                ->whereHas('round', function ($q) {
-                    $q->where('game_key', self::GAME_KEY);
+                ->get()
+                ->map(function ($bet) {
+                    return [
+                        'id' => $bet->id,
+                        'round_id' => $bet->round_id,
+                        'round_number' => $bet->round->round_number ?? null,
+                        'gem_type' => $bet->gem_type,
+                        'amount' => $bet->amount,
+                        'payout_rate' => $bet->payout_rate,
+                        'status' => $bet->status,
+                        'payout_amount' => $bet->payout_amount,
+                    ];
                 })
-                ->with('round')
-                ->orderBy('created_at', 'desc')
-                ->first();
-        }
-
-        if (!$bet) {
-            return response()->json([
-                'bet' => null,
-                'balance' => $user->balance,
-            ]);
+                ->toArray();
         }
 
         return response()->json([
-            'bet' => [
-                'id' => $bet->id,
-                'round_id' => $bet->round_id,
-                'round_number' => $bet->round->round_number ?? null,
-                'gem_type' => $bet->gem_type,
-                'amount' => $bet->amount,
-                'payout_rate' => $bet->payout_rate,
-                'status' => $bet->status,
-                'payout_amount' => $bet->payout_amount,
-                'round' => [
-                    'id' => $bet->round->id ?? null,
-                    'round_number' => $bet->round->round_number ?? null,
-                    'final_result' => $bet->round->final_result ?? null,
-                    'admin_set_result' => $bet->round->admin_set_result ?? null,
-                ],
-            ],
+            'bets' => $bets,
             'balance' => $user->balance,
         ]);
     }
@@ -240,21 +224,24 @@ class XanhDoController extends Controller
             ], 404);
         }
 
-        if ($round->status === 'running' && !$round->final_result) {
+        // NOTE: final_result can be string "0" (valid) => do NOT use truthy checks
+        if ($round->status === 'running' && ($round->final_result === null || $round->final_result === '')) {
             $round->refresh();
-            $finalResult = $round->admin_set_result ?: $round->randomResultBasedOnBets();
+            $finalResult = ($round->admin_set_result !== null && $round->admin_set_result !== '')
+                ? $round->admin_set_result
+                : $round->randomResultBasedOnBets();
             $round->finish($finalResult);
             $round->refresh();
         }
 
-        $result = $round->admin_set_result ?: $round->final_result;
+        // For finished rounds, final_result is the source of truth.
+        // For running rounds, surface admin_set_result if set (including "0"), otherwise null.
+        $result = ($round->final_result !== null && $round->final_result !== '')
+            ? $round->final_result
+            : (($round->admin_set_result !== null && $round->admin_set_result !== '') ? $round->admin_set_result : null);
 
-        // Backward compatibility map
-        $resultMap = [
-            'thachanh' => 'kcxanh',
-            'kimcuong' => 'kcdo',
-        ];
-        $result = $resultMap[$result] ?? $result;
+        // For xanhdo, result is a number (0-9), return as-is
+        // No backward compatibility mapping needed for xanhdo
 
         return response()->json([
             'round_number' => $round->round_number,
@@ -262,6 +249,54 @@ class XanhDoController extends Controller
             'admin_set_result' => $round->admin_set_result,
             'final_result' => $round->final_result,
         ]);
+    }
+
+    /**
+     * Get recent 10 round results for XanhDo
+     */
+    public function getRecentResults()
+    {
+        $rounds = Round::where('game_key', self::GAME_KEY)
+            ->whereNotNull('final_result')
+            ->orderBy('round_number', 'desc')
+            ->limit(10)
+            ->get(['id', 'round_number', 'final_result', 'admin_set_result', 'ended_at', 'created_at'])
+            ->map(function ($round) {
+                // IMPORTANT:
+                // For finished rounds, always use final_result as the source of truth.
+                // admin_set_result can be set but not applied (race timing) so it may differ.
+                $result = $round->final_result;
+                $resultNum = is_numeric($result) ? (int) $result : null;
+                
+                // Determine winning colors based on number
+                $winningColors = [];
+                if ($resultNum !== null && $resultNum >= 0 && $resultNum <= 9) {
+                    if ($resultNum === 0) {
+                        $winningColors = ['daquy', 'kcdo']; // tím + đỏ
+                    } elseif ($resultNum === 5) {
+                        $winningColors = ['daquy', 'kcxanh']; // tím + xanh
+                    } elseif (in_array($resultNum, [1, 2, 3, 7, 9])) {
+                        $winningColors = ['kcxanh']; // xanh
+                    } elseif (in_array($resultNum, [4, 6, 8])) {
+                        $winningColors = ['kcdo']; // đỏ
+                    }
+                }
+                
+                // Format time
+                $time = $round->ended_at ? $round->ended_at->format('H:i:s') : ($round->created_at ? $round->created_at->format('H:i:s') : '');
+                
+                return [
+                    'round_number' => $round->round_number,
+                    'result' => $resultNum !== null ? $resultNum : $result,
+                    'winning_colors' => $winningColors,
+                    'time' => $time,
+                    'admin_set_result' => $round->admin_set_result,
+                    'final_result' => $round->final_result,
+                ];
+            })
+            ->values();
+
+        return response()->json($rounds);
     }
 }
 

@@ -13,6 +13,8 @@ class Bet extends Model
         'round_id',
         'user_id',
         'gem_type',
+        'bet_type',
+        'bet_value',
         'amount',
         'payout_rate',
         'status',

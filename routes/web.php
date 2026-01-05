@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\XanhDoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -25,11 +26,10 @@ Route::get('/csrf-token', function () {
     try {
         $request = request();
         
-        // IMPORTANT:
-        // Do NOT regenerate the CSRF token here.
-        // Regenerating the token during normal browsing can desync already-rendered
-        // Blade forms that still contain an older hidden `_token`, causing 419 errors.
-        // This endpoint is only meant to expose the current token for JS clients.
+        // Regenerate token if session exists
+        if ($request->hasSession()) {
+            $request->session()->regenerateToken();
+        }
         
         return response()->json([
             'token' => csrf_token(),
@@ -43,7 +43,7 @@ Route::get('/csrf-token', function () {
 })->middleware('web');
 
 // Authentication Routes
-Route::middleware(['guest', 'no.store'])->group(function () {
+Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
     Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:5,1');
     
@@ -56,7 +56,7 @@ Route::middleware(['guest', 'no.store'])->group(function () {
 });
 
 // Protected routes for authenticated users
-Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
+Route::middleware('auth')->group(function () {
     // Dashboard - default
     Route::get('/dashboard', function () {
         $user = \Illuminate\Support\Facades\Auth::guard('web')->user();
@@ -79,12 +79,17 @@ Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
         return view('dashboard', compact('sliders', 'recentNotifications', 'unreadCount'));
     })->name('dashboard');
 
-    // Explore screen
-    Route::get('/explore', [\App\Http\Controllers\ExploreController::class, 'index'])->name('explore');
-    Route::get('/explore/khaithac-60s', [\App\Http\Controllers\ExploreController::class, 'khaithac60s'])->name('games.khaithac');
-    Route::get('/explore/xanhdo-60s', [\App\Http\Controllers\ExploreController::class, 'xanhDo60s'])->name('games.xanhdo');
+    // Games hub
+    Route::get('/games', [\App\Http\Controllers\ExploreController::class, 'index'])->name('games.index');
     
-    // Explore API endpoints
+    // Game routes
+    Route::get('/games/khaithac', [\App\Http\Controllers\ExploreController::class, 'khaithac60s'])->name('games.khaithac');
+    Route::get('/games/xanhdo', [\App\Http\Controllers\ExploreController::class, 'xanhDo60s'])->name('games.xanhdo');
+    
+    // Explore screen (legacy - redirect to games)
+    Route::get('/explore', [\App\Http\Controllers\ExploreController::class, 'khaithac60s'])->name('explore');
+    
+    // Explore API endpoints (for khaithac game)
     Route::get('/api/explore/current-round', [\App\Http\Controllers\ExploreController::class, 'getCurrentRound'])->name('explore.current-round');
     Route::post('/api/explore/save-result', [\App\Http\Controllers\ExploreController::class, 'saveResult'])->name('explore.save-result');
     Route::post('/api/explore/bet', [\App\Http\Controllers\ExploreController::class, 'placeBet'])->name('explore.bet');
@@ -95,12 +100,13 @@ Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
     Route::get('/api/explore/round-result', [\App\Http\Controllers\ExploreController::class, 'getRoundResult'])->name('explore.round-result');
     Route::get('/api/explore/signal-grid-rounds', [\App\Http\Controllers\ExploreController::class, 'getSignalGridRounds'])->name('explore.signal-grid-rounds');
     Route::post('/api/explore/signal-grid-rounds/append', [\App\Http\Controllers\ExploreController::class, 'appendSignalGridRound'])->name('explore.signal-grid-rounds.append');
-
-    // Xanh đỏ 60s API endpoints (separate backend stream)
+    
+    // XanhDo API endpoints
     Route::get('/api/xanhdo/gem-types', [\App\Http\Controllers\XanhDoController::class, 'getGemTypes'])->name('xanhdo.gem-types');
     Route::post('/api/xanhdo/bet', [\App\Http\Controllers\XanhDoController::class, 'placeBet'])->name('xanhdo.bet');
     Route::get('/api/xanhdo/my-bet', [\App\Http\Controllers\XanhDoController::class, 'getMyBet'])->name('xanhdo.my-bet');
     Route::get('/api/xanhdo/round-result', [\App\Http\Controllers\XanhDoController::class, 'getRoundResult'])->name('xanhdo.round-result');
+    Route::get('/api/xanhdo/recent-results', [\App\Http\Controllers\XanhDoController::class, 'getRecentResults'])->name('xanhdo.recent-results');
 
     // Assets screen
     Route::get('/assets', function () {
@@ -185,25 +191,17 @@ Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
         return view('me-change-fund-password');
     })->name('me.change-fund-password');
 
-    Route::get('/transaction-history', function (Request $request) {
+    Route::get('/transaction-history', function () {
         $user = Auth::guard('web')->user();
         if (!$user) {
             return redirect()->route('login');
         }
         
-        $gameFilter = $request->query('game', 'all'); // all|khaithac|xanhdo
-
         // Get user's bets with round information, ordered by created_at desc
-        $betsQuery = \App\Models\Bet::where('user_id', $user->id)->with('round')->orderBy('created_at', 'desc');
-
-        // Filter per game (if rounds.game_key exists)
-        if ($gameFilter !== 'all' && \Illuminate\Support\Facades\Schema::hasColumn('rounds', 'game_key')) {
-            $betsQuery->whereHas('round', function ($q) use ($gameFilter) {
-                $q->where('game_key', $gameFilter);
-            });
-        }
-
-        $bets = $betsQuery->paginate(20)->withQueryString();
+        $bets = \App\Models\Bet::where('user_id', $user->id)
+            ->with('round')
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
         
         // Gem types mapping
         $gemTypes = [
@@ -218,13 +216,7 @@ Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
             'kimcuong' => ['name' => 'Kim Cương Đỏ', 'icon' => 'kcdo.png'],
         ];
         
-        $gameOptions = [
-            'all' => 'Tất cả',
-            'khaithac' => 'Khai thác 60s',
-            'xanhdo' => 'Xanh đỏ 60s',
-        ];
-
-        return view('transaction-history', compact('bets', 'gemTypes', 'gameFilter', 'gameOptions'));
+        return view('transaction-history', compact('bets', 'gemTypes'));
     })->name('transaction-history');
 
     Route::get('/notifications', function () {
@@ -355,7 +347,6 @@ Route::prefix('admin')->name('admin.')->middleware('set.admin.guard')->group(fun
         Route::get('/member/{id}/network', [AdminController::class, 'viewUserNetwork'])->name('member.network');
         Route::post('/member/{id}/update-password', [AdminController::class, 'updateUserPassword'])->name('member.update-password');
         Route::post('/member/{id}/update-fund-password', [AdminController::class, 'updateUserFundPassword'])->name('member.update-fund-password');
-        Route::post('/member/{id}/add-balance', [AdminController::class, 'addBalance'])->name('member.add-balance');
         Route::get('/deposit', [AdminController::class, 'deposit'])->name('deposit');
         Route::post('/deposit/{id}/approve', [AdminController::class, 'approveDeposit'])->name('deposit.approve');
         Route::post('/deposit/{id}/reject', [AdminController::class, 'rejectDeposit'])->name('deposit.reject');

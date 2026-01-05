@@ -124,9 +124,9 @@ class ProcessRoundTimer extends Command
                     // Refresh round để lấy admin_set_result mới nhất từ database
                     $round->refresh();
 
-                    // Ưu tiên admin_set_result nếu có, nếu không thì random dựa vào tổng tiền đặt cược
+                    // Ưu tiên admin_set_result nếu có (NOTE: string "0" is a valid value, do NOT use truthy check)
                     $finalResult = null;
-                    if ($round->admin_set_result) {
+                    if ($round->admin_set_result !== null && $round->admin_set_result !== '') {
                         $finalResult = $round->admin_set_result;
                         $this->info("[{$gameKey}] Round {$round->round_number} using admin_set_result: {$finalResult}");
                     } else {

@@ -297,7 +297,8 @@ class Round extends Model
      */
     public function appendToSignalGrid()
     {
-        if (!$this->final_result) {
+        // final_result can be string "0" (valid) => do NOT use truthy checks
+        if ($this->final_result === null || $this->final_result === '') {
             return;
         }
         
@@ -362,12 +363,39 @@ class Round extends Model
     }
 
     /**
+     * Check if a bet is winning for xanhdo game
+     * Logic:
+     * - If bet is on a number (bet_type = 'number'), ONLY check if bet_value matches result number (ignore color)
+     * - If bet is on a color (bet_type = 'color' or null), check if gem_type is in winning colors
+     */
+    private function isWinningBet($bet, $resultNum, $winningGemTypes)
+    {
+        // Check number bets: if bet_type is 'number', ONLY check the number match
+        if ($bet->bet_type === 'number' && $bet->bet_value !== null) {
+            $betNumber = (int) $bet->bet_value;
+            // For number bets, ONLY the exact number wins, colors don't matter
+            return ($betNumber === $resultNum);
+        }
+        
+        // Check color bets: if gem_type is in winning colors
+        // This applies to:
+        // - Color bets (bet_type = 'color')
+        // - Legacy bets (bet_type = null) - treat as color bet
+        if (in_array($bet->gem_type, $winningGemTypes, true)) {
+            return true; // Color bet matches one of the winning colors
+        }
+        
+        return false;
+    }
+
+    /**
      * Process all bets and update user balances
      */
     public function processBets()
     {
         // Đảm bảo round đã có final_result
-        if (!$this->final_result) {
+        // final_result can be string "0" (valid) => do NOT use truthy checks
+        if ($this->final_result === null || $this->final_result === '') {
             \Log::warning("Round {$this->id} cannot process bets: no final_result");
             return;
         }
@@ -386,10 +414,45 @@ class Round extends Model
         $isJackpot = in_array($this->final_result, $jackpotTypes);
 
         // Xanh đỏ rule:
-        // If final result is "Tím" (daquy) then bets on Xanh/Đỏ are also winning,
-        // but they still pay using their own payout_rate (stored on bet).
+        // For xanhdo game, final_result is a number (0-9)
+        // When a number is drawn, bets on that number AND all corresponding colors win
+        // Logic:
+        // - Number bets: stored with gem_type = 'number_0', 'number_1', etc. (need to check bet table structure)
+        // - Color bets: stored with gem_type = 'kcxanh', 'kcdo', 'daquy'
+        // Winning conditions:
+        // 0: số 0, màu đỏ (kcdo), màu tím (daquy)
+        // 1: số 1, màu xanh (kcxanh)
+        // 2: số 2, màu xanh (kcxanh), màu đỏ (kcdo) - vì 2 thuộc cả xanh và đỏ
+        // 3: số 3, màu xanh (kcxanh)
+        // 4: số 4, màu đỏ (kcdo)
+        // 5: số 5, màu tím (daquy), màu xanh (kcxanh)
+        // 6: số 6, màu đỏ (kcdo)
+        // 7: số 7, màu xanh (kcxanh)
+        // 8: số 8, màu đỏ (kcdo)
+        // 9: số 9, màu xanh (kcxanh)
         $isXanhDo = ($this->game_key ?? 'khaithac') === 'xanhdo';
-        $isPurpleWild = $isXanhDo && $this->final_result === 'daquy';
+        $winningGemTypes = [];
+        $winningNumbers = [];
+        
+        if ($isXanhDo && is_numeric($this->final_result)) {
+            $resultNum = (int) $this->final_result;
+            $winningNumbers[] = $resultNum; // The number itself wins
+            
+            // Determine winning colors based on number
+            // 1,2,3,7,9: xanh (kcxanh)
+            // 4,6,8: đỏ (kcdo)
+            // 0: tím (daquy) + đỏ (kcdo)
+            // 5: tím (daquy) + xanh (kcxanh)
+            if ($resultNum === 0) {
+                $winningGemTypes = ['daquy', 'kcdo']; // tím + đỏ
+            } elseif (in_array($resultNum, [1, 2, 3, 7, 9])) {
+                $winningGemTypes = ['kcxanh']; // xanh
+            } elseif (in_array($resultNum, [4, 6, 8])) {
+                $winningGemTypes = ['kcdo']; // đỏ
+            } elseif ($resultNum === 5) {
+                $winningGemTypes = ['daquy', 'kcxanh']; // tím + xanh
+            }
+        }
         
         // Get jackpot payout rate if it's a jackpot
         $jackpotPayoutRate = null;
@@ -452,9 +515,12 @@ class Round extends Model
                             \Log::error("Bet {$bet->id}: Balance mismatch! Expected: {$newBalance}, Actual: {$user->balance}");
                         }
                     } else if (
-                        $bet->gem_type === $this->final_result
-                        || ($isPurpleWild && in_array($bet->gem_type, ['kcxanh', 'kcdo', 'daquy'], true))
+                        (!$isXanhDo && $bet->gem_type === $this->final_result)
+                        || ($isXanhDo && $this->isWinningBet($bet, $resultNum, $winningGemTypes))
                     ) {
+                        // For xanhdo: When a number is drawn, bets on that number AND all corresponding colors win
+                        // Example: Number 1 → bets on number 1 (stored as kcxanh) AND color xanh (kcxanh) both win
+                        // Example: Number 0 → bets on number 0 (stored as kcdo or daquy) AND color đỏ (kcdo) AND color tím (daquy) all win
                         // User won (normal result)
                         $payoutAmount = $bet->amount * $bet->payout_rate;
                         
@@ -530,9 +596,31 @@ class Round extends Model
      * Random kết quả dựa vào tổng tiền đặt cược
      * Đá có nhiều tiền đặt cược nhất sẽ KHÔNG được random (không thắng)
      * Random trong 2 đá còn lại
+     * For xanhdo game, returns a number (0-9) instead of gem type
      */
     public function randomResultBasedOnBets()
     {
+        $isXanhDo = ($this->game_key ?? 'khaithac') === 'xanhdo';
+        
+        if ($isXanhDo) {
+            // For xanhdo, return a random number 0-9
+            // Số 0 và 5 có tỉ lệ rất thấp (mỗi số 2%), các số khác chia đều 96%
+            $random = rand(1, 100);
+            
+            if ($random <= 2) {
+                // 2% - số 0
+                return '0';
+            } elseif ($random <= 4) {
+                // 2% - số 5
+                return '5';
+            } else {
+                // 96% - các số còn lại (1,2,3,4,6,7,8,9) - mỗi số ~12%
+                $otherNumbers = [1, 2, 3, 4, 6, 7, 8, 9];
+                $index = rand(0, count($otherNumbers) - 1);
+                return (string) $otherNumbers[$index];
+            }
+        }
+        
         // Lấy tất cả bets của round này
         $bets = $this->bets()->where('status', 'pending')->get();
         

@@ -17,9 +17,9 @@
         </a>
 
         <!-- Explore (center item - floating) -->
-        <a href="{{ route('explore') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14 -mt-5">
+        <a href="{{ route('games.index') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14 -mt-5">
             <img src="{{ asset('images/icons/gioithieu.png') }}" alt="Khám phá" class="w-14 h-10">
-            <span class="text-xs whitespace-nowrap mt-1 {{ request()->routeIs('explore') ? 'text-blue-500' : 'text-gray-400' }}">Khám phá</span>
+            <span class="text-xs whitespace-nowrap mt-1 {{ request()->routeIs('games.*') || request()->routeIs('explore') ? 'text-blue-500' : 'text-gray-400' }}">Khám phá</span>
         </a>
 
         <!-- Assets -->

@@ -207,7 +207,8 @@ class ExploreController extends Controller
         $finalResult = $round->admin_set_result ?? $validated['final_result'];
         
         // Verify the final result matches what server would calculate (if no admin intervention)
-        if (!$round->admin_set_result) {
+        // NOTE: string "0" is falsy in PHP; don't use truthy checks for admin_set_result
+        if ($round->admin_set_result === null || $round->admin_set_result === '') {
             $expectedResult = $this->getGemForSecond($round->seed, 60, $round);
             if ($validated['final_result'] !== $expectedResult) {
                 // Log warning but still accept (client might have slight timing difference)
@@ -249,7 +250,7 @@ class ExploreController extends Controller
         }
         
         // If admin has set result, update the last result (second 60) to match
-        if ($round->admin_set_result) {
+        if ($round->admin_set_result !== null && $round->admin_set_result !== '') {
             $results[59] = $round->admin_set_result; // Index 59 = second 60
             $finalResult = $round->admin_set_result;
         }
@@ -276,7 +277,7 @@ class ExploreController extends Controller
     public function getGemForSecond($seed, $second, $round = null)
     {
         // If it's the last second (60) and admin has set a result, use that
-        if ($second === 60 && $round && $round->admin_set_result) {
+        if ($second === 60 && $round && ($round->admin_set_result !== null && $round->admin_set_result !== '')) {
             return $round->admin_set_result;
         }
         
@@ -524,13 +525,14 @@ class ExploreController extends Controller
         }
         
         // Nếu round chưa finish và đã đến giây 60, finish round với kết quả random
-        if ($round->status === 'running' && !$round->final_result) {
+        // NOTE: don't use truthy checks; be explicit
+        if ($round->status === 'running' && ($round->final_result === null || $round->final_result === '')) {
             // Refresh để lấy admin_set_result mới nhất
             $round->refresh();
             
             // Ưu tiên admin_set_result nếu có, nếu không thì random dựa vào tổng tiền đặt cược
             $finalResult = null;
-            if ($round->admin_set_result) {
+            if ($round->admin_set_result !== null && $round->admin_set_result !== '') {
                 $finalResult = $round->admin_set_result;
             } else {
                 // Random dựa vào tổng tiền đặt cược: đá có nhiều tiền nhất sẽ không thắng
@@ -544,10 +546,10 @@ class ExploreController extends Controller
         
         // Ưu tiên admin_set_result, nếu không có thì dùng final_result
         $result = null;
-        if ($round->admin_set_result) {
-            $result = $round->admin_set_result;
-        } else if ($round->final_result) {
+        if ($round->final_result !== null && $round->final_result !== '') {
             $result = $round->final_result;
+        } else if ($round->admin_set_result !== null && $round->admin_set_result !== '') {
+            $result = $round->admin_set_result;
         }
         
         // Map giá trị cũ sang giá trị mới (backward compatibility)

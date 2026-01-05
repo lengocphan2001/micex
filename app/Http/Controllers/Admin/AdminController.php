@@ -133,15 +133,11 @@ class AdminController extends Controller
             'cuoc' => (float) SystemSetting::getValue('gem_payout_rate_cuoc', '50.00'),
         ];
         
-        // Get current round (không tạo mới, chỉ lấy từ database)
-        $currentRound = Round::getCurrentRound('khaithac');
+        // Get current rounds for both games (không tạo mới, chỉ lấy từ database)
+        $currentRoundKhaithac = Round::getCurrentRound('khaithac');
+        $currentRoundXanhdo = Round::getCurrentRound('xanhdo');
         
-        // Nếu round chưa tồn tại, tạo round rỗng để view không bị lỗi
-        if (!$currentRound) {
-            $currentRound = null;
-        }
-        
-        return view('admin.intervene-results', compact('payoutRates', 'jackpotRates', 'currentRound'));
+        return view('admin.intervene-results', compact('payoutRates', 'jackpotRates', 'currentRoundKhaithac', 'currentRoundXanhdo'));
     }
     
     /**
@@ -198,10 +194,26 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'round_id' => 'required|exists:rounds,id',
-            'final_result' => 'required|in:kcxanh,daquy,kcdo,thachanhtim,ngusac,cuoc',
+            'final_result' => 'required',
+            'game_key' => 'nullable|in:khaithac,xanhdo',
         ]);
         
         $round = Round::findOrFail($validated['round_id']);
+        $gameKey = $validated['game_key'] ?? $round->game_key ?? 'khaithac';
+        
+        // For xanhdo, validate that final_result is a number 0-9
+        if ($gameKey === 'xanhdo') {
+            $resultNum = (int) $validated['final_result'];
+            if ($resultNum < 0 || $resultNum > 9) {
+                return back()->with('error', 'Kết quả phải là số từ 0 đến 9 cho game Xanh đỏ.');
+            }
+            $validated['final_result'] = (string) $resultNum;
+        } else {
+            // For khaithac, validate gem types
+            $request->validate([
+                'final_result' => 'required|in:kcxanh,daquy,kcdo,thachanhtim,ngusac,cuoc',
+            ]);
+        }
         
         // Save admin-set result
         $round->admin_set_result = $validated['final_result'];
@@ -339,9 +351,10 @@ class AdminController extends Controller
     /**
      * Get realtime round data for admin (current result and bet amounts)
      */
-    public function getRealtimeRoundData()
+    public function getRealtimeRoundData(Request $request)
     {
-        $round = Round::getCurrentRound('khaithac');
+        $gameKey = $request->input('game_key', 'khaithac');
+        $round = Round::getCurrentRound($gameKey);
         
         if (!$round) {
             return response()->json([
@@ -409,9 +422,10 @@ class AdminController extends Controller
     /**
      * Get bet amounts only (for realtime update every 2 seconds)
      */
-    public function getBetAmounts()
+    public function getBetAmounts(Request $request)
     {
-        $round = Round::getCurrentRound('khaithac');
+        $gameKey = $request->input('game_key', 'khaithac');
+        $round = Round::getCurrentRound($gameKey);
         
         if (!$round) {
             return response()->json(['bet_amounts' => []]);
@@ -651,57 +665,6 @@ class AdminController extends Controller
         $user->save();
 
         return back()->with('success', 'Đã cập nhật mật khẩu quỹ thành công.');
-    }
-
-    /**
-     * Add balance (đá quý) to user
-     */
-    public function addBalance(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'amount' => 'required|numeric|min:0.01',
-            'notes' => 'nullable|string|max:500',
-        ]);
-
-        $user = User::findOrFail($id);
-        $admin = Auth::guard('admin')->user();
-        $amount = (float) $validated['amount'];
-        $oldBalance = $user->balance;
-        
-        DB::beginTransaction();
-        try {
-            // Lock user row to prevent race condition
-            $user = User::where('id', $id)->lockForUpdate()->first();
-            
-            // Add balance
-            $user->balance += $amount;
-            $user->save();
-            
-            // Log the action
-            \Log::info('Admin added balance to user', [
-                'admin_id' => $admin->id,
-                'admin_name' => $admin->name,
-                'user_id' => $user->id,
-                'user_phone' => $user->phone_number,
-                'amount' => $amount,
-                'old_balance' => $oldBalance,
-                'new_balance' => $user->balance,
-                'notes' => $validated['notes'] ?? null,
-            ]);
-            
-            DB::commit();
-            
-            return back()->with('success', "Đã cộng {$amount} đá quý cho thành viên. Số dư mới: " . number_format($user->balance, 2) . " đá quý.");
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Error adding balance to user', [
-                'user_id' => $id,
-                'amount' => $amount,
-                'error' => $e->getMessage(),
-            ]);
-            
-            return back()->with('error', 'Có lỗi xảy ra khi cộng đá quý: ' . $e->getMessage());
-        }
     }
 
     /**

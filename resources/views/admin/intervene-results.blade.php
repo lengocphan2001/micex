@@ -174,117 +174,243 @@
                     </h3>
                 </div>
                 <div class="card-body">
-                    <div id="roundInfoContainer">
-                        @if($currentRound)
-                            <div class="alert alert-info" id="roundInfoAlert">
-                                <strong>Phiên hiện tại:</strong> <span id="roundNumber">#{{ $currentRound->round_number }}</span><br>
-                                <strong>Trạng thái:</strong> <span id="roundStatus">
-                                    @if($currentRound->status === 'pending')
-                                        <span class="badge badge-secondary">Chờ bắt đầu</span>
-                                    @elseif($currentRound->status === 'running')
-                                        <span class="badge badge-success">Đang chạy</span>
-                                    @elseif($currentRound->status === 'finished')
-                                        <span class="badge badge-danger">Đã kết thúc</span>
-                                    @endif
-                                </span>
-                                <span id="roundFinalResult">
-                                    @if($currentRound->status === 'finished' && $currentRound->final_result)
-                                        <br><strong>Kết quả:</strong> 
-                                        @php
-                                            $gemNames = [
-                                                'kcxanh' => 'Kim Cương Xanh',
-                                                'daquy' => 'Đá Quý',
-                                                'kcdo' => 'Kim Cương Đỏ',
-                                                'thachanhtim' => 'Thạch Anh Tím (Nổ Hũ)',
-                                                'ngusac' => 'Ngũ Sắc (Nổ Hũ)',
-                                                'cuoc' => 'Cuốc (Nổ Hũ)',
-                                            ];
-                                        @endphp
-                                        <img src="{{ asset('images/icons/' . $currentRound->final_result . '.png') }}" alt="{{ $gemNames[$currentRound->final_result] ?? $currentRound->final_result }}" style="width: 24px; height: 24px;" class="d-inline-block">
-                                        {{ $gemNames[$currentRound->final_result] ?? $currentRound->final_result }}
-                                    @endif
-                                </span>
-                            </div>
-
-                            <div id="adminSetResultAlert" style="display: none;">
-                                <div class="alert alert-success">
-                                    <strong>Kết quả đã được đặt:</strong> 
-                                    <span id="adminSetResultDisplay"></span>
-                                    <br><small>Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng.</small>
-                                </div>
-                            </div>
-                            
-                            <form id="setResultForm" action="{{ route('admin.intervene-results.set-result') }}" method="POST" onsubmit="return handleSetResult(event);">
-                                @csrf
-                                <input type="hidden" name="round_id" id="roundIdInput" value="{{ $currentRound->id }}">
-                                
-                                <div class="form-group">
-                                    <label for="final_result">Chọn kết quả (sẽ là kết quả cuối cùng - giây 60)</label>
-                                    <div class="row" id="gemOptionsContainer">
-                                        @php
-                                            $gemOptions = [
-                                                'kcxanh' => ['name' => 'Kim Cương Xanh', 'icon' => 'kcxanh.png', 'type' => 'normal'],
-                                                'daquy' => ['name' => 'Đá Quý', 'icon' => 'daquy.png', 'type' => 'normal'],
-                                                'kcdo' => ['name' => 'Kim Cương Đỏ', 'icon' => 'kcdo.png', 'type' => 'normal'],
-                                            ];
-                                            $jackpotOptions = [
-                                                'thachanhtim' => ['name' => 'Thạch Anh Tím (Nổ Hũ)', 'icon' => 'thachanhtim.png', 'type' => 'jackpot', 'rate' => $jackpotRates['thachanhtim'] ?? '10.00'],
-                                                'ngusac' => ['name' => 'Ngũ Sắc (Nổ Hũ)', 'icon' => 'ngusac.png', 'type' => 'jackpot', 'rate' => $jackpotRates['ngusac'] ?? '20.00'],
-                                                'cuoc' => ['name' => 'Cuốc (Nổ Hũ)', 'icon' => 'cuoc.png', 'type' => 'jackpot', 'rate' => $jackpotRates['cuoc'] ?? '50.00'],
-                                            ];
-                                        @endphp
-                                        <div class="col-12 mb-2">
-                                            <strong class="text-white">Đá thường:</strong>
-                                        </div>
-                                        @foreach($gemOptions as $value => $gem)
-                                            <div class="col-6 mb-2">
-                                                <label class="d-flex align-items-center p-2 border rounded cursor-pointer gem-option-label" style="cursor: pointer;" data-gem-value="{{ $value }}">
-                                                    <input type="radio" name="final_result" value="{{ $value }}" 
-                                                           class="mr-2 gem-option-radio" 
-                                                           {{ old('final_result', $currentRound->admin_set_result ?? '') === $value ? 'checked' : '' }} required>
-                                                    <img src="{{ asset('images/icons/' . $gem['icon']) }}" alt="{{ $gem['name'] }}" 
-                                                         style="width: 24px; height: 24px;" class="mr-2">
-                                                    <span>{{ $gem['name'] }}</span>
-                                                </label>
-                                            </div>
-                                        @endforeach
-                                        <div class="col-12 mb-2 mt-3">
-                                            <strong class="text-warning">Đá Nổ Hũ (Tất cả user thắng):</strong>
-                                        </div>
-                                        @foreach($jackpotOptions as $value => $gem)
-                                            <div class="col-6 mb-2">
-                                                <label class="d-flex align-items-center p-2 border border-warning rounded cursor-pointer gem-option-label" style="cursor: pointer; background-color: rgba(255, 193, 7, 0.1);" data-gem-value="{{ $value }}">
-                                                    <input type="radio" name="final_result" value="{{ $value }}" 
-                                                           class="mr-2 gem-option-radio" 
-                                                           {{ old('final_result', $currentRound->admin_set_result ?? '') === $value ? 'checked' : '' }}>
-                                                    <img src="{{ asset('images/icons/' . $gem['icon']) }}" alt="{{ $gem['name'] }}" 
-                                                         style="width: 24px; height: 24px;" class="mr-2">
-                                                    <div class="flex-1">
-                                                        <div class="font-weight-bold">{{ $gem['name'] }}</div>
-                                                        <small class="text-warning">Tỉ lệ: {{ $gem['rate'] }}x</small>
-                                                    </div>
-                                                </label>
-                                            </div>
-                                        @endforeach
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs" id="gameTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="khaithac-tab" data-toggle="tab" href="#khaithac" role="tab" aria-controls="khaithac" aria-selected="true">
+                                Khai thác
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="xanhdo-tab" data-toggle="tab" href="#xanhdo" role="tab" aria-controls="xanhdo" aria-selected="false">
+                                Xanh đỏ
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="gameTabsContent">
+                        <!-- Tab Khai thác -->
+                        <div class="tab-pane fade show active" id="khaithac" role="tabpanel" aria-labelledby="khaithac-tab">
+                            <div id="roundInfoContainerKhaithac">
+                                @if($currentRoundKhaithac)
+                                    <div class="alert alert-info" id="roundInfoAlertKhaithac">
+                                        <strong>Phiên hiện tại:</strong> <span id="roundNumberKhaithac">#{{ $currentRoundKhaithac->round_number }}</span><br>
+                                        <strong>Trạng thái:</strong> <span id="roundStatusKhaithac">
+                                            @if($currentRoundKhaithac->status === 'pending')
+                                                <span class="badge badge-secondary">Chờ bắt đầu</span>
+                                            @elseif($currentRoundKhaithac->status === 'running')
+                                                <span class="badge badge-success">Đang chạy</span>
+                                            @elseif($currentRoundKhaithac->status === 'finished')
+                                                <span class="badge badge-danger">Đã kết thúc</span>
+                                            @endif
+                                        </span>
+                                        <span id="roundFinalResultKhaithac">
+                                            @if($currentRoundKhaithac->status === 'finished' && $currentRoundKhaithac->final_result)
+                                                <br><strong>Kết quả:</strong> 
+                                                @php
+                                                    $gemNames = [
+                                                        'kcxanh' => 'Kim Cương Xanh',
+                                                        'daquy' => 'Đá Quý',
+                                                        'kcdo' => 'Kim Cương Đỏ',
+                                                        'thachanhtim' => 'Thạch Anh Tím (Nổ Hũ)',
+                                                        'ngusac' => 'Ngũ Sắc (Nổ Hũ)',
+                                                        'cuoc' => 'Cuốc (Nổ Hũ)',
+                                                    ];
+                                                @endphp
+                                                <img src="{{ asset('images/icons/' . $currentRoundKhaithac->final_result . '.png') }}" alt="{{ $gemNames[$currentRoundKhaithac->final_result] ?? $currentRoundKhaithac->final_result }}" style="width: 24px; height: 24px;" class="d-inline-block">
+                                                {{ $gemNames[$currentRoundKhaithac->final_result] ?? $currentRoundKhaithac->final_result }}
+                                            @endif
+                                        </span>
                                     </div>
-                                    @error('final_result')
-                                        <div class="text-danger small">{{ $message }}</div>
-                                    @enderror
-                                </div>
 
-                                <button type="submit" class="btn btn-warning" id="setResultBtn">
-                                    <i class="fas fa-exclamation-triangle"></i> <span id="setResultBtnText">{{ $currentRound->admin_set_result ? 'Cập nhật kết quả' : 'Đặt kết quả' }}</span> (Can thiệp)
-                                </button>
-                            </form>
-                            
-                            <div id="roundNotRunningAlert" class="alert alert-warning" style="display: none;">
-                                Chỉ có thể đặt kết quả khi phiên đang chạy.
+                                    <div id="adminSetResultAlertKhaithac" style="display: none;">
+                                        <div class="alert alert-success">
+                                            <strong>Kết quả đã được đặt:</strong> 
+                                            <span id="adminSetResultDisplayKhaithac"></span>
+                                            <br><small>Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng.</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <form id="setResultFormKhaithac" action="{{ route('admin.intervene-results.set-result') }}" method="POST" onsubmit="return handleSetResult(event, 'khaithac');">
+                                        @csrf
+                                        <input type="hidden" name="round_id" id="roundIdInputKhaithac" value="{{ $currentRoundKhaithac->id }}">
+                                        <input type="hidden" name="game_key" value="khaithac">
+                                        
+                                        <div class="form-group">
+                                            <label for="final_result_khaithac">Chọn kết quả (sẽ là kết quả cuối cùng - giây 60)</label>
+                                            <div class="row" id="gemOptionsContainerKhaithac">
+                                                @php
+                                                    $gemOptions = [
+                                                        'kcxanh' => ['name' => 'Kim Cương Xanh', 'icon' => 'kcxanh.png', 'type' => 'normal'],
+                                                        'daquy' => ['name' => 'Đá Quý', 'icon' => 'daquy.png', 'type' => 'normal'],
+                                                        'kcdo' => ['name' => 'Kim Cương Đỏ', 'icon' => 'kcdo.png', 'type' => 'normal'],
+                                                    ];
+                                                    $jackpotOptions = [
+                                                        'thachanhtim' => ['name' => 'Thạch Anh Tím (Nổ Hũ)', 'icon' => 'thachanhtim.png', 'type' => 'jackpot', 'rate' => $jackpotRates['thachanhtim'] ?? '10.00'],
+                                                        'ngusac' => ['name' => 'Ngũ Sắc (Nổ Hũ)', 'icon' => 'ngusac.png', 'type' => 'jackpot', 'rate' => $jackpotRates['ngusac'] ?? '20.00'],
+                                                        'cuoc' => ['name' => 'Cuốc (Nổ Hũ)', 'icon' => 'cuoc.png', 'type' => 'jackpot', 'rate' => $jackpotRates['cuoc'] ?? '50.00'],
+                                                    ];
+                                                @endphp
+                                                <div class="col-12 mb-2">
+                                                    <strong class="text-white">Đá thường:</strong>
+                                                </div>
+                                                @foreach($gemOptions as $value => $gem)
+                                                    <div class="col-6 mb-2">
+                                                        <label class="d-flex align-items-center p-2 border rounded cursor-pointer gem-option-label" style="cursor: pointer;" data-gem-value="{{ $value }}">
+                                                            <input type="radio" name="final_result" value="{{ $value }}" 
+                                                                   class="mr-2 gem-option-radio" 
+                                                                   {{ old('final_result', $currentRoundKhaithac->admin_set_result ?? '') === $value ? 'checked' : '' }} required>
+                                                            <img src="{{ asset('images/icons/' . $gem['icon']) }}" alt="{{ $gem['name'] }}" 
+                                                                 style="width: 24px; height: 24px;" class="mr-2">
+                                                            <span>{{ $gem['name'] }}</span>
+                                                        </label>
+                                                    </div>
+                                                @endforeach
+                                                <div class="col-12 mb-2 mt-3">
+                                                    <strong class="text-warning">Đá Nổ Hũ (Tất cả user thắng):</strong>
+                                                </div>
+                                                @foreach($jackpotOptions as $value => $gem)
+                                                    <div class="col-6 mb-2">
+                                                        <label class="d-flex align-items-center p-2 border border-warning rounded cursor-pointer gem-option-label" style="cursor: pointer; background-color: rgba(255, 193, 7, 0.1);" data-gem-value="{{ $value }}">
+                                                            <input type="radio" name="final_result" value="{{ $value }}" 
+                                                                   class="mr-2 gem-option-radio" 
+                                                                   {{ old('final_result', $currentRoundKhaithac->admin_set_result ?? '') === $value ? 'checked' : '' }}>
+                                                            <img src="{{ asset('images/icons/' . $gem['icon']) }}" alt="{{ $gem['name'] }}" 
+                                                                 style="width: 24px; height: 24px;" class="mr-2">
+                                                            <div class="flex-1">
+                                                                <div class="font-weight-bold">{{ $gem['name'] }}</div>
+                                                                <small class="text-warning">Tỉ lệ: {{ $gem['rate'] }}x</small>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                            @error('final_result')
+                                                <div class="text-danger small">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <button type="submit" class="btn btn-warning" id="setResultBtnKhaithac">
+                                            <i class="fas fa-exclamation-triangle"></i> <span id="setResultBtnTextKhaithac">{{ ($currentRoundKhaithac->admin_set_result !== null && $currentRoundKhaithac->admin_set_result !== '') ? 'Cập nhật kết quả' : 'Đặt kết quả' }}</span> (Can thiệp)
+                                        </button>
+                                    </form>
+                                    
+                                    <div id="roundNotRunningAlertKhaithac" class="alert alert-warning" style="display: none;">
+                                        Chỉ có thể đặt kết quả khi phiên đang chạy.
+                                    </div>
+                                @else
+                                    <div class="alert alert-warning">
+                                        Không tìm thấy phiên cược hiện tại.
+                                    </div>
+                                @endif
                             </div>
-                        @else
-                            <div class="alert alert-warning">
-                                Không tìm thấy phiên cược hiện tại.
+                        </div>
+                        
+                        <!-- Tab Xanh đỏ -->
+                        <div class="tab-pane fade" id="xanhdo" role="tabpanel" aria-labelledby="xanhdo-tab">
+                            <div id="roundInfoContainerXanhdo">
+                                @if($currentRoundXanhdo)
+                                    <div class="alert alert-info" id="roundInfoAlertXanhdo">
+                                        <strong>Phiên hiện tại:</strong> <span id="roundNumberXanhdo">#{{ $currentRoundXanhdo->round_number }}</span><br>
+                                        <strong>Trạng thái:</strong> <span id="roundStatusXanhdo">
+                                            @if($currentRoundXanhdo->status === 'pending')
+                                                <span class="badge badge-secondary">Chờ bắt đầu</span>
+                                            @elseif($currentRoundXanhdo->status === 'running')
+                                                <span class="badge badge-success">Đang chạy</span>
+                                            @elseif($currentRoundXanhdo->status === 'finished')
+                                                <span class="badge badge-danger">Đã kết thúc</span>
+                                            @endif
+                                        </span>
+                                        <span id="roundFinalResultXanhdo">
+                                            @if($currentRoundXanhdo->status === 'finished' && $currentRoundXanhdo->final_result !== null && $currentRoundXanhdo->final_result !== '')
+                                                <br><strong>Kết quả:</strong> 
+                                                @php
+                                                    $resultNum = is_numeric($currentRoundXanhdo->final_result) ? (int)$currentRoundXanhdo->final_result : null;
+                                                @endphp
+                                                @if($resultNum !== null && $resultNum >= 0 && $resultNum <= 9)
+                                                    <span class="badge badge-primary" style="font-size: 1.2em; padding: 8px 12px;">{{ $resultNum }}</span>
+                                                    @php
+                                                        // Show winning colors
+                                                        $winningColors = [];
+                                                        if ($resultNum === 0) {
+                                                            $winningColors[] = 'Tím + Đỏ';
+                                                        } elseif ($resultNum === 5) {
+                                                            $winningColors[] = 'Tím + Xanh';
+                                                        } elseif (in_array($resultNum, [1, 2, 3, 7, 9])) {
+                                                            $winningColors[] = 'Xanh';
+                                                        } elseif (in_array($resultNum, [4, 6, 8])) {
+                                                            $winningColors[] = 'Đỏ';
+                                                        }
+                                                    @endphp
+                                                    <span class="ml-2">({{ implode(', ', $winningColors) }})</span>
+                                                @else
+                                                    {{ $currentRoundXanhdo->final_result }}
+                                                @endif
+                                            @endif
+                                        </span>
+                                    </div>
+
+                                    <div id="adminSetResultAlertXanhdo" style="display: none;">
+                                        <div class="alert alert-success">
+                                            <strong>Kết quả đã được đặt:</strong> 
+                                            <span id="adminSetResultDisplayXanhdo"></span>
+                                            <br><small>Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng.</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <form id="setResultFormXanhdo" action="{{ route('admin.intervene-results.set-result') }}" method="POST" onsubmit="return handleSetResult(event, 'xanhdo');">
+                                        @csrf
+                                        <input type="hidden" name="round_id" id="roundIdInputXanhdo" value="{{ $currentRoundXanhdo->id }}">
+                                        <input type="hidden" name="game_key" value="xanhdo">
+                                        
+                                        <div class="form-group">
+                                            <label for="final_result_xanhdo">Chọn số (0-9) - sẽ là kết quả cuối cùng</label>
+                                            <div class="row" id="numberOptionsContainerXanhdo">
+                                                @for($i = 0; $i <= 9; $i++)
+                                                    @php
+                                                        $winningColors = [];
+                                                        if ($i === 0) {
+                                                            $winningColors[] = 'Tím + Đỏ';
+                                                        } elseif ($i === 5) {
+                                                            $winningColors[] = 'Tím + Xanh';
+                                                        } elseif (in_array($i, [1, 2, 3, 7, 9])) {
+                                                            $winningColors[] = 'Xanh';
+                                                        } elseif (in_array($i, [4, 6, 8])) {
+                                                            $winningColors[] = 'Đỏ';
+                                                        }
+                                                        $adminResult = is_numeric($currentRoundXanhdo->admin_set_result ?? '') ? (int)$currentRoundXanhdo->admin_set_result : null;
+                                                    @endphp
+                                                    <div class="col-3 mb-2">
+                                                        <label class="d-flex flex-column align-items-center p-3 border rounded cursor-pointer number-option-label" style="cursor: pointer; min-height: 100px;" data-number-value="{{ $i }}">
+                                                            <input type="radio" name="final_result" value="{{ $i }}" 
+                                                                   class="mb-2 number-option-radio" 
+                                                                   {{ $adminResult === $i ? 'checked' : '' }} required>
+                                                            <span class="badge badge-primary" style="font-size: 1.5em; padding: 10px 15px; width: 60px;">{{ $i }}</span>
+                                                            <small class="text-muted mt-1 text-center" style="font-size: 0.75em;">{{ implode(', ', $winningColors) }}</small>
+                                                        </label>
+                                                    </div>
+                                                @endfor
+                                            </div>
+                                            @error('final_result')
+                                                <div class="text-danger small">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <button type="submit" class="btn btn-warning" id="setResultBtnXanhdo">
+                                            <i class="fas fa-exclamation-triangle"></i> <span id="setResultBtnTextXanhdo">{{ ($currentRoundXanhdo->admin_set_result !== null && $currentRoundXanhdo->admin_set_result !== '') ? 'Cập nhật kết quả' : 'Đặt kết quả' }}</span> (Can thiệp)
+                                        </button>
+                                    </form>
+                                    
+                                    <div id="roundNotRunningAlertXanhdo" class="alert alert-warning" style="display: none;">
+                                        Chỉ có thể đặt kết quả khi phiên đang chạy.
+                                    </div>
+                                @else
+                                    <div class="alert alert-warning">
+                                        Không tìm thấy phiên cược hiện tại.
+                                    </div>
+                                @endif
                             </div>
-                        @endif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -387,10 +513,11 @@
     }
     
     // Load realtime data for "Đặt kết quả phiên cược" section
-    function loadRealtimeRoundData() {
-        // Only fetch if round is running or we need to check status
-        // Always fetch to check status, but only update UI if running
-        fetch('{{ route("admin.intervene-results.realtime") }}', {
+    function loadRealtimeRoundData(gameKey) {
+        gameKey = gameKey || 'khaithac';
+        const suffix = gameKey === 'xanhdo' ? 'Xanhdo' : 'Khaithac';
+        
+        fetch('{{ route("admin.intervene-results.realtime") }}?game_key=' + gameKey, {
             method: 'GET',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
@@ -405,28 +532,16 @@
                 return response.json();
             })
             .then(data => {
-                
-                // Check if new round started (break time ended)
-                if (lastRoundId !== null && lastRoundId !== data.round.id) {
-                    // New round started, reload page to refresh form
-                    window.location.reload();
-                    return;
-                }
-                
-                lastRoundId = data.round.id;
-                lastRoundNumber = data.round.round_number;
-                
-                // Control polling based on round status (this will start/stop polling as needed)
-                controlPolling(data.round.status);
+                if (!data.round) return;
                 
                 // Update round number
-                const roundNumberEl = document.getElementById('roundNumber');
+                const roundNumberEl = document.getElementById('roundNumber' + suffix);
                 if (roundNumberEl) {
                     roundNumberEl.textContent = '#' + data.round.round_number;
                 }
                 
                 // Update round status
-                const roundStatusEl = document.getElementById('roundStatus');
+                const roundStatusEl = document.getElementById('roundStatus' + suffix);
                 if (roundStatusEl) {
                     let statusHtml = '';
                     if (data.round.status === 'pending') {
@@ -440,14 +555,30 @@
                 }
                 
                 // Update final result
-                const roundFinalResultEl = document.getElementById('roundFinalResult');
+                const roundFinalResultEl = document.getElementById('roundFinalResult' + suffix);
                 if (roundFinalResultEl) {
                     if (data.round.status === 'finished' && data.round.final_result) {
-                        const gem = GEM_TYPES[data.round.final_result];
-                        if (gem) {
-                            roundFinalResultEl.innerHTML = '<br><strong>Kết quả:</strong> <img src="' + gem.icon + '" alt="' + gem.name + '" style="width: 24px; height: 24px;" class="d-inline-block"> ' + gem.name;
+                        if (gameKey === 'xanhdo') {
+                            // For xanhdo, show number
+                            const resultNum = parseInt(data.round.final_result);
+                            if (!isNaN(resultNum) && resultNum >= 0 && resultNum <= 9) {
+                                let winningColors = [];
+                                if (resultNum === 0) winningColors.push('Tím + Đỏ');
+                                else if (resultNum === 5) winningColors.push('Tím + Xanh');
+                                else if ([1, 2, 3, 7, 9].includes(resultNum)) winningColors.push('Xanh');
+                                else if ([4, 6, 8].includes(resultNum)) winningColors.push('Đỏ');
+                                roundFinalResultEl.innerHTML = '<br><strong>Kết quả:</strong> <span class="badge badge-primary" style="font-size: 1.2em; padding: 8px 12px;">' + resultNum + '</span> <span class="ml-2">(' + winningColors.join(', ') + ')</span>';
+                            } else {
+                                roundFinalResultEl.innerHTML = '<br><strong>Kết quả:</strong> ' + data.round.final_result;
+                            }
                         } else {
-                            roundFinalResultEl.innerHTML = '<br><strong>Kết quả:</strong> ' + data.round.final_result;
+                            // For khaithac, show gem
+                            const gem = GEM_TYPES[data.round.final_result];
+                            if (gem) {
+                                roundFinalResultEl.innerHTML = '<br><strong>Kết quả:</strong> <img src="' + gem.icon + '" alt="' + gem.name + '" style="width: 24px; height: 24px;" class="d-inline-block"> ' + gem.name;
+                            } else {
+                                roundFinalResultEl.innerHTML = '<br><strong>Kết quả:</strong> ' + data.round.final_result;
+                            }
                         }
                     } else {
                         roundFinalResultEl.innerHTML = '';
@@ -455,23 +586,41 @@
                 }
                 
                 // Update admin set result display
-                const adminSetResultAlert = document.getElementById('adminSetResultAlert');
-                const adminSetResultDisplay = document.getElementById('adminSetResultDisplay');
-                if (data.round.admin_set_result) {
-                    const gem = GEM_TYPES[data.round.admin_set_result];
-                    if (gem) {
-                        if (adminSetResultDisplay) {
-                            adminSetResultDisplay.innerHTML = '<img src="' + gem.icon + '" alt="' + gem.name + '" style="width: 24px; height: 24px;" class="d-inline-block"> ' + gem.name;
-                        }
-                        if (adminSetResultAlert) {
-                            adminSetResultAlert.style.display = 'block';
+                const adminSetResultAlert = document.getElementById('adminSetResultAlert' + suffix);
+                const adminSetResultDisplay = document.getElementById('adminSetResultDisplay' + suffix);
+                const hasAdminSetResult = (data.round.admin_set_result !== null && data.round.admin_set_result !== undefined && data.round.admin_set_result !== '');
+                if (hasAdminSetResult) {
+                    if (gameKey === 'xanhdo') {
+                        const resultNum = parseInt(data.round.admin_set_result);
+                        if (!isNaN(resultNum) && resultNum >= 0 && resultNum <= 9) {
+                            if (adminSetResultDisplay) {
+                                let winningColors = [];
+                                if (resultNum === 0) winningColors.push('Tím + Đỏ');
+                                else if (resultNum === 5) winningColors.push('Tím + Xanh');
+                                else if ([1, 2, 3, 7, 9].includes(resultNum)) winningColors.push('Xanh');
+                                else if ([4, 6, 8].includes(resultNum)) winningColors.push('Đỏ');
+                                adminSetResultDisplay.innerHTML = '<span class="badge badge-primary" style="font-size: 1.2em; padding: 8px 12px;">' + resultNum + '</span> <span class="ml-2">(' + winningColors.join(', ') + ')</span>';
+                            }
+                            if (adminSetResultAlert) {
+                                adminSetResultAlert.style.display = 'block';
+                            }
                         }
                     } else {
-                        if (adminSetResultDisplay) {
-                            adminSetResultDisplay.textContent = data.round.admin_set_result;
-                        }
-                        if (adminSetResultAlert) {
-                            adminSetResultAlert.style.display = 'block';
+                        const gem = GEM_TYPES[data.round.admin_set_result];
+                        if (gem) {
+                            if (adminSetResultDisplay) {
+                                adminSetResultDisplay.innerHTML = '<img src="' + gem.icon + '" alt="' + gem.name + '" style="width: 24px; height: 24px;" class="d-inline-block"> ' + gem.name;
+                            }
+                            if (adminSetResultAlert) {
+                                adminSetResultAlert.style.display = 'block';
+                            }
+                        } else {
+                            if (adminSetResultDisplay) {
+                                adminSetResultDisplay.textContent = data.round.admin_set_result;
+                            }
+                            if (adminSetResultAlert) {
+                                adminSetResultAlert.style.display = 'block';
+                            }
                         }
                     }
                 } else {
@@ -481,32 +630,46 @@
                 }
                 
                 // Update radio buttons to reflect admin_set_result
-                if (data.round.admin_set_result) {
-                    const radioButtons = document.querySelectorAll('.gem-option-radio');
-                    const labels = document.querySelectorAll('.gem-option-label');
-                    radioButtons.forEach(radio => {
-                        if (radio.value === data.round.admin_set_result) {
-                            radio.checked = true;
-                        }
-                    });
-                    labels.forEach(label => {
-                        label.classList.remove('border-success', 'bg-light');
-                        if (label.dataset.gemValue === data.round.admin_set_result) {
-                            label.classList.add('border-success', 'bg-light');
-                        }
-                    });
+                if (hasAdminSetResult) {
+                    if (gameKey === 'xanhdo') {
+                        const radioButtons = document.querySelectorAll('#numberOptionsContainerXanhdo .number-option-radio');
+                        const labels = document.querySelectorAll('#numberOptionsContainerXanhdo .number-option-label');
+                        radioButtons.forEach(radio => {
+                            radio.checked = (radio.value === String(data.round.admin_set_result));
+                        });
+                        labels.forEach(label => {
+                            label.classList.remove('border-success', 'bg-light');
+                            if (label.dataset.numberValue === String(data.round.admin_set_result)) {
+                                label.classList.add('border-success', 'bg-light');
+                            }
+                        });
+                    } else {
+                        const radioButtons = document.querySelectorAll('#gemOptionsContainerKhaithac .gem-option-radio');
+                        const labels = document.querySelectorAll('#gemOptionsContainerKhaithac .gem-option-label');
+                        radioButtons.forEach(radio => {
+                            if (radio.value === data.round.admin_set_result) {
+                                radio.checked = true;
+                            }
+                        });
+                        labels.forEach(label => {
+                            label.classList.remove('border-success', 'bg-light');
+                            if (label.dataset.gemValue === data.round.admin_set_result) {
+                                label.classList.add('border-success', 'bg-light');
+                            }
+                        });
+                    }
                 }
                 
                 // Update button text
-                const setResultBtnText = document.getElementById('setResultBtnText');
+                const setResultBtnText = document.getElementById('setResultBtnText' + suffix);
                 if (setResultBtnText) {
-                    setResultBtnText.textContent = data.round.admin_set_result ? 'Cập nhật kết quả' : 'Đặt kết quả';
+                    setResultBtnText.textContent = hasAdminSetResult ? 'Cập nhật kết quả' : 'Đặt kết quả';
                 }
                 
                 // Show/hide form based on round status
-                const setResultForm = document.getElementById('setResultForm');
-                const roundNotRunningAlert = document.getElementById('roundNotRunningAlert');
-                const roundIdInput = document.getElementById('roundIdInput');
+                const setResultForm = document.getElementById('setResultForm' + suffix);
+                const roundNotRunningAlert = document.getElementById('roundNotRunningAlert' + suffix);
+                const roundIdInput = document.getElementById('roundIdInput' + suffix);
                 
                 if (data.round.status === 'running') {
                     if (setResultForm) setResultForm.style.display = 'block';
@@ -523,33 +686,37 @@
     
     // Initial check of round status to determine if polling should start
     function checkInitialRoundStatus() {
-        fetch('{{ route("admin.intervene-results.realtime") }}', {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-            },
-            cache: 'no-cache'
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.round) {
-                    // Set status and control polling
-                    controlPolling(data.round.status);
-                    
-                    // Also load bet amounts immediately if round is running
-                    if (data.round.status === 'running') {
-                        loadBetAmounts();
-                    }
-                }
+        // Check both games
+        ['khaithac', 'xanhdo'].forEach(gameKey => {
+            fetch('{{ route("admin.intervene-results.realtime") }}?game_key=' + gameKey, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                cache: 'no-cache'
             })
-            .catch(error => {
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.round && gameKey === 'khaithac') {
+                        // Set status and control polling (only for khaithac for bet amounts)
+                        controlPolling(data.round.status);
+                        
+                        // Also load bet amounts immediately if round is running
+                        if (data.round.status === 'running') {
+                            loadBetAmounts();
+                        }
+                    }
+                })
+                .catch(error => {
+                });
+        });
     }
     
     // Handle set result form submission
-    function handleSetResult(event) {
-        if (!confirm('Bạn có chắc chắn muốn đặt kết quả cho phiên này? Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng (giây 60).')) {
+    function handleSetResult(event, gameKey) {
+        const gameName = gameKey === 'xanhdo' ? 'Xanh đỏ' : 'Khai thác';
+        if (!confirm(`Bạn có chắc chắn muốn đặt kết quả cho phiên ${gameName} này? Phiên sẽ tiếp tục chạy và kết quả này sẽ là kết quả cuối cùng (giây 60).`)) {
             event.preventDefault();
             return false;
         }
@@ -626,20 +793,23 @@
         // Setup update payout rates form
         setupUpdatePayoutRatesForm();
         
-        // Initialize lastRoundId from current round
-        @if($currentRound)
-            lastRoundId = {{ $currentRound->id }};
-            lastRoundNumber = {{ $currentRound->round_number }};
-            currentRoundStatus = '{{ $currentRound->status }}';
+        // Initialize lastRoundId from current round (use khaithac for bet amounts polling)
+        @if($currentRoundKhaithac)
+            lastRoundId = {{ $currentRoundKhaithac->id }};
+            lastRoundNumber = {{ $currentRoundKhaithac->round_number }};
+            currentRoundStatus = '{{ $currentRoundKhaithac->status }}';
         @endif
         
         // Check initial round status and start/stop polling accordingly
         checkInitialRoundStatus();
         
-        // Load realtime round data for "Đặt kết quả phiên cược" section (always check status)
-        // This will control polling based on round status
-        loadRealtimeRoundData();
-        realtimeInterval = setInterval(loadRealtimeRoundData, 1000);
+        // Load realtime round data for both games
+        function loadAllRealtimeData() {
+            loadRealtimeRoundData('khaithac');
+            loadRealtimeRoundData('xanhdo');
+        }
+        loadAllRealtimeData();
+        realtimeInterval = setInterval(loadAllRealtimeData, 1000);
     });
     
     // Cleanup on page unload

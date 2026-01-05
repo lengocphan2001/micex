@@ -90,76 +90,6 @@
         </div>
     </div>
 
-    <!-- Add Balance Section -->
-    <div class="card mb-4">
-        <div class="card-header bg-success">
-            <h3 class="card-title">Cộng đá quý cho thành viên</h3>
-        </div>
-        <div class="card-body">
-            @if (session('success'))
-                <div class="alert alert-success alert-dismissible fade show">
-                    {{ session('success') }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            @endif
-            @if (session('error'))
-                <div class="alert alert-danger alert-dismissible fade show">
-                    {{ session('error') }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            @endif
-            
-            <form action="{{ route('admin.member.add-balance', $user->id) }}" method="POST" id="addBalanceForm">
-                @csrf
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="amount">Số lượng đá quý</label>
-                            <input type="number" 
-                                   class="form-control @error('amount') is-invalid @enderror" 
-                                   id="amount" 
-                                   name="amount" 
-                                   step="0.01"
-                                   min="0.01"
-                                   required 
-                                   placeholder="Nhập số lượng đá quý">
-                            @error('amount')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">Số lượng đá quý sẽ được cộng vào số dư hiện tại</small>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="notes">Ghi chú (tùy chọn)</label>
-                            <textarea class="form-control @error('notes') is-invalid @enderror" 
-                                      id="notes" 
-                                      name="notes" 
-                                      rows="3" 
-                                      placeholder="Ghi chú về lý do cộng đá quý..."></textarea>
-                            @error('notes')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <div class="alert alert-info">
-                        <strong>Số dư hiện tại:</strong> {{ number_format($user->balance, 2) }} đá quý<br>
-                        <strong>Số dư sau khi cộng:</strong> <span id="newBalance">{{ number_format($user->balance, 2) }}</span> đá quý
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-success" onclick="return confirm('Bạn có chắc chắn muốn cộng đá quý cho thành viên này?')">
-                    <i class="fas fa-plus"></i> Cộng đá quý
-                </button>
-            </form>
-        </div>
-    </div>
-
     <!-- Change Password Section -->
     <div class="row">
         <div class="col-md-6">
@@ -297,19 +227,6 @@
         @if(session('error'))
             toastr.error('{{ session('error') }}');
         @endif
-
-        // Calculate new balance when amount changes
-        const amountInput = document.getElementById('amount');
-        const newBalanceSpan = document.getElementById('newBalance');
-        const currentBalance = {{ $user->balance }};
-
-        if (amountInput && newBalanceSpan) {
-            amountInput.addEventListener('input', function() {
-                const amount = parseFloat(this.value) || 0;
-                const newBalance = currentBalance + amount;
-                newBalanceSpan.textContent = newBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            });
-        }
     </script>
 @stop
 

@@ -36,7 +36,7 @@
         @forelse($bets as $bet)
             @php
                 $round = $bet->round;
-                $gameKey = $round->game_key ?? 'khaithac';
+                $gameKey = $round ? ($round->game_key ?? 'khaithac') : 'khaithac';
                 $gameName = $gameKey === 'xanhdo' ? 'Xanh đỏ 60s' : 'Khai thác 60s';
 
                 $createdAt = $bet->created_at;
@@ -44,17 +44,47 @@
 
                 // Choice label
                 if ($gameKey === 'xanhdo') {
-                    $choiceLabel = $bet->gem_type === 'kcxanh' ? 'Xanh' : ($bet->gem_type === 'kcdo' ? 'Đỏ' : 'Tím');
+                    // If bet_type is 'number', show the number; if 'color', show the color
+                    if ($bet->bet_type === 'number' && $bet->bet_value !== null) {
+                        $choiceLabel = $bet->bet_value; // Show the number
+                    } else {
+                        // Show color name
+                        $choiceLabel = $bet->gem_type === 'kcxanh' ? 'Xanh' : ($bet->gem_type === 'kcdo' ? 'Đỏ' : 'Tím');
+                    }
                 } else {
                     $choiceLabel = ($gemTypes[$bet->gem_type]['name'] ?? $bet->gem_type);
                 }
 
                 // Result label
-                $finalResult = $round->admin_set_result ?? $round->final_result ?? null;
-                if ($gameKey === 'xanhdo') {
-                    $resultLabel = $finalResult === 'kcxanh' ? 'Xanh' : ($finalResult === 'kcdo' ? 'Đỏ' : ($finalResult === 'daquy' ? 'Tím' : '-'));
-                } else {
-                    $resultLabel = $finalResult ? ($gemTypes[$finalResult]['name'] ?? $finalResult) : '-';
+                $resultLabel = '-';
+                if ($round) {
+                    $finalResult = $round->admin_set_result ?? $round->final_result ?? null;
+                    if ($finalResult !== null && $finalResult !== '') {
+                        if ($gameKey === 'xanhdo') {
+                            // For xanhdo, final_result is a number (0-9) stored as string
+                            // Convert to string first to ensure consistent comparison
+                            $finalResultStr = (string) $finalResult;
+                            
+                            // Check if it's a single digit (0-9)
+                            if (preg_match('/^[0-9]$/', $finalResultStr)) {
+                                $resultLabel = $finalResultStr;
+                            } elseif (is_numeric($finalResultStr)) {
+                                $resultNum = (int) $finalResultStr;
+                                if ($resultNum >= 0 && $resultNum <= 9) {
+                                    $resultLabel = (string) $resultNum;
+                                } else {
+                                    // Not a valid number, try legacy gem type
+                                    $resultLabel = $finalResultStr === 'kcxanh' ? 'Xanh' : ($finalResultStr === 'kcdo' ? 'Đỏ' : ($finalResultStr === 'daquy' ? 'Tím' : '-'));
+                                }
+                            } else {
+                                // Not numeric, try legacy gem type
+                                $resultLabel = $finalResultStr === 'kcxanh' ? 'Xanh' : ($finalResultStr === 'kcdo' ? 'Đỏ' : ($finalResultStr === 'daquy' ? 'Tím' : '-'));
+                            }
+                        } else {
+                            // For khaithac game
+                            $resultLabel = $gemTypes[$finalResult]['name'] ?? $finalResult;
+                        }
+                    }
                 }
 
                 // Amount display (UX like screenshot: pending shows -amount because stake is deducted)
