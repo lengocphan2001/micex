@@ -10,6 +10,7 @@ class Round extends Model
     use HasFactory;
 
     protected $fillable = [
+        'game_key',
         'round_number',
         'seed',
         'status',
@@ -63,14 +64,15 @@ class Round extends Model
      * Get current active round WITHOUT creating new one
      * Round should only be created by ProcessRoundTimer command
      */
-    public static function getCurrentRound()
+    public static function getCurrentRound(string $gameKey = 'khaithac')
     {
         // Tính round number từ BASE_TIME
         $roundNumber = self::calculateRoundNumber();
-        $expectedSeed = 'round_' . $roundNumber;
+        $expectedSeed = $gameKey . '_round_' . $roundNumber;
         
         // CHỈ lấy round có seed deterministic (round_ + roundNumber), BỎ round có seed random
-        return self::where('round_number', $roundNumber)
+        return self::where('game_key', $gameKey)
+            ->where('round_number', $roundNumber)
             ->where('seed', $expectedSeed)
             ->first();
     }
@@ -94,32 +96,35 @@ class Round extends Model
      * Tự động tạo round nếu chưa có, đảm bảo chạy background
      * Sử dụng lock để tránh race condition khi tạo round
      */
-    public static function getOrCreateRoundByNumber($roundNumber)
+    public static function getOrCreateRoundByNumber($roundNumber, string $gameKey = 'khaithac')
     {
         // Sử dụng lock để tránh race condition khi nhiều process cùng tạo round
-        $round = \DB::transaction(function () use ($roundNumber) {
-            $expectedSeed = 'round_' . $roundNumber;
+        $round = \DB::transaction(function () use ($roundNumber, $gameKey) {
+            $expectedSeed = $gameKey . '_round_' . $roundNumber;
             
             // CHỈ tìm round có seed deterministic (round_ + roundNumber)
             // BỎ TẤT CẢ round có seed random
-            $round = self::where('round_number', $roundNumber)
+            $round = self::where('game_key', $gameKey)
+                ->where('round_number', $roundNumber)
                 ->where('seed', $expectedSeed)
                 ->lockForUpdate()
                 ->first();
             
             if (!$round) {
                 // Double-check sau khi lock để tránh race condition
-                $round = self::where('round_number', $roundNumber)
+                $round = self::where('game_key', $gameKey)
+                    ->where('round_number', $roundNumber)
                     ->where('seed', $expectedSeed)
                     ->first();
                 
                 if (!$round) {
                     // Generate deterministic seed for this round (phải giống client)
                     // Client dùng: 'round_' + roundNumber
-                    $seed = 'round_' . $roundNumber;
+                    $seed = $gameKey . '_round_' . $roundNumber;
                     
                     try {
             $round = self::create([
+                            'game_key' => $gameKey,
                             'round_number' => $roundNumber,
                 'seed' => $seed,
                 'status' => 'pending',
@@ -129,7 +134,8 @@ class Round extends Model
                         // Nếu unique constraint violation (round đã được tạo bởi process khác)
                         // CHỈ lấy round có seed deterministic
                         if ($e->getCode() == 23000) { // SQLSTATE[23000]: Integrity constraint violation
-                            $round = self::where('round_number', $roundNumber)
+                            $round = self::where('game_key', $gameKey)
+                                ->where('round_number', $roundNumber)
                                 ->where('seed', $expectedSeed)
                                 ->first();
                         } else {
@@ -141,7 +147,8 @@ class Round extends Model
             
             // XÓA TẤT CẢ round có seed random (không phải deterministic) với cùng round_number
             // Chỉ giữ lại round có seed deterministic
-            $roundsWithRandomSeed = self::where('round_number', $roundNumber)
+            $roundsWithRandomSeed = self::where('game_key', $gameKey)
+                ->where('round_number', $roundNumber)
                 ->where('seed', '!=', $expectedSeed)
                 ->get();
             
@@ -166,7 +173,7 @@ class Round extends Model
         // Cleanup old rounds sau khi tạo round mới (ngoài transaction để tránh deadlock)
         // Chỉ cleanup khi round vừa được tạo trong transaction này
         try {
-            self::cleanupOldRounds();
+            self::cleanupOldRounds($gameKey);
         } catch (\Exception $e) {
             // Log error nhưng không throw để không ảnh hưởng đến việc tạo round
             \Log::warning('Error cleaning up old rounds: ' . $e->getMessage());
@@ -179,22 +186,24 @@ class Round extends Model
      * Cleanup old rounds - chỉ giữ lại tối đa 60 rounds gần nhất
      * Xóa các round cũ nhất, nhưng chỉ xóa các round đã finish và không có bets
      */
-    public static function cleanupOldRounds()
+    public static function cleanupOldRounds(string $gameKey = 'khaithac')
     {
         // Đếm tổng số rounds
-        $totalRounds = self::count();
+        $totalRounds = self::where('game_key', $gameKey)->count();
         
         // Nếu có nhiều hơn 60 rounds, cần xóa các round cũ
         if ($totalRounds > 60) {
             // Lấy 60 rounds gần nhất (theo round_number desc)
-            $latestRounds = self::orderBy('round_number', 'desc')
+            $latestRounds = self::where('game_key', $gameKey)
+                ->orderBy('round_number', 'desc')
                 ->limit(60)
                 ->pluck('id')
                 ->toArray();
             
             // Xóa các round không nằm trong danh sách 60 rounds gần nhất
             // Nhưng chỉ xóa các round đã finish và không có bets
-            $roundsToDelete = self::whereNotIn('id', $latestRounds)
+            $roundsToDelete = self::where('game_key', $gameKey)
+                ->whereNotIn('id', $latestRounds)
                 ->where('status', 'finished')
                 ->whereDoesntHave('bets')
                 ->get();
@@ -205,10 +214,11 @@ class Round extends Model
             
             // Nếu vẫn còn nhiều hơn 60 rounds sau khi xóa các round không có bets
             // Xóa các round cũ nhất (đã finish) ngay cả khi có bets (nhưng chỉ khi bets đã được xử lý)
-            $remainingCount = self::count();
+            $remainingCount = self::where('game_key', $gameKey)->count();
             if ($remainingCount > 60) {
                 $excessCount = $remainingCount - 60;
-                $oldestRounds = self::orderBy('round_number', 'asc')
+                $oldestRounds = self::where('game_key', $gameKey)
+                    ->orderBy('round_number', 'asc')
                     ->where('status', 'finished')
                     ->limit($excessCount)
                     ->get();
@@ -279,7 +289,7 @@ class Round extends Model
         $this->processBets();
         
         // Cleanup old rounds sau khi finish round
-        self::cleanupOldRounds();
+        self::cleanupOldRounds($this->game_key ?? 'khaithac');
     }
     
     /**
@@ -292,8 +302,15 @@ class Round extends Model
         }
         
         try {
+            $gameKey = $this->game_key ?? 'khaithac';
+            $settingKey = 'signal_grid_rounds_' . $gameKey;
+
             // Lấy rounds hiện tại từ SystemSetting
-            $stored = \App\Models\SystemSetting::getValue('signal_grid_rounds', '[]');
+            $stored = \App\Models\SystemSetting::getValue($settingKey, null);
+            // Backward-compat: migrate from old key once for khaithac
+            if ($stored === null && $gameKey === 'khaithac') {
+                $stored = \App\Models\SystemSetting::getValue('signal_grid_rounds', '[]');
+            }
             $rounds = json_decode($stored, true);
             
             if (!is_array($rounds)) {
@@ -337,8 +354,8 @@ class Round extends Model
                 }
             }
             
-            // Lưu lại vào SystemSetting
-            \App\Models\SystemSetting::setValue('signal_grid_rounds', json_encode($rounds), 'Signal grid rounds (48 rounds: 3 columns x 16 rounds each, 4 rows x 4 items)');
+            // Lưu lại vào SystemSetting (scoped per game)
+            \App\Models\SystemSetting::setValue($settingKey, json_encode($rounds), "Signal grid rounds for {$gameKey} (48 rounds: 3 columns x 16 rounds each, 4 rows x 4 items)");
         } catch (\Exception $e) {
             \Log::error("Error appending round to signal grid: " . $e->getMessage());
         }
@@ -367,6 +384,12 @@ class Round extends Model
         // Check if this is a jackpot result (nổ hũ)
         $jackpotTypes = ['thachanhtim', 'ngusac', 'cuoc'];
         $isJackpot = in_array($this->final_result, $jackpotTypes);
+
+        // Xanh đỏ rule:
+        // If final result is "Tím" (daquy) then bets on Xanh/Đỏ are also winning,
+        // but they still pay using their own payout_rate (stored on bet).
+        $isXanhDo = ($this->game_key ?? 'khaithac') === 'xanhdo';
+        $isPurpleWild = $isXanhDo && $this->final_result === 'daquy';
         
         // Get jackpot payout rate if it's a jackpot
         $jackpotPayoutRate = null;
@@ -428,7 +451,10 @@ class Round extends Model
                         if (abs((float) $user->balance - $newBalance) > 0.01) {
                             \Log::error("Bet {$bet->id}: Balance mismatch! Expected: {$newBalance}, Actual: {$user->balance}");
                         }
-                    } else if ($bet->gem_type === $this->final_result) {
+                    } else if (
+                        $bet->gem_type === $this->final_result
+                        || ($isPurpleWild && in_array($bet->gem_type, ['kcxanh', 'kcdo', 'daquy'], true))
+                    ) {
                         // User won (normal result)
                         $payoutAmount = $bet->amount * $bet->payout_rate;
                         

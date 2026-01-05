@@ -93,84 +93,73 @@ class ProcessRoundTimer extends Command
      */
     public function handle()
     {
-        // Tính round number từ BASE_TIME (giống client)
+        // Process independently per game (each game has its own round stream)
+        $games = ['khaithac', 'xanhdo'];
+
+        // Tính round number từ BASE_TIME (giống client) - shared timeline
         $currentRoundNumber = $this->calculateRoundNumber();
-        
-        // Get or create round với round_number này
-        $round = Round::getOrCreateRoundByNumber($currentRoundNumber);
-        
-        // Tính current second từ deadline
         $currentSecond = $this->calculateCurrentSecond($currentRoundNumber);
-        
-        // Nếu round chưa start và đã đến thời gian (currentSecond > 0)
-        if ($round->status === 'pending' && $currentSecond > 0) {
-            $round->start();
-            $this->info("Round {$round->round_number} started");
-            return 0;
-        }
-        
-        // Nếu round đang running
-        if ($round->status === 'running') {
-            // Tính deadline để check xem round đã finish chưa
-            $deadline = $this->calculateRoundDeadline($currentRoundNumber);
-            // Use UTC to match client-side calculation
-            $now = Carbon::now('UTC');
-            $countdown = max(0, (int) floor(($deadline->timestamp - $now->timestamp)));
-            
-            // Nếu đã đến giây 60 hoặc quá deadline (countdown = 0), finish round
-            if ($currentSecond >= 60 || $countdown <= 0) {
-                // Chỉ finish nếu chưa finish (tránh finish nhiều lần)
-                if ($round->status === 'running') {
+
+        foreach ($games as $gameKey) {
+            // Get or create round cho từng game
+            $round = Round::getOrCreateRoundByNumber($currentRoundNumber, $gameKey);
+
+            // Nếu round chưa start và đã đến thời gian (currentSecond > 0)
+            if ($round->status === 'pending' && $currentSecond > 0) {
+                $round->start();
+                $this->info("[{$gameKey}] Round {$round->round_number} started");
+                continue;
+            }
+
+            // Nếu round đang running
+            if ($round->status === 'running') {
+                // Tính deadline để check xem round đã finish chưa
+                $deadline = $this->calculateRoundDeadline($currentRoundNumber);
+                // Use UTC to match client-side calculation
+                $now = Carbon::now('UTC');
+                $countdown = max(0, (int) floor(($deadline->timestamp - $now->timestamp)));
+
+                // Nếu đã đến giây 60 hoặc quá deadline (countdown = 0), finish round
+                if ($currentSecond >= 60 || $countdown <= 0) {
                     // Refresh round để lấy admin_set_result mới nhất từ database
                     $round->refresh();
-                    
+
                     // Ưu tiên admin_set_result nếu có, nếu không thì random dựa vào tổng tiền đặt cược
                     $finalResult = null;
                     if ($round->admin_set_result) {
-                        // Admin đã set result, dùng admin_set_result
                         $finalResult = $round->admin_set_result;
-                        $this->info("Round {$round->round_number} using admin_set_result: {$finalResult}");
+                        $this->info("[{$gameKey}] Round {$round->round_number} using admin_set_result: {$finalResult}");
                     } else {
-                        // Admin chưa set, random dựa vào tổng tiền đặt cược
-                        // Đá có nhiều tiền nhất sẽ không thắng, random trong 2 đá còn lại
                         $finalResult = $round->randomResultBasedOnBets();
-                        $this->info("Round {$round->round_number} using random result based on bets: {$finalResult}");
+                        $this->info("[{$gameKey}] Round {$round->round_number} using random result based on bets: {$finalResult}");
                     }
-                    
-                    // Finish the round (this will process bets and update commission)
+
                     $round->finish($finalResult);
-                    $this->info("Round {$round->round_number} finished with result: {$finalResult}");
-                    
-                    // Refresh round để đảm bảo có final_result
+                    $this->info("[{$gameKey}] Round {$round->round_number} finished with result: {$finalResult}");
+
                     $round->refresh();
-                    
-                    // Log để debug
-                    \Log::info("Round {$round->round_number} finished", [
+                    \Log::info("[{$gameKey}] Round {$round->round_number} finished", [
                         'round_id' => $round->id,
                         'final_result' => $round->final_result,
                         'admin_set_result' => $round->admin_set_result,
                         'status' => $round->status,
                     ]);
+                } else if ($currentSecond > 0 && $currentSecond < 60) {
+                    $randomResult = $this->getGemForSecond($round->seed, $currentSecond);
+                    $round->update([
+                        'current_second' => $currentSecond,
+                        'current_result' => $randomResult,
+                    ]);
                 }
-            } else if ($currentSecond > 0 && $currentSecond < 60) {
-                // Update current second and result based on seed
-                $randomResult = $this->getGemForSecond($round->seed, $currentSecond);
-                
-                $round->update([
-                    'current_second' => $currentSecond,
-                    'current_result' => $randomResult,
-                ]);
             }
-        }
-        
-        // Nếu round đã finish nhưng chưa process bets (safety check)
-        if ($round->status === 'finished' && $round->final_result) {
-            // Kiểm tra xem còn bets pending không
-            $pendingBets = $round->bets()->where('status', 'pending')->count();
-            if ($pendingBets > 0) {
-                // Nếu còn bets pending, process lại
-                $this->warn("Round {$round->round_number} has {$pendingBets} pending bets, processing...");
-                $round->processBets();
+
+            // Safety: nếu round đã finish nhưng vẫn còn bets pending
+            if ($round->status === 'finished' && $round->final_result) {
+                $pendingBets = $round->bets()->where('status', 'pending')->count();
+                if ($pendingBets > 0) {
+                    $this->warn("[{$gameKey}] Round {$round->round_number} has {$pendingBets} pending bets, processing...");
+                    $round->processBets();
+                }
             }
         }
         

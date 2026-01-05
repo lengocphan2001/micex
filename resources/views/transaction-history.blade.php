@@ -1,6 +1,6 @@
 @extends('layouts.mobile')
 
-@section('title', 'Lịch sử giao dịch - Micex')
+@section('title', 'Lịch sử trò chơi - Micex')
 
 @section('header')
 <header class="w-full px-4 py-4 flex items-center justify-between bg-gray-900 border-b border-gray-800">
@@ -9,77 +9,115 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
     </button>
-    <h1 class="text-white text-base font-semibold">Lịch sử giao dịch</h1>
+    <h1 class="text-white text-base font-semibold">Lịch sử trò chơi</h1>
     <div class="w-6"></div>
 </header>
 @endsection
 
 @section('content')
 <div class="px-4 py-4">
-    <!-- Table Header -->
-    <div class="grid grid-cols-4 gap-3 mb-4 text-white text-sm font-semibold pb-3 border-b border-gray-600">
-        <div class="text-center">Thời gian</div>
-        <div class="text-center">Lựa chọn</div>
-        <div class="text-center">Số lượng</div>
-        <div class="text-center">Lợi nhuận</div>
+    <!-- Filters -->
+    @php
+        $gameFilter = $gameFilter ?? 'all';
+        $gameOptions = $gameOptions ?? ['all' => 'Tất cả', 'khaithac' => 'Khai thác 60s', 'xanhdo' => 'Xanh đỏ 60s'];
+    @endphp
+    <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar mb-4">
+        @foreach($gameOptions as $key => $label)
+            <a href="{{ route('transaction-history', ['game' => $key]) }}"
+               class="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap border transition-colors
+                    {{ $gameFilter === $key ? 'bg-[#3958F5] text-white border-[#3958F5]' : 'bg-gray-800 text-gray-200 border-gray-700 hover:bg-gray-700' }}">
+                {{ $label }}
+            </a>
+        @endforeach
     </div>
 
-    <!-- Table Rows -->
-    <div class="space-y-3">
+    <!-- History cards -->
+    <div class="space-y-4">
         @forelse($bets as $bet)
             @php
-                $gemType = $gemTypes[$bet->gem_type] ?? null;
-                $gemIcon = $gemType ? asset('images/icons/' . $gemType['icon']) : asset('images/icons/kcxanh.png');
-                $gemName = $gemType ? $gemType['name'] : 'N/A';
-                
-                $profitAmount = 0;
-                $profitColor = 'text-gray-400';
-                
-                if ($bet->status === 'won') {
-                    $profitAmount = $bet->payout_amount ?? ($bet->amount * $bet->payout_rate);
-                    $profitColor = 'text-green-400';
-                } elseif ($bet->status === 'lost') {
-                    $profitAmount = -$bet->amount;
-                    $profitColor = 'text-red-400';
-                } elseif ($bet->status === 'pending') {
-                    $profitAmount = 0;
-                    $profitColor = 'text-gray-400';
-                }
-                
-                // Format date and time
+                $round = $bet->round;
+                $gameKey = $round->game_key ?? 'khaithac';
+                $gameName = $gameKey === 'xanhdo' ? 'Xanh đỏ 60s' : 'Khai thác 60s';
+
                 $createdAt = $bet->created_at;
-                $time = $createdAt->format('H:i');
-                $date = $createdAt->format('d-m-Y');
+                $time = $createdAt->format('Y-m-d H:i:s');
+
+                // Choice label
+                if ($gameKey === 'xanhdo') {
+                    $choiceLabel = $bet->gem_type === 'kcxanh' ? 'Xanh' : ($bet->gem_type === 'kcdo' ? 'Đỏ' : 'Tím');
+                } else {
+                    $choiceLabel = ($gemTypes[$bet->gem_type]['name'] ?? $bet->gem_type);
+                }
+
+                // Result label
+                $finalResult = $round->admin_set_result ?? $round->final_result ?? null;
+                if ($gameKey === 'xanhdo') {
+                    $resultLabel = $finalResult === 'kcxanh' ? 'Xanh' : ($finalResult === 'kcdo' ? 'Đỏ' : ($finalResult === 'daquy' ? 'Tím' : '-'));
+                } else {
+                    $resultLabel = $finalResult ? ($gemTypes[$finalResult]['name'] ?? $finalResult) : '-';
+                }
+
+                // Amount display (UX like screenshot: pending shows -amount because stake is deducted)
+                $displayAmount = 0;
+                $displayColor = 'text-gray-300';
+                $statusText = '';
+                if ($bet->status === 'pending') {
+                    $displayAmount = - (float) $bet->amount;
+                    $displayColor = 'text-yellow-400';
+                    $statusText = 'Chờ kết quả';
+                } elseif ($bet->status === 'lost') {
+                    $displayAmount = - (float) $bet->amount;
+                    $displayColor = 'text-red-400';
+                } elseif ($bet->status === 'won') {
+                    $displayAmount = (float) ($bet->payout_amount ?? ((float)$bet->amount * (float)$bet->payout_rate));
+                    $displayColor = 'text-green-400';
+                }
             @endphp
-            
-        <div class="grid grid-cols-4 gap-3 py-3 border-b border-gray-700/30 hover:bg-gray-800/30 transition-colors rounded px-2">
-            <div class="text-white text-xs text-center leading-tight">
-                    <div class="font-medium">{{ $time }}</div>
-                    <div class="text-gray-400">{{ $date }}</div>
-            </div>
-            <div class="flex items-center justify-center">
-                    <img src="{{ $gemIcon }}" alt="{{ $gemName }}" class="w-8 h-8 object-contain">
-            </div>
-            <div class="text-white text-xs text-center flex items-center justify-center gap-1.5">
-                    <span class="font-medium">{{ number_format($bet->amount, 2, '.', ',') }}</span>
-                <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin" class="w-5 h-5 object-contain">
-        </div>
-                <div class="{{ $profitColor }} text-xs text-center font-bold flex items-center justify-center">
-                    @if($profitAmount > 0)
-                        +{{ number_format($profitAmount, 2, '.', ',') }}$
-                    @elseif($profitAmount < 0)
-                        {{ number_format($profitAmount, 2, '.', ',') }}$
-                    @else
-                        -
-                    @endif
-            </div>
+
+            <div class="rounded-2xl bg-[#0f1118] border border-white/10 p-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="{{ $displayColor }} text-lg font-bold">
+                        @if($displayAmount > 0)
+                            +{{ number_format($displayAmount, 2, '.', ',') }} USDT
+                        @else
+                            {{ number_format($displayAmount, 2, '.', ',') }} USDT
+                        @endif
+                    </div>
+                    <div class="text-yellow-400 font-semibold whitespace-nowrap">
+                        Thông tin chi tiết <span class="text-white/70">›</span>
+                    </div>
+                </div>
+
+                <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div class="text-white/50">• Trò chơi</div>
+                    <div class="text-white text-right">{{ $gameName }}</div>
+
+                    <div class="text-white/50">• No.</div>
+                    <div class="text-white text-right">{{ $round->round_number ?? '-' }}</div>
+
+                    <div class="text-white/50">• Thời gian đặt cược</div>
+                    <div class="text-white text-right">{{ $time }}</div>
+
+                    <div class="text-white/50">• Lựa chọn cược</div>
+                    <div class="text-white text-right">{{ $choiceLabel }}</div>
+
+                    <div class="text-white/50">• Kết quả</div>
+                    <div class="text-white text-right">{{ $resultLabel }}</div>
+
+                    <div class="text-white/50">• Tổng đơn cược</div>
+                    <div class="text-white text-right">{{ number_format($bet->amount, 2, '.', ',') }} USDT</div>
+                </div>
+
+                @if($statusText)
+                    <div class="mt-3 {{ $displayColor }} font-semibold">{{ $statusText }}</div>
+                @endif
             </div>
         @empty
-            <div class="text-center py-8">
-                <p class="text-gray-400 text-sm">Chưa có giao dịch nào</p>
+            <div class="text-center py-10">
+                <p class="text-gray-400 text-sm">Chưa có lịch sử trò chơi</p>
             </div>
         @endforelse
-        </div>
+    </div>
 
     <!-- Pagination -->
     @if($bets->hasPages())

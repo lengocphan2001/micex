@@ -13,11 +13,27 @@ use Illuminate\Support\Facades\DB;
 class ExploreController extends Controller
 {
     /**
-     * Show explore page
+     * Show games hub (Explore tab)
      */
     public function index()
     {
+        return view('games.index');
+    }
+
+    /**
+     * Game: Khai thác 60s (existing explore game UI)
+     */
+    public function khaithac60s()
+    {
         return view('explore');
+    }
+
+    /**
+     * Game: Xanh đỏ 60s (new UI, mapped to existing explore backend)
+     */
+    public function xanhDo60s()
+    {
+        return view('games.xanhdo-60s');
     }
 
     // Tỉ lệ random cho mỗi loại đá (tổng = 100)
@@ -100,7 +116,7 @@ class ExploreController extends Controller
         // Lưu ý: Round được tạo và quản lý bởi ProcessRoundTimer command (background)
         // Không tự động tạo hoặc start round ở đây để tránh duplicate
         // CHỈ lấy round có seed deterministic (round_ + roundNumber), BỎ round có seed random
-        $round = Round::getCurrentRound();
+        $round = Round::getCurrentRound('khaithac');
         
         // Nếu round chưa tồn tại, trả về null (không tạo mới)
         // Round sẽ được tạo bởi ProcessRoundTimer command
@@ -309,7 +325,7 @@ class ExploreController extends Controller
         ]);
 
         // Get current round (không tạo mới, chỉ lấy từ database)
-        $round = Round::getCurrentRound();
+        $round = Round::getCurrentRound('khaithac');
         
         if (!$round) {
             return response()->json(['error' => 'Round not found'], 404);
@@ -435,7 +451,7 @@ class ExploreController extends Controller
         $user->refresh();
 
         // Lấy bet của round hiện tại trước
-        $round = Round::getCurrentRound();
+        $round = Round::getCurrentRound('khaithac');
         
         $bet = null;
         if ($round) {
@@ -495,8 +511,9 @@ class ExploreController extends Controller
             'round_number' => 'required|integer',
         ]);
         
-        $round = Round::where('round_number', $validated['round_number'])
-            ->where('seed', 'round_' . $validated['round_number'])
+        $round = Round::where('game_key', 'khaithac')
+            ->where('round_number', $validated['round_number'])
+            ->where('seed', 'khaithac_round_' . $validated['round_number'])
             ->first();
         
         if (!$round) {
@@ -570,7 +587,11 @@ class ExploreController extends Controller
      */
     public function getSignalGridRounds()
     {
-        $stored = SystemSetting::getValue('signal_grid_rounds', '[]');
+        $stored = SystemSetting::getValue('signal_grid_rounds_khaithac', null);
+        if ($stored === null) {
+            // Backward-compat: old key
+            $stored = SystemSetting::getValue('signal_grid_rounds', '[]');
+        }
         $rounds = json_decode($stored, true);
         
         if (!is_array($rounds)) {
@@ -597,7 +618,10 @@ class ExploreController extends Controller
         ]);
         
         // Lấy rounds hiện tại từ SystemSetting
-        $stored = SystemSetting::getValue('signal_grid_rounds', '[]');
+        $stored = SystemSetting::getValue('signal_grid_rounds_khaithac', null);
+        if ($stored === null) {
+            $stored = SystemSetting::getValue('signal_grid_rounds', '[]');
+        }
         $rounds = json_decode($stored, true);
         
         if (!is_array($rounds)) {
@@ -642,7 +666,7 @@ class ExploreController extends Controller
         }
         
         // Lưu lại vào SystemSetting
-        SystemSetting::setValue('signal_grid_rounds', json_encode($rounds), 'Signal grid rounds (48 rounds: 3 columns x 16 rounds each, 4 rows x 4 items)');
+        SystemSetting::setValue('signal_grid_rounds_khaithac', json_encode($rounds), 'Signal grid rounds for khaithac (48 rounds: 3 columns x 16 rounds each, 4 rows x 4 items)');
         
         // Trả về tất cả 48 rounds cho client
         return response()->json(['success' => true, 'rounds' => $rounds]);
@@ -653,7 +677,7 @@ class ExploreController extends Controller
      */
     public function getBetAmounts()
     {
-        $round = Round::getCurrentRound();
+        $round = Round::getCurrentRound('khaithac');
         
         if (!$round) {
             return response()->json(['bet_amounts' => []]);

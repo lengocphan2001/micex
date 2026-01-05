@@ -81,6 +81,8 @@ Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
 
     // Explore screen
     Route::get('/explore', [\App\Http\Controllers\ExploreController::class, 'index'])->name('explore');
+    Route::get('/explore/khaithac-60s', [\App\Http\Controllers\ExploreController::class, 'khaithac60s'])->name('games.khaithac');
+    Route::get('/explore/xanhdo-60s', [\App\Http\Controllers\ExploreController::class, 'xanhDo60s'])->name('games.xanhdo');
     
     // Explore API endpoints
     Route::get('/api/explore/current-round', [\App\Http\Controllers\ExploreController::class, 'getCurrentRound'])->name('explore.current-round');
@@ -93,6 +95,12 @@ Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
     Route::get('/api/explore/round-result', [\App\Http\Controllers\ExploreController::class, 'getRoundResult'])->name('explore.round-result');
     Route::get('/api/explore/signal-grid-rounds', [\App\Http\Controllers\ExploreController::class, 'getSignalGridRounds'])->name('explore.signal-grid-rounds');
     Route::post('/api/explore/signal-grid-rounds/append', [\App\Http\Controllers\ExploreController::class, 'appendSignalGridRound'])->name('explore.signal-grid-rounds.append');
+
+    // Xanh đỏ 60s API endpoints (separate backend stream)
+    Route::get('/api/xanhdo/gem-types', [\App\Http\Controllers\XanhDoController::class, 'getGemTypes'])->name('xanhdo.gem-types');
+    Route::post('/api/xanhdo/bet', [\App\Http\Controllers\XanhDoController::class, 'placeBet'])->name('xanhdo.bet');
+    Route::get('/api/xanhdo/my-bet', [\App\Http\Controllers\XanhDoController::class, 'getMyBet'])->name('xanhdo.my-bet');
+    Route::get('/api/xanhdo/round-result', [\App\Http\Controllers\XanhDoController::class, 'getRoundResult'])->name('xanhdo.round-result');
 
     // Assets screen
     Route::get('/assets', function () {
@@ -177,17 +185,25 @@ Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
         return view('me-change-fund-password');
     })->name('me.change-fund-password');
 
-    Route::get('/transaction-history', function () {
+    Route::get('/transaction-history', function (Request $request) {
         $user = Auth::guard('web')->user();
         if (!$user) {
             return redirect()->route('login');
         }
         
+        $gameFilter = $request->query('game', 'all'); // all|khaithac|xanhdo
+
         // Get user's bets with round information, ordered by created_at desc
-        $bets = \App\Models\Bet::where('user_id', $user->id)
-            ->with('round')
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $betsQuery = \App\Models\Bet::where('user_id', $user->id)->with('round')->orderBy('created_at', 'desc');
+
+        // Filter per game (if rounds.game_key exists)
+        if ($gameFilter !== 'all' && \Illuminate\Support\Facades\Schema::hasColumn('rounds', 'game_key')) {
+            $betsQuery->whereHas('round', function ($q) use ($gameFilter) {
+                $q->where('game_key', $gameFilter);
+            });
+        }
+
+        $bets = $betsQuery->paginate(20)->withQueryString();
         
         // Gem types mapping
         $gemTypes = [
@@ -202,7 +218,13 @@ Route::middleware(['auth', 'single.session', 'no.store'])->group(function () {
             'kimcuong' => ['name' => 'Kim Cương Đỏ', 'icon' => 'kcdo.png'],
         ];
         
-        return view('transaction-history', compact('bets', 'gemTypes'));
+        $gameOptions = [
+            'all' => 'Tất cả',
+            'khaithac' => 'Khai thác 60s',
+            'xanhdo' => 'Xanh đỏ 60s',
+        ];
+
+        return view('transaction-history', compact('bets', 'gemTypes', 'gameFilter', 'gameOptions'));
     })->name('transaction-history');
 
     Route::get('/notifications', function () {

@@ -394,7 +394,7 @@
             </div>
             <h3 class="text-white text-base font-bold mb-2">Đào liền tay ! Ring quà về ngay?</h3>
             <p class="text-gray-400 text-xs mb-4">Phần thưởng lên tới 1000 USDT đang chờ bạn</p>
-            <a href="{{ route('explore') }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-10 py-2 rounded-4xl mb-4 transition-colors text-center">
+            <a href="{{ route('games.khaithac') }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-10 py-2 rounded-4xl mb-4 transition-colors text-center">
                 Đào ngay
             </a>
             <!-- Countdown Timer -->

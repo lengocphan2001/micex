@@ -134,7 +134,7 @@ class AdminController extends Controller
         ];
         
         // Get current round (không tạo mới, chỉ lấy từ database)
-        $currentRound = Round::getCurrentRound();
+        $currentRound = Round::getCurrentRound('khaithac');
         
         // Nếu round chưa tồn tại, tạo round rỗng để view không bị lỗi
         if (!$currentRound) {
@@ -341,7 +341,7 @@ class AdminController extends Controller
      */
     public function getRealtimeRoundData()
     {
-        $round = Round::getCurrentRound();
+        $round = Round::getCurrentRound('khaithac');
         
         if (!$round) {
             return response()->json([
@@ -411,7 +411,7 @@ class AdminController extends Controller
      */
     public function getBetAmounts()
     {
-        $round = Round::getCurrentRound();
+        $round = Round::getCurrentRound('khaithac');
         
         if (!$round) {
             return response()->json(['bet_amounts' => []]);

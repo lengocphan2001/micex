@@ -51,8 +51,14 @@
 @endpush
 
 @section('header')
-    <header class="w-full px-4 py-4 flex items-center justify-center bg-gray-900 border-b border-gray-800">
-        <h1 class="text-white text-base font-semibold">Trò Chơi</h1>
+    <header class="w-full px-4 py-4 flex items-center justify-between bg-gray-900 border-b border-gray-800">
+        <a href="{{ route('explore') }}" class="text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </a>
+        <h1 class="text-white text-base font-semibold">Khai thác 60s</h1>
+        <div class="w-6"></div>
     </header>
 @endsection
 

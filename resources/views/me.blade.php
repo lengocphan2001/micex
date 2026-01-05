@@ -53,7 +53,7 @@
 
     <div class="space-y-3">
         <a href="{{ route('transaction-history') }}" class="block w-full h-12 rounded-[10px] border-[0.5px] border-[#3958F5] px-4 py-3 text-base text-white transition-all hover:bg-[#3958F5]/20 hover:border-[#3958F5]/80" style="background: linear-gradient(90deg, rgba(201, 157, 62, 0) 15.06%, rgba(243, 172, 18, 0) 100%);">
-            <span>Lịch sử giao dịch</span>
+            <span>Lịch sử trò chơi</span>
         </a>
         <a href="{{ route('deposit-withdraw-history') }}" class="block w-full h-12 rounded-[10px] border-[0.5px] border-[#3958F5] px-4 py-3 text-base text-white transition-all hover:bg-[#3958F5]/20 hover:border-[#3958F5]/80" style="background: linear-gradient(90deg, rgba(201, 157, 62, 0) 15.06%, rgba(243, 172, 18, 0) 100%);">
             <span>Lịch sử nạp & rút</span>

@@ -93,8 +93,8 @@ return Application::configure(basePath: dirname(__DIR__))
             $referer = $request->headers->get('referer');
             if ($referer) {
                 return redirect()->to($referer)
-                    ->withInput($request->except('password', '_token'))
-                    ->with('error', 'Phiên đăng nhập đã hết hạn. Vui lòng thử lại.');
+                ->withInput($request->except('password', '_token'))
+                ->with('error', 'Phiên đăng nhập đã hết hạn. Vui lòng thử lại.');
             }
 
             return redirect()->route('login')
