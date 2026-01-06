@@ -422,7 +422,7 @@ class Round extends Model
         // Winning conditions:
         // 0: số 0, màu đỏ (kcdo), màu tím (daquy)
         // 1: số 1, màu xanh (kcxanh)
-        // 2: số 2, màu xanh (kcxanh), màu đỏ (kcdo) - vì 2 thuộc cả xanh và đỏ
+        // 2: số 2, màu đỏ (kcdo)
         // 3: số 3, màu xanh (kcxanh)
         // 4: số 4, màu đỏ (kcdo)
         // 5: số 5, màu tím (daquy), màu xanh (kcxanh)
@@ -439,15 +439,15 @@ class Round extends Model
             $winningNumbers[] = $resultNum; // The number itself wins
             
             // Determine winning colors based on number
-            // 1,2,3,7,9: xanh (kcxanh)
-            // 4,6,8: đỏ (kcdo)
+            // 1,3,7,9: xanh (kcxanh)
+            // 2,4,6,8: đỏ (kcdo)
             // 0: tím (daquy) + đỏ (kcdo)
             // 5: tím (daquy) + xanh (kcxanh)
             if ($resultNum === 0) {
                 $winningGemTypes = ['daquy', 'kcdo']; // tím + đỏ
-            } elseif (in_array($resultNum, [1, 2, 3, 7, 9])) {
+            } elseif (in_array($resultNum, [1, 3, 7, 9])) {
                 $winningGemTypes = ['kcxanh']; // xanh
-            } elseif (in_array($resultNum, [4, 6, 8])) {
+            } elseif (in_array($resultNum, [2, 4, 6, 8])) {
                 $winningGemTypes = ['kcdo']; // đỏ
             } elseif ($resultNum === 5) {
                 $winningGemTypes = ['daquy', 'kcxanh']; // tím + xanh

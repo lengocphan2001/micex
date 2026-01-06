@@ -107,6 +107,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/xanhdo/my-bet', [\App\Http\Controllers\XanhDoController::class, 'getMyBet'])->name('xanhdo.my-bet');
     Route::get('/api/xanhdo/round-result', [\App\Http\Controllers\XanhDoController::class, 'getRoundResult'])->name('xanhdo.round-result');
     Route::get('/api/xanhdo/recent-results', [\App\Http\Controllers\XanhDoController::class, 'getRecentResults'])->name('xanhdo.recent-results');
+    Route::get('/api/xanhdo/round-winnings', [\App\Http\Controllers\XanhDoController::class, 'getRoundWinnings'])->name('xanhdo.round-winnings');
 
     // Assets screen
     Route::get('/assets', function () {

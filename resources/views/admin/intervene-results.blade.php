@@ -336,9 +336,9 @@
                                                             $winningColors[] = 'Tím + Đỏ';
                                                         } elseif ($resultNum === 5) {
                                                             $winningColors[] = 'Tím + Xanh';
-                                                        } elseif (in_array($resultNum, [1, 2, 3, 7, 9])) {
+                                                        } elseif (in_array($resultNum, [1, 3, 7, 9])) {
                                                             $winningColors[] = 'Xanh';
-                                                        } elseif (in_array($resultNum, [4, 6, 8])) {
+                                                        } elseif (in_array($resultNum, [2, 4, 6, 8])) {
                                                             $winningColors[] = 'Đỏ';
                                                         }
                                                     @endphp
@@ -373,9 +373,9 @@
                                                             $winningColors[] = 'Tím + Đỏ';
                                                         } elseif ($i === 5) {
                                                             $winningColors[] = 'Tím + Xanh';
-                                                        } elseif (in_array($i, [1, 2, 3, 7, 9])) {
+                                                        } elseif (in_array($i, [1, 3, 7, 9])) {
                                                             $winningColors[] = 'Xanh';
-                                                        } elseif (in_array($i, [4, 6, 8])) {
+                                                        } elseif (in_array($i, [2, 4, 6, 8])) {
                                                             $winningColors[] = 'Đỏ';
                                                         }
                                                         $adminResult = is_numeric($currentRoundXanhdo->admin_set_result ?? '') ? (int)$currentRoundXanhdo->admin_set_result : null;
@@ -565,8 +565,8 @@
                                 let winningColors = [];
                                 if (resultNum === 0) winningColors.push('Tím + Đỏ');
                                 else if (resultNum === 5) winningColors.push('Tím + Xanh');
-                                else if ([1, 2, 3, 7, 9].includes(resultNum)) winningColors.push('Xanh');
-                                else if ([4, 6, 8].includes(resultNum)) winningColors.push('Đỏ');
+                                else if ([1, 3, 7, 9].includes(resultNum)) winningColors.push('Xanh');
+                                else if ([2, 4, 6, 8].includes(resultNum)) winningColors.push('Đỏ');
                                 roundFinalResultEl.innerHTML = '<br><strong>Kết quả:</strong> <span class="badge badge-primary" style="font-size: 1.2em; padding: 8px 12px;">' + resultNum + '</span> <span class="ml-2">(' + winningColors.join(', ') + ')</span>';
                             } else {
                                 roundFinalResultEl.innerHTML = '<br><strong>Kết quả:</strong> ' + data.round.final_result;
@@ -597,8 +597,8 @@
                                 let winningColors = [];
                                 if (resultNum === 0) winningColors.push('Tím + Đỏ');
                                 else if (resultNum === 5) winningColors.push('Tím + Xanh');
-                                else if ([1, 2, 3, 7, 9].includes(resultNum)) winningColors.push('Xanh');
-                                else if ([4, 6, 8].includes(resultNum)) winningColors.push('Đỏ');
+                                else if ([1, 3, 7, 9].includes(resultNum)) winningColors.push('Xanh');
+                                else if ([2, 4, 6, 8].includes(resultNum)) winningColors.push('Đỏ');
                                 adminSetResultDisplay.innerHTML = '<span class="badge badge-primary" style="font-size: 1.2em; padding: 8px 12px;">' + resultNum + '</span> <span class="ml-2">(' + winningColors.join(', ') + ')</span>';
                             }
                             if (adminSetResultAlert) {

@@ -275,9 +275,9 @@ class XanhDoController extends Controller
                         $winningColors = ['daquy', 'kcdo']; // tím + đỏ
                     } elseif ($resultNum === 5) {
                         $winningColors = ['daquy', 'kcxanh']; // tím + xanh
-                    } elseif (in_array($resultNum, [1, 2, 3, 7, 9])) {
+                    } elseif (in_array($resultNum, [1, 3, 7, 9])) {
                         $winningColors = ['kcxanh']; // xanh
-                    } elseif (in_array($resultNum, [4, 6, 8])) {
+                    } elseif (in_array($resultNum, [2, 4, 6, 8])) {
                         $winningColors = ['kcdo']; // đỏ
                     }
                 }
@@ -297,6 +297,46 @@ class XanhDoController extends Controller
             ->values();
 
         return response()->json($rounds);
+    }
+
+    /**
+     * Get total winnings for a specific round
+     */
+    public function getRoundWinnings(Request $request)
+    {
+        $user = Auth::guard('web')->user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'round_number' => 'required|integer',
+        ]);
+
+        $round = Round::where('game_key', self::GAME_KEY)
+            ->where('round_number', $validated['round_number'])
+            ->first();
+
+        if (!$round) {
+            return response()->json([
+                'total_winnings' => 0,
+                'has_winnings' => false,
+            ]);
+        }
+
+        // Get all winning bets for this round and user
+        $winningBets = Bet::where('round_id', $round->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'won')
+            ->get();
+
+        $totalWinnings = $winningBets->sum('payout_amount');
+
+        return response()->json([
+            'total_winnings' => $totalWinnings,
+            'has_winnings' => $totalWinnings > 0,
+            'round_number' => $round->round_number,
+        ]);
     }
 }
 

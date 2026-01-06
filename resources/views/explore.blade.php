@@ -52,7 +52,7 @@
 
 @section('header')
     <header class="w-full px-4 py-4 flex items-center justify-between bg-gray-900 border-b border-gray-800">
-        <a href="{{ route('explore') }}" class="text-white">
+        <a href="{{ route('games.index') }}" class="text-white">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>

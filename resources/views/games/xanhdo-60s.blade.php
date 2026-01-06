@@ -29,7 +29,7 @@
 
 @section('header')
 <header class="w-full px-4 py-4 flex items-center justify-between bg-gray-900 border-b border-gray-800">
-    <a href="{{ route('explore') }}" class="text-white">
+    <a href="{{ route('games.index') }}" class="text-white">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
@@ -40,8 +40,8 @@
 @endsection
 
 @section('content')
-<div class="px-4 py-4 space-y-4">
-    <div class="flex items-center justify-between">
+<div class="">
+    <div class="flex items-center justify-between p-4">
         <div class="flex items-center gap-2">
             <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center w-8 h-8 rounded-full xd-chip">
@@ -53,14 +53,18 @@
         </div>
         <div class="flex items-center gap-2">
             <div class="flex items-center gap-2 rounded-full xd-chip px-3 py-2">
-                <span class="text-white/80 text-sm">•••</span>
+                <button type="button" id="showRecentResultsBtn" class="text-white/80 text-sm cursor-pointer hover:text-white transition-colors">•••</button>
                 <span class="w-px h-4 bg-white/15"></span>
-                <a href="{{ route('explore') }}" class="text-white/80 text-sm font-semibold">X</a>
+                <a href="{{ route('games.index') }}" class="text-white/80 hover:text-white transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </a>
             </div>
         </div>
     </div>
 
-        <div class="xd-card rounded-2xl p-4 space-y-3">
+        <div class="xd-card p-4 space-y-3">
             <div class="flex items-start">
              <div class="w-full">
                  <div class="w-full flex items-center justify-between gap-3">
@@ -83,7 +87,7 @@
         </div>
 
         <div class="text-white/75 text-xs leading-relaxed">
-            Đoán giá trị của 0-9, 1, 2, 3, 5, 7, 9 là màu xanh, 0, 2, 4, 6, 8 là màu đỏ và 0 (tím + đỏ) hoặc 5 (tím + xanh).
+            Đoán giá trị của 0-9, 1, 3, 5, 7, 9 là màu xanh, 2, 4, 6, 8 là màu đỏ và 0 (tím + đỏ) hoặc 5 (tím + xanh).
         </div>
 
         <div class="grid grid-cols-3 gap-3 pt-2">
@@ -106,7 +110,7 @@
         </div>
     </div>
 
-    <div class="xd-card rounded-2xl p-4 space-y-3">
+    <div class="xd-card p-4 space-y-3">
         <!-- Balance (like explore) -->
         <div class="flex items-center gap-4">
             <div class="flex items-center justify-center gap-2">
@@ -147,7 +151,7 @@
 
 <!-- Recent Results Popup -->
 <div id="recentResultsPopup" class="fixed inset-0 z-50 hidden items-start justify-center bg-black/50 backdrop-blur-sm pt-6" style="display: none;">
-    <div class="w-full max-w-md bg-gray-900 rounded-b-3xl shadow-2xl max-h-[80vh] flex flex-col">
+    <div class="w-full max-w-md bg-gray-900 shadow-2xl max-h-[80vh] flex flex-col">
         <div class="flex items-center justify-between p-4 border-b border-gray-800">
             <h3 class="text-white text-lg font-semibold">Kết quả gần nhất</h3>
             <button type="button" id="closeRecentResults" class="text-white/60 hover:text-white">
@@ -175,6 +179,27 @@
         </div>
     </div>
 </div>
+
+<!-- Winning Result Popup -->
+<div id="winningResultPopup" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70" style="display: none;">
+    <div class="relative w-full max-w-sm mx-4">
+        <button type="button" id="closeWinningResult" class="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-[#2F2F5C] flex items-center justify-center text-white hover:bg-[#3F3F6C] transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <div class="relative">
+            <img src="{{ asset('images/xanhdoresult1.png') }}" alt="Kết quả thắng" class="w-full h-auto">
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="text-center" style="margin-top: 20%;">
+                    <div id="winningAmountText" class="text-green-500 font-bold text-4xl" style="text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);">
+                        + 0$
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -187,6 +212,7 @@
     let xdMyBets = []; // Array of bets for current round
     let xdLastRoundNumberSeen = null;
     let xdRoundFlipRetryTimer = null;
+    let xdLastCheckedRound = null; // Track which round we've already checked for winnings
 
     function xdCalculateRoundNumber() {
         const now = Date.now();
@@ -210,8 +236,8 @@
         if (n === 0) return 'tim'; // Can bet on both tím and đỏ
         // 5: tím + xanh
         if (n === 5) return 'tim'; // Can bet on both tím and xanh
-        // 1, 2, 3, 5, 7, 9: xanh
-        if ([1, 2, 3, 5, 7, 9].includes(n)) return 'xanh';
+        // 1, 3, 5, 7, 9: xanh
+        if ([1, 3, 5, 7, 9].includes(n)) return 'xanh';
         // 0, 2, 4, 6, 8: đỏ
         if ([0, 2, 4, 6, 8].includes(n)) return 'do';
         return 'do'; // default
@@ -224,12 +250,11 @@
             winning.push('daquy', 'kcdo'); // tím + đỏ
         } else if (n === 5) {
             winning.push('daquy', 'kcxanh'); // tím + xanh
-        } else if ([1, 2, 3, 7, 9].includes(n)) {
+        } else if ([1, 3, 7, 9].includes(n)) {
             winning.push('kcxanh'); // xanh
-        } else if ([4, 6, 8].includes(n)) {
+        } else if ([2, 4, 6, 8].includes(n)) {
             winning.push('kcdo'); // đỏ
         }
-        // Note: 2 is both xanh and đỏ, but we'll handle it as xanh for display
         return winning;
     }
 
@@ -447,6 +472,46 @@
         popup.style.display = 'none';
     }
 
+    async function xdCheckRoundWinnings(roundNumber) {
+        // Only check once per round
+        if (xdLastCheckedRound === roundNumber) return;
+        
+        try {
+            const res = await fetch(`{{ route('xanhdo.round-winnings') }}?round_number=${roundNumber}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!res.ok) return;
+            
+            const data = await res.json();
+            if (data && data.has_winnings && data.total_winnings > 0) {
+                xdLastCheckedRound = roundNumber;
+                xdShowWinningResult(data.total_winnings);
+            }
+        } catch (e) {
+            console.error('Error checking round winnings:', e);
+        }
+    }
+
+    function xdShowWinningResult(amount) {
+        const popup = document.getElementById('winningResultPopup');
+        const amountText = document.getElementById('winningAmountText');
+        if (!popup || !amountText) return;
+        
+        // Format amount: + 19$ or + 19.50$
+        const formattedAmount = amount % 1 === 0 
+            ? `+ ${amount}$` 
+            : `+ ${amount.toFixed(2)}$`;
+        
+        amountText.textContent = formattedAmount;
+        popup.style.display = 'flex';
+    }
+
+    function xdHideWinningResult() {
+        const popup = document.getElementById('winningResultPopup');
+        if (!popup) return;
+        popup.style.display = 'none';
+    }
+
     function xdTick() {
         const roundNumber = xdCalculateRoundNumber();
         const deadline = xdCalculateRoundDeadline(roundNumber);
@@ -467,6 +532,7 @@
         if (xdLastRoundNumberSeen === null) {
             xdLastRoundNumberSeen = roundNumber;
         } else if (roundNumber !== xdLastRoundNumberSeen) {
+            const prevRound = xdLastRoundNumberSeen;
             xdLastRoundNumberSeen = roundNumber;
             // Clear pending retries
             if (xdRoundFlipRetryTimer) {
@@ -476,6 +542,11 @@
             // Fetch immediately + retry a few times to catch backend finishing timing
             const runRefresh = async (attempt = 0) => {
                 await xdLoadBalanceAndLastResult();
+                // Check for winnings from previous round (with delay to allow backend to process)
+                if (attempt >= 2 && prevRound > 0) {
+                    // Wait a bit more for backend to finish processing bets
+                    setTimeout(() => xdCheckRoundWinnings(prevRound), 500);
+                }
                 if (attempt < 4) {
                     xdRoundFlipRetryTimer = setTimeout(() => runRefresh(attempt + 1), 800);
                 }
@@ -610,8 +681,8 @@
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.dataset.num = String(n);
-            btn.className = `xd-num rounded-xl py-2 text-center text-white font-semibold ${bg}`;
-            btn.innerHTML = `<div class="text-lg">${n}</div><div class="text-xs text-white/80 mt-1">9.75x</div>`;
+            btn.className = `xd-num rounded-sm py-2 text-center text-white font-semibold ${bg}`;
+            btn.innerHTML = `<div class="text-base">${n}</div><div class="text-xs text-white/80 mt-1">9.75x</div>`;
             btn.addEventListener('click', () => xdToggleNumber(n));
             grid.appendChild(btn);
         }
@@ -656,10 +727,19 @@
         
         // Recent results popup
         document.getElementById('lastResultDot')?.addEventListener('click', xdShowRecentResults);
+        document.getElementById('showRecentResultsBtn')?.addEventListener('click', xdShowRecentResults);
         document.getElementById('closeRecentResults')?.addEventListener('click', xdHideRecentResults);
         document.getElementById('recentResultsPopup')?.addEventListener('click', (e) => {
             if (e.target.id === 'recentResultsPopup') {
                 xdHideRecentResults();
+            }
+        });
+
+        // Winning result popup
+        document.getElementById('closeWinningResult')?.addEventListener('click', xdHideWinningResult);
+        document.getElementById('winningResultPopup')?.addEventListener('click', (e) => {
+            if (e.target.id === 'winningResultPopup') {
+                xdHideWinningResult();
             }
         });
 
