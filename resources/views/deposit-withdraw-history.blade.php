@@ -15,20 +15,12 @@
 @endsection
 
 @section('content')
-<div class="px-4 py-4 space-y-3">
-    <!-- Table Header -->
-    <div class="grid grid-cols-4 gap-2 text-white text-xs font-semibold pb-2 border-b border-gray-600">
-        <div>Số lượng</div>
-        <div>Thời gian</div>
-        <div>Loại</div>
-        <div class="text-center">Tình trạng</div>
-    </div>
-
-    <!-- Table Rows -->
-    <div class="space-y-2">
+<div class="px-2 py-2 space-y-3">
+    <!-- Transaction Items -->
+    <div class="space-y-3">
         @forelse($allRequests as $request)
         <div 
-            class="grid grid-cols-4 gap-2 py-3 px-2 border-b border-gray-700/30 rounded hover:bg-gray-800/30 transition-colors cursor-pointer transaction-row"
+            class="bg-[#141517] rounded-lg p-4 space-y-4 border-b border-gray-700/30 cursor-pointer transaction-row hover:bg-gray-800/70 transition-colors"
             data-request-id="{{ $request['id'] }}"
             data-request-type="{{ $request['type'] }}"
             data-amount="{{ $request['amount'] }}"
@@ -43,42 +35,50 @@
             data-bank-account="{{ $request['bank_account'] ?? '' }}"
             data-bank-full-name="{{ $request['bank_full_name'] ?? '' }}"
         >
-            <!-- Số lượng -->
-            <div>
-                <p class="text-white font-medium text-sm">
+            <!-- Yêu cầu -->
+            <div class="flex justify-between items-center">
+                <span class="text-[#636465] text-xs">Yêu cầu</span>
+                <span class="text-xs font-medium">
                     @if($request['type'] === 'deposit')
-                        +{{ number_format($request['amount'], 0, ',', '.') }} VND
+                        <span class="text-green-400">Nạp tiền</span>
                     @else
-                        -{{ number_format($request['amount'], 0, ',', '.') }} VND
+                        <span class="text-red-400">Rút Tiền</span>
                     @endif
-                </p>
+                </span>
+            </div>
+            
+            <!-- Số lượng -->
+            <div class="flex justify-between items-center">
+                <span class="text-[#636465] text-xs">Số lượng</span>
+                <span class="text-white text-xs">
+                    {{ number_format($request['amount'], 0, ',', '.') }} USDT
+                </span>
+            </div>
+            
+            <!-- Địa chỉ -->
+            <div class="flex justify-between items-center">
+                <span class="text-[#636465] text-xs">Địa chỉ</span>
+                <span class="text-white text-xs">Ngân hàng</span>
             </div>
             
             <!-- Thời gian -->
-            <div>
-                <p class="text-white text-xs">{{ \Carbon\Carbon::parse($request['created_at'])->format('H:i d/m/Y') }}</p>
+            <div class="flex justify-between items-center">
+                <span class="text-[#636465] text-xs">Thời gian</span>
+                <span class="text-white text-xs">{{ \Carbon\Carbon::parse($request['created_at'])->format('H:i:s d-m-Y') }}</span>
             </div>
             
-            <!-- Loại -->
-            <div>
-                <p class="text-white text-xs">
-                    @if($request['type'] === 'deposit')
-                        Nạp
-                    @else
-                        Rút
+            <!-- Trạng thái -->
+            <div class="flex justify-between items-center">
+                <span class="text-[#636465] text-xs">Trạng thái</span>
+                <span class="text-xs font-medium">
+                    @if($request['status'] === 'pending')
+                        <span class="text-orange-400">Chờ sử lý</span>
+                    @elseif($request['status'] === 'approved')
+                        <span class="text-green-400">Thành công</span>
+                    @elseif($request['status'] === 'rejected')
+                        <span class="text-red-400">Thất bại</span>
                     @endif
-                </p>
-            </div>
-            
-            <!-- Tình trạng -->
-            <div class="flex items-center justify-center">
-                @if($request['status'] === 'pending')
-                    <span class="text-orange-400 text-xs font-medium">Chưa xử lý</span>
-                @elseif($request['status'] === 'approved')
-                    <span class="text-green-400 text-xs font-medium">Thành công</span>
-                @elseif($request['status'] === 'rejected')
-                    <span class="text-red-400 text-xs font-medium">Thất bại</span>
-                @endif
+                </span>
             </div>
         </div>
         @empty
