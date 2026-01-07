@@ -18,6 +18,11 @@ class ProcessRoundTimer extends Command
     const ROUND_DURATION = 60; // 60 giây mỗi round
     
     /**
+     * Last cleanup time per game (để cleanup định kỳ mỗi 10 phút)
+     */
+    private static $lastCleanupTime = [];
+    
+    /**
      * The name and signature of the console command.
      *
      * @var string
@@ -102,6 +107,18 @@ class ProcessRoundTimer extends Command
 
         foreach ($games as $gameKey) {
             try {
+                // Cleanup định kỳ mỗi 10 phút (600 giây) cho mỗi game
+                $now = time();
+                $lastCleanup = self::$lastCleanupTime[$gameKey] ?? 0;
+                if ($now - $lastCleanup >= 600) { // 10 phút
+                    try {
+                        Round::cleanupOldRounds($gameKey);
+                        self::$lastCleanupTime[$gameKey] = $now;
+                    } catch (\Exception $e) {
+                        \Log::warning("Error cleaning up old rounds for {$gameKey}: " . $e->getMessage());
+                    }
+                }
+                
                 // Get or create round cho từng game
                 $round = Round::getOrCreateRoundByNumber($currentRoundNumber, $gameKey);
 

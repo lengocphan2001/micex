@@ -176,14 +176,9 @@ class Round extends Model
         return $round;
         });
         
-        // Cleanup old rounds sau khi tạo round mới (ngoài transaction để tránh deadlock)
-        // Chỉ cleanup khi round vừa được tạo trong transaction này
-        try {
-            self::cleanupOldRounds($gameKey);
-        } catch (\Exception $e) {
-            // Log error nhưng không throw để không ảnh hưởng đến việc tạo round
-            \Log::warning('Error cleaning up old rounds: ' . $e->getMessage());
-        }
+        // KHÔNG cleanup ngay sau khi tạo round mới
+        // Cleanup sẽ được thực hiện định kỳ hoặc khi thực sự cần (ví dụ: > 500 rounds)
+        // Điều này đảm bảo lịch sử cược luôn có sẵn cho người dùng
         
         // Đảm bảo không trả về null
         if (!$round) {
@@ -199,53 +194,45 @@ class Round extends Model
     }
 
     /**
-     * Cleanup old rounds - chỉ giữ lại tối đa 60 rounds gần nhất
+     * Cleanup old rounds - chỉ giữ lại tối đa 500 rounds gần nhất
+     * Chỉ cleanup khi có > 500 rounds để đảm bảo có đủ lịch sử cho người dùng
      * Xóa các round cũ nhất, nhưng chỉ xóa các round đã finish và không có bets
+     * KHÔNG BAO GIỜ xóa rounds có bets
      */
     public static function cleanupOldRounds(string $gameKey = 'khaithac')
     {
         // Đếm tổng số rounds
         $totalRounds = self::where('game_key', $gameKey)->count();
         
-        // Nếu có nhiều hơn 60 rounds, cần xóa các round cũ
-        if ($totalRounds > 60) {
-            // Lấy 60 rounds gần nhất (theo round_number desc)
+        // Chỉ cleanup khi có nhiều hơn 500 rounds (để đảm bảo có đủ lịch sử)
+        if ($totalRounds > 500) {
+            // Lấy 500 rounds gần nhất (theo round_number desc)
             $latestRounds = self::where('game_key', $gameKey)
                 ->orderBy('round_number', 'desc')
-                ->limit(60)
+                ->limit(500)
                 ->pluck('id')
                 ->toArray();
             
-            // Xóa các round không nằm trong danh sách 60 rounds gần nhất
-            // Nhưng chỉ xóa các round đã finish và không có bets
+            // Xóa các round không nằm trong danh sách 500 rounds gần nhất
+            // NHƯNG chỉ xóa các round đã finish và KHÔNG có bets (KHÔNG BAO GIỜ xóa rounds có bets)
             $roundsToDelete = self::where('game_key', $gameKey)
                 ->whereNotIn('id', $latestRounds)
                 ->where('status', 'finished')
-                ->whereDoesntHave('bets')
+                ->whereDoesntHave('bets') // CHỈ xóa rounds không có bets
                 ->get();
             
+            $deletedCount = 0;
             foreach ($roundsToDelete as $round) {
-                $round->delete();
+                // Double-check: đảm bảo không có bets trước khi xóa
+                $hasBets = $round->bets()->count() > 0;
+                if (!$hasBets) {
+                    $round->delete();
+                    $deletedCount++;
+                }
             }
             
-            // Nếu vẫn còn nhiều hơn 60 rounds sau khi xóa các round không có bets
-            // Xóa các round cũ nhất (đã finish) ngay cả khi có bets (nhưng chỉ khi bets đã được xử lý)
-            $remainingCount = self::where('game_key', $gameKey)->count();
-            if ($remainingCount > 60) {
-                $excessCount = $remainingCount - 60;
-                $oldestRounds = self::where('game_key', $gameKey)
-                    ->orderBy('round_number', 'asc')
-                    ->where('status', 'finished')
-                    ->limit($excessCount)
-                    ->get();
-                
-                foreach ($oldestRounds as $round) {
-                    // Chỉ xóa nếu tất cả bets đã được xử lý (không còn pending)
-                    $pendingBets = $round->bets()->where('status', 'pending')->count();
-                    if ($pendingBets === 0) {
-                        $round->delete();
-                    }
-                }
+            if ($deletedCount > 0) {
+                \Log::info("Cleaned up {$deletedCount} old rounds for game {$gameKey}");
             }
         }
     }
@@ -304,8 +291,9 @@ class Round extends Model
         // Process all bets for this round
         $this->processBets();
         
-        // Cleanup old rounds sau khi finish round
-        self::cleanupOldRounds($this->game_key ?? 'khaithac');
+        // KHÔNG cleanup ngay sau khi finish round
+        // Cleanup sẽ được thực hiện định kỳ hoặc khi thực sự cần (> 500 rounds)
+        // Điều này đảm bảo lịch sử cược luôn có sẵn cho người dùng
     }
     
     /**
