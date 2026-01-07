@@ -145,6 +145,12 @@ class Round extends Model
                 }
             }
             
+            // Đảm bảo round không null trước khi xử lý
+            if (!$round) {
+                \Log::error("Failed to get or create round {$roundNumber} for game {$gameKey}");
+                throw new \Exception("Failed to get or create round {$roundNumber} for game {$gameKey}");
+            }
+            
             // XÓA TẤT CẢ round có seed random (không phải deterministic) với cùng round_number
             // Chỉ giữ lại round có seed deterministic
             $roundsWithRandomSeed = self::where('game_key', $gameKey)
@@ -177,6 +183,16 @@ class Round extends Model
         } catch (\Exception $e) {
             // Log error nhưng không throw để không ảnh hưởng đến việc tạo round
             \Log::warning('Error cleaning up old rounds: ' . $e->getMessage());
+        }
+        
+        // Đảm bảo không trả về null
+        if (!$round) {
+            \Log::error("getOrCreateRoundByNumber returned null for round {$roundNumber} game {$gameKey}");
+            // Thử lấy lại một lần nữa
+            $round = self::where('game_key', $gameKey)
+                ->where('round_number', $roundNumber)
+                ->where('seed', $gameKey . '_round_' . $roundNumber)
+                ->first();
         }
         
         return $round;

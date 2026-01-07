@@ -101,65 +101,107 @@ class ProcessRoundTimer extends Command
         $currentSecond = $this->calculateCurrentSecond($currentRoundNumber);
 
         foreach ($games as $gameKey) {
-            // Get or create round cho từng game
-            $round = Round::getOrCreateRoundByNumber($currentRoundNumber, $gameKey);
+            try {
+                // Get or create round cho từng game
+                $round = Round::getOrCreateRoundByNumber($currentRoundNumber, $gameKey);
 
-            // Nếu round chưa start và đã đến thời gian (currentSecond > 0)
-            if ($round->status === 'pending' && $currentSecond > 0) {
-                $round->start();
-                $this->info("[{$gameKey}] Round {$round->round_number} started");
-                continue;
-            }
+                // Kiểm tra nếu round là null (tránh lỗi)
+                if (!$round) {
+                    $this->warn("[{$gameKey}] Failed to get or create round {$currentRoundNumber}");
+                    continue;
+                }
 
-            // Nếu round đang running
-            if ($round->status === 'running') {
-                // Tính deadline để check xem round đã finish chưa
-                $deadline = $this->calculateRoundDeadline($currentRoundNumber);
-                // Use UTC to match client-side calculation
-                $now = Carbon::now('UTC');
-                $countdown = max(0, (int) floor(($deadline->timestamp - $now->timestamp)));
+                // Nếu round chưa start và đã đến thời gian (currentSecond > 0)
+                if ($round->status === 'pending' && $currentSecond > 0) {
+                    $round->start();
+                    $this->info("[{$gameKey}] Round {$round->round_number} started");
+                    continue;
+                }
 
-                // Nếu đã đến giây 60 hoặc quá deadline (countdown = 0), finish round
-                if ($currentSecond >= 60 || $countdown <= 0) {
-                    // Refresh round để lấy admin_set_result mới nhất từ database
-                    $round->refresh();
+                // Nếu round đang running
+                if ($round->status === 'running') {
+                    // Tính deadline để check xem round đã finish chưa
+                    $deadline = $this->calculateRoundDeadline($currentRoundNumber);
+                    // Use UTC to match client-side calculation
+                    $now = Carbon::now('UTC');
+                    $countdown = max(0, (int) floor(($deadline->timestamp - $now->timestamp)));
 
-                    // Ưu tiên admin_set_result nếu có (NOTE: string "0" is a valid value, do NOT use truthy check)
-                    $finalResult = null;
-                    if ($round->admin_set_result !== null && $round->admin_set_result !== '') {
-                        $finalResult = $round->admin_set_result;
-                        $this->info("[{$gameKey}] Round {$round->round_number} using admin_set_result: {$finalResult}");
-                    } else {
-                        $finalResult = $round->randomResultBasedOnBets();
-                        $this->info("[{$gameKey}] Round {$round->round_number} using random result based on bets: {$finalResult}");
+                    // Nếu đã đến giây 60 hoặc quá deadline (countdown = 0), finish round
+                    if ($currentSecond >= 60 || $countdown <= 0) {
+                        // Refresh round để lấy admin_set_result mới nhất từ database
+                        // Kiểm tra xem round còn tồn tại không trước khi refresh
+                        try {
+                            $round->refresh();
+                        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                            // Round đã bị xóa, bỏ qua
+                            $this->warn("[{$gameKey}] Round {$currentRoundNumber} was deleted, skipping...");
+                            continue;
+                        }
+
+                        // Ưu tiên admin_set_result nếu có (NOTE: string "0" is a valid value, do NOT use truthy check)
+                        $finalResult = null;
+                        if ($round->admin_set_result !== null && $round->admin_set_result !== '') {
+                            $finalResult = $round->admin_set_result;
+                            $this->info("[{$gameKey}] Round {$round->round_number} using admin_set_result: {$finalResult}");
+                        } else {
+                            $finalResult = $round->randomResultBasedOnBets();
+                            $this->info("[{$gameKey}] Round {$round->round_number} using random result based on bets: {$finalResult}");
+                        }
+
+                        $round->finish($finalResult);
+                        $this->info("[{$gameKey}] Round {$round->round_number} finished with result: {$finalResult}");
+
+                        // Kiểm tra lại trước khi refresh lần cuối
+                        try {
+                            $round->refresh();
+                            \Log::info("[{$gameKey}] Round {$round->round_number} finished", [
+                                'round_id' => $round->id,
+                                'final_result' => $round->final_result,
+                                'admin_set_result' => $round->admin_set_result,
+                                'status' => $round->status,
+                            ]);
+                        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                            // Round đã bị xóa sau khi finish, chỉ log warning
+                            $this->warn("[{$gameKey}] Round {$currentRoundNumber} was deleted after finishing");
+                        }
+                    } else if ($currentSecond > 0 && $currentSecond < 60) {
+                        $randomResult = $this->getGemForSecond($round->seed, $currentSecond);
+                        try {
+                            $round->update([
+                                'current_second' => $currentSecond,
+                                'current_result' => $randomResult,
+                            ]);
+                        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                            // Round đã bị xóa, bỏ qua
+                            $this->warn("[{$gameKey}] Round {$currentRoundNumber} was deleted during update, skipping...");
+                            continue;
+                        }
                     }
-
-                    $round->finish($finalResult);
-                    $this->info("[{$gameKey}] Round {$round->round_number} finished with result: {$finalResult}");
-
-                    $round->refresh();
-                    \Log::info("[{$gameKey}] Round {$round->round_number} finished", [
-                        'round_id' => $round->id,
-                        'final_result' => $round->final_result,
-                        'admin_set_result' => $round->admin_set_result,
-                        'status' => $round->status,
-                    ]);
-                } else if ($currentSecond > 0 && $currentSecond < 60) {
-                    $randomResult = $this->getGemForSecond($round->seed, $currentSecond);
-                    $round->update([
-                        'current_second' => $currentSecond,
-                        'current_result' => $randomResult,
-                    ]);
                 }
-            }
 
-            // Safety: nếu round đã finish nhưng vẫn còn bets pending
-            if ($round->status === 'finished' && $round->final_result) {
-                $pendingBets = $round->bets()->where('status', 'pending')->count();
-                if ($pendingBets > 0) {
-                    $this->warn("[{$gameKey}] Round {$round->round_number} has {$pendingBets} pending bets, processing...");
-                    $round->processBets();
+                // Safety: nếu round đã finish nhưng vẫn còn bets pending
+                if ($round->status === 'finished' && $round->final_result) {
+                    try {
+                        $pendingBets = $round->bets()->where('status', 'pending')->count();
+                        if ($pendingBets > 0) {
+                            $this->warn("[{$gameKey}] Round {$round->round_number} has {$pendingBets} pending bets, processing...");
+                            $round->processBets();
+                        }
+                    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                        // Round đã bị xóa, bỏ qua
+                        $this->warn("[{$gameKey}] Round {$currentRoundNumber} was deleted, skipping bet processing...");
+                        continue;
+                    }
                 }
+            } catch (\Exception $e) {
+                // Log lỗi nhưng tiếp tục xử lý game khác
+                $this->error("[{$gameKey}] Error processing round {$currentRoundNumber}: " . $e->getMessage());
+                \Log::error("[{$gameKey}] Error in ProcessRoundTimer: " . $e->getMessage(), [
+                    'round_number' => $currentRoundNumber,
+                    'game_key' => $gameKey,
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                continue;
             }
         }
         
