@@ -16,6 +16,8 @@ class Bet extends Model
         'bet_type',
         'bet_value',
         'amount',
+        'amount_from_deposit',
+        'amount_from_reward',
         'payout_rate',
         'status',
         'payout_amount',
@@ -23,6 +25,8 @@ class Bet extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'amount_from_deposit' => 'decimal:2',
+        'amount_from_reward' => 'decimal:2',
         'payout_rate' => 'decimal:2',
         'payout_amount' => 'decimal:2',
     ];

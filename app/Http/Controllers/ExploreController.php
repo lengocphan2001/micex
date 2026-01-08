@@ -346,8 +346,9 @@ class ExploreController extends Controller
             ], 400);
         }
 
-        // Check if user has enough balance
-        if ($user->balance < $validated['amount']) {
+        // Check if user has enough total balance (deposit + reward)
+        $totalBalance = $user->getTotalBalance();
+        if ($totalBalance < $validated['amount']) {
             return response()->json([
                 'error' => 'Số dư không đủ để đặt cược.',
             ], 400);
@@ -372,16 +373,17 @@ class ExploreController extends Controller
             ], 400);
         }
 
-            // Check balance again after lock (in case it changed)
-            if ($user->balance < $validated['amount']) {
+            // Check total balance again after lock (in case it changed)
+            $totalBalance = $user->getTotalBalance();
+            if ($totalBalance < $validated['amount']) {
                 DB::rollBack();
                 return response()->json([
                     'error' => 'Số dư không đủ để đặt cược.',
                 ], 400);
             }
 
-            // Deduct balance
-            $user->balance -= $validated['amount'];
+            // Deduct from wallets (ưu tiên ví nạp trước)
+            $deduction = $user->deductFromWallets($validated['amount']);
             
             // Decrease betting requirement by bet amount
             $user->betting_requirement = max(0, ($user->betting_requirement ?? 0) - $validated['amount']);
@@ -397,6 +399,8 @@ class ExploreController extends Controller
                 'amount' => $validated['amount'],
                 'payout_rate' => $this->getPayoutRates()[$validated['gem_type']],
                 'status' => 'pending',
+                'amount_from_deposit' => $deduction['from_deposit'] ?? 0,
+                'amount_from_reward' => $deduction['from_reward'] ?? 0,
             ]);
                 
                 // Calculate and distribute commission to network (F1, F2, F3...) based on bet amount
@@ -428,7 +432,9 @@ class ExploreController extends Controller
                     'amount' => $bet->amount,
                     'payout_rate' => $bet->payout_rate,
                 ],
-                'new_balance' => $user->balance,
+                'balance' => $user->balance,
+                'reward_balance' => $user->reward_balance ?? 0,
+                'total_balance' => $user->getTotalBalance(),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -474,7 +480,9 @@ class ExploreController extends Controller
         if (!$bet) {
             return response()->json([
                 'bet' => null,
-                'balance' => $user->balance, // Always return balance
+                'balance' => $user->balance,
+                'reward_balance' => $user->reward_balance ?? 0,
+                'total_balance' => $user->getTotalBalance(),
             ]);
         }
         
@@ -497,7 +505,9 @@ class ExploreController extends Controller
         
         return response()->json([
             'bet' => $betData,
-            'balance' => $user->balance, // Trả về balance mới nhất
+            'balance' => $user->balance,
+            'reward_balance' => $user->reward_balance ?? 0,
+            'total_balance' => $user->getTotalBalance(),
         ]);
     }
 

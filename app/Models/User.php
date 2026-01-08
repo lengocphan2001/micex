@@ -29,6 +29,9 @@ class User extends Authenticatable
         'transfer_code',
         'role',
         'balance',
+        'reward_balance',
+        'last_reward_at',
+        'last_bet_from_reward_at',
         'betting_requirement',
     ];
 
@@ -53,6 +56,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'balance' => 'decimal:2',
+            'reward_balance' => 'decimal:2',
+            'last_reward_at' => 'datetime',
+            'last_bet_from_reward_at' => 'datetime',
             'betting_requirement' => 'decimal:2',
         ];
     }
@@ -240,5 +246,113 @@ class User extends Authenticatable
     {
         $networkLevel = $this->getNetworkLevel();
         return $networkLevel; // Returns 1-6, which corresponds to F1-F6
+    }
+
+    /**
+     * Get total available balance (deposit wallet + reward wallet)
+     */
+    public function getTotalBalance()
+    {
+        return ($this->balance ?? 0) + ($this->reward_balance ?? 0);
+    }
+
+    /**
+     * Add reward to reward wallet
+     */
+    public function addReward($amount)
+    {
+        $this->reward_balance = ($this->reward_balance ?? 0) + $amount;
+        $this->last_reward_at = now();
+        $this->save();
+    }
+
+    /**
+     * Transfer amount from reward wallet to deposit wallet
+     * Returns true if successful, false otherwise
+     */
+    public function transferRewardToDeposit($amount)
+    {
+        if (($this->reward_balance ?? 0) < $amount) {
+            return false;
+        }
+
+        $this->reward_balance -= $amount;
+        $this->balance = ($this->balance ?? 0) + $amount;
+        $this->save();
+
+        return true;
+    }
+
+    /**
+     * Check if reward balance should be expired (3 hours without betting from reward wallet)
+     */
+    public function shouldExpireRewardBalance()
+    {
+        if (($this->reward_balance ?? 0) <= 0) {
+            return false;
+        }
+
+        // If never bet from reward wallet, check last_reward_at
+        if ($this->last_bet_from_reward_at === null) {
+            if ($this->last_reward_at === null) {
+                return false;
+            }
+            $expireTime = $this->last_reward_at->copy()->addHours(3);
+            return now() >= $expireTime;
+        }
+
+        // If bet from reward wallet, check last_bet_from_reward_at
+        $expireTime = $this->last_bet_from_reward_at->copy()->addHours(3);
+        return now() >= $expireTime;
+    }
+
+    /**
+     * Expire reward balance (set to 0)
+     */
+    public function expireRewardBalance()
+    {
+        if (($this->reward_balance ?? 0) > 0) {
+            $this->reward_balance = 0;
+            $this->last_bet_from_reward_at = null;
+            $this->save();
+        }
+    }
+
+    /**
+     * Deduct amount from wallets (ưu tiên ví nạp trước, nếu không đủ thì trừ từ ví thưởng)
+     * Returns array with deducted amounts and source
+     */
+    public function deductFromWallets($amount)
+    {
+        $fromDeposit = 0;
+        $fromReward = 0;
+        $usedRewardWallet = false;
+
+        $depositBalance = $this->balance ?? 0;
+        $rewardBalance = $this->reward_balance ?? 0;
+
+        if ($depositBalance >= $amount) {
+            // Đủ trong ví nạp
+            $fromDeposit = $amount;
+            $this->balance -= $amount;
+        } else {
+            // Không đủ trong ví nạp, cần dùng cả 2 ví
+            $fromDeposit = $depositBalance;
+            $fromReward = $amount - $depositBalance;
+            $this->balance = 0;
+            $this->reward_balance -= $fromReward;
+            $usedRewardWallet = true;
+            
+            // Cập nhật thời gian cược từ ví thưởng
+            $this->last_bet_from_reward_at = now();
+        }
+
+        $this->save();
+
+        return [
+            'from_deposit' => $fromDeposit,
+            'from_reward' => $fromReward,
+            'used_reward_wallet' => $usedRewardWallet,
+        ];
     }
 }

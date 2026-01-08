@@ -77,6 +77,23 @@
         </div>
     </div>
 
+    <!-- System Fund Card -->
+    <div class="row mt-4">
+        <div class="col-lg-3 col-md-6 col-12 mb-3">
+            <div class="card border-warning" style="border-width: 2px;">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">
+                        <i class="fas fa-coins"></i> Tổng quỹ hệ thống
+                    </h5>
+                    <h3 class="text-warning mb-0">{{ number_format($systemFund ?? 1000, 2) }} <small>USDT</small></h3>
+                    <p class="text-muted mb-0 mt-2" style="font-size: 0.85rem;">
+                        <small>Quỹ được cộng khi nạp/thua, trừ khi rút</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Reward/Commission Cards -->
     <div class="row mt-4">
         <div class="col-lg-3 col-md-6 col-12 mb-3">

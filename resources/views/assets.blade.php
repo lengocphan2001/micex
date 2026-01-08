@@ -32,11 +32,35 @@
             <div class="mt-4 space-y-3 text-white">
                 <div>
                     <p class="text-sm text-blue-100">Tổng tài sản</p>
-                    <p class="text-2xl font-bold flex items-center gap-1">
-                        {{ number_format(auth()->user()->balance ?? 0, 2, '.', ',') }}
+                    <p class="text-2xl font-bold flex items-center gap-1" id="totalBalanceDisplay">
+                        {{ number_format(auth()->user() ? (auth()->user()->balance ?? 0) + (auth()->user()->reward_balance ?? 0) : 0, 2, '.', ',') }}
                         <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-5 h-5 object-contain">
                     </p>
                 </div>
+                
+                <!-- Two Wallets Display -->
+                <div class="space-y-2 pt-2">
+                    <div class="flex items-center justify-between bg-white/10 rounded-lg px-3 py-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-blue-100">Ví nạp:</span>
+                            <span class="text-white font-semibold" id="depositBalanceDisplay">{{ number_format(auth()->user()->balance ?? 0, 2, '.', ',') }}</span>
+                            <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-4 h-4 object-contain">
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between bg-white/10 rounded-lg px-3 py-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-blue-100">Ví thưởng:</span>
+                            <span class="text-white font-semibold" id="rewardBalanceDisplay">{{ number_format(auth()->user()->reward_balance ?? 0, 2, '.', ',') }}</span>
+                            <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-4 h-4 object-contain">
+                        </div>
+                        @if((auth()->user()->reward_balance ?? 0) >= 5)
+                        <button type="button" id="transferRewardBtn" class="text-xs bg-green-500 hover:bg-green-600 text-white font-semibold px-3 py-1 rounded-full transition-colors">
+                            Chuyển
+                        </button>
+                        @endif
+                    </div>
+                </div>
+                
                 <div class="text-sm text-blue-100 flex items-center gap-1">
                     Vòng cược chưa hoàn thành : <span class="font-semibold text-white" data-remaining-betting>{{ number_format(auth()->user() ? (auth()->user()->betting_requirement ?? 0) : 0, 2, '.', ',') }}</span> <span class="text-yellow-300">
                         <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-5 h-5 object-contain">
@@ -70,6 +94,47 @@
             <div class="mt-3 flex justify-center">
                 <button type="submit" form="giftcodeForm" id="giftcodeSubmit" class="w-fit bg-[#2d59ff] hover:bg-[#2448d1] text-white font-semibold py-2.5 px-4 rounded-full text-base shadow">Xác nhận</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Reward Modal -->
+<div id="transferRewardModal" class="fixed inset-0 z-[10000] flex items-center justify-center hidden">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black/70" onclick="closeTransferModal()"></div>
+    
+    <!-- Modal Content -->
+    <div class="relative z-10 w-full max-w-sm mx-4 rounded-3xl overflow-hidden bg-gray-800 border border-gray-700">
+        <!-- Header -->
+        <div class="p-4 border-b border-gray-700">
+            <h3 class="text-white text-lg font-semibold">Chuyển từ ví thưởng sang ví nạp</h3>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-4 space-y-4">
+            <div>
+                <label class="text-sm text-gray-300 mb-2 block">Số dư ví thưởng:</label>
+                <p class="text-white font-semibold text-lg" id="transferModalRewardBalance">0.00</p>
+            </div>
+            <div>
+                <label for="transferAmount" class="text-sm text-gray-300 mb-2 block">Số tiền muốn chuyển (tối thiểu 5):</label>
+                <input type="number" id="transferAmount" step="0.01" min="5" 
+                       class="w-full bg-gray-700 text-white rounded-lg px-3 py-2 outline-none border border-gray-600 focus:border-blue-500"
+                       placeholder="Nhập số tiền">
+            </div>
+            <div id="transferError" class="hidden bg-red-500/20 border border-red-500 text-red-200 text-sm rounded-lg px-3 py-2"></div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="p-4 border-t border-gray-700 flex gap-3">
+            <button type="button" onclick="closeTransferModal()" 
+                    class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2.5 rounded-lg transition-colors">
+                Hủy
+            </button>
+            <button type="button" id="confirmTransferBtn" 
+                    class="flex-1 bg-[#2d59ff] hover:bg-[#2448d1] text-white font-semibold py-2.5 rounded-lg transition-colors">
+                Xác nhận
+            </button>
         </div>
     </div>
 </div>
@@ -187,20 +252,9 @@
                             showToast(data.message, 'success');
                         }
                         
-                        // Update balance if provided
-                        if (data.balance !== undefined) {
-                            // Find and update balance display (if exists)
-                            const balanceElements = document.querySelectorAll('[data-balance]');
-                            balanceElements.forEach(el => {
-                                el.textContent = parseFloat(data.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '$';
-                            });
-                            
-                            // Also update total assets if exists
-                            const totalAssetsEl = document.querySelector('.text-2xl.font-bold');
-                            if (totalAssetsEl && totalAssetsEl.textContent.includes('$')) {
-                                const parts = totalAssetsEl.innerHTML.split('<');
-                                totalAssetsEl.innerHTML = parseFloat(data.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (parts[1] || '');
-                            }
+                        // Update balances if provided
+                        if (data.balance !== undefined || data.reward_balance !== undefined) {
+                            loadWalletBalances();
                         }
                         
                         // Update betting requirement if provided
@@ -244,6 +298,145 @@
                 }
             });
         }
+    });
+
+    // Load wallet balances
+    async function loadWalletBalances() {
+        try {
+            const response = await fetch('{{ route('wallet.balances') }}', {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Update displays
+                    const totalEl = document.getElementById('totalBalanceDisplay');
+                    const depositEl = document.getElementById('depositBalanceDisplay');
+                    const rewardEl = document.getElementById('rewardBalanceDisplay');
+                    const transferBtn = document.getElementById('transferRewardBtn');
+                    
+                    if (totalEl) {
+                        const total = parseFloat(data.total_balance || 0);
+                        const parts = totalEl.innerHTML.split('<');
+                        totalEl.innerHTML = total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (parts[1] || '');
+                    }
+                    if (depositEl) {
+                        depositEl.textContent = parseFloat(data.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+                    if (rewardEl) {
+                        rewardEl.textContent = parseFloat(data.reward_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+                    
+                    // Show/hide transfer button
+                    if (transferBtn) {
+                        if (parseFloat(data.reward_balance || 0) >= 5) {
+                            transferBtn.style.display = 'block';
+                        } else {
+                            transferBtn.style.display = 'none';
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error loading balances:', e);
+        }
+    }
+
+    // Transfer Reward Modal Functions
+    function showTransferModal() {
+        const modal = document.getElementById('transferRewardModal');
+        const rewardBalanceEl = document.getElementById('transferModalRewardBalance');
+        const rewardBalance = parseFloat(document.getElementById('rewardBalanceDisplay')?.textContent.replace(/,/g, '') || 0);
+        
+        if (modal && rewardBalanceEl) {
+            rewardBalanceEl.textContent = rewardBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('transferAmount').value = '';
+            document.getElementById('transferError').classList.add('hidden');
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
+    }
+
+    function closeTransferModal() {
+        const modal = document.getElementById('transferRewardModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            document.getElementById('transferAmount').value = '';
+            document.getElementById('transferError').classList.add('hidden');
+        }
+    }
+
+    // Transfer button click handler
+    document.addEventListener('DOMContentLoaded', function() {
+        const transferBtn = document.getElementById('transferRewardBtn');
+        const confirmTransferBtn = document.getElementById('confirmTransferBtn');
+        
+        if (transferBtn) {
+            transferBtn.addEventListener('click', showTransferModal);
+        }
+        
+        if (confirmTransferBtn) {
+            confirmTransferBtn.addEventListener('click', async function() {
+                const amountInput = document.getElementById('transferAmount');
+                const errorEl = document.getElementById('transferError');
+                const amount = parseFloat(amountInput.value);
+                
+                // Validation
+                if (!amount || isNaN(amount) || amount < 5) {
+                    errorEl.textContent = 'Số tiền tối thiểu là 5 đá quý.';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+                
+                const rewardBalance = parseFloat(document.getElementById('rewardBalanceDisplay')?.textContent.replace(/,/g, '') || 0);
+                if (amount > rewardBalance) {
+                    errorEl.textContent = 'Số tiền vượt quá số dư ví thưởng.';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+                
+                // Disable button
+                confirmTransferBtn.disabled = true;
+                confirmTransferBtn.textContent = 'Đang xử lý...';
+                
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    const response = await fetch('{{ route('wallet.transfer-reward-to-deposit') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken || '',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ amount: amount })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        if (typeof showToast === 'function') {
+                            showToast(data.message || 'Chuyển tiền thành công!', 'success');
+                        }
+                        closeTransferModal();
+                        loadWalletBalances();
+                    } else {
+                        errorEl.textContent = data.message || 'Có lỗi xảy ra.';
+                        errorEl.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    errorEl.textContent = 'Có lỗi xảy ra. Vui lòng thử lại.';
+                    errorEl.classList.remove('hidden');
+                } finally {
+                    confirmTransferBtn.disabled = false;
+                    confirmTransferBtn.textContent = 'Xác nhận';
+                }
+            });
+        }
+        
+        // Load balances on page load
+        loadWalletBalances();
     });
 
     // Giftcode Success Modal Functions

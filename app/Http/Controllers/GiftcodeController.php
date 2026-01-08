@@ -73,8 +73,8 @@ class GiftcodeController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            // Add balance to user
-            $user->balance += $giftcode->value;
+            // Add reward to reward wallet (ví thưởng)
+            $user->addReward($giftcode->value);
             
             // Increase betting requirement by giftcode value
             $user->betting_requirement = ($user->betting_requirement ?? 0) + $giftcode->value;
@@ -98,7 +98,8 @@ class GiftcodeController extends Controller
             $user->refresh();
 
             return response()->json([
-                'message' => "Đã nhận " . number_format($giftcode->value, 2) . " đá quý từ giftcode thành công!",
+                'message' => "Đã nhận " . number_format($giftcode->value, 2) . " đá quý từ giftcode vào ví thưởng thành công!",
+                'reward_balance' => $user->reward_balance,
                 'balance' => $user->balance,
                 'betting_requirement' => $user->betting_requirement ?? 0,
                 'value' => $giftcode->value,

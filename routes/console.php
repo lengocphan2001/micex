@@ -11,3 +11,9 @@ Schedule::command('commission:notify-available')
     ->hourly()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Schedule reward balance expiration every 5 minutes
+Schedule::command('reward:expire')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground();

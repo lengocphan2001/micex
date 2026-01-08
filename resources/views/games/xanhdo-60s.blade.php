@@ -153,12 +153,27 @@
 
         <div class="xd-card p-4 space-y-3">
             <!-- Balance (like explore) -->
+            <div class="space-y-2">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-center gap-2">
+                        <p class="text-[#FFFFFFB2] text-[14px] font-medium">Tổng số dư:</p>
+                        <span id="totalBalanceText" class="text-white text-[16px] font-medium">0.00</span>
+                        <span class="text-[#FFFFFFB2] text-[14px] font-medium">USDT</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[#FFFFFFB2]">Ví nạp:</span>
+                        <span id="depositBalanceText" class="text-white font-medium">0.00</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[#FFFFFFB2]">Ví thưởng:</span>
+                        <span id="rewardBalanceText" class="text-white font-medium">0.00</span>
+                    </div>
+                </div>
+            </div>
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-center gap-2">
-                    <p class="text-[#FFFFFFB2] text-[14px] font-medium">Số dư:</p>
-                    <span id="balanceText" class="text-white text-[16px] font-medium">0.00</span>
-                    <span class="text-[#FFFFFFB2] text-[14px] font-medium">USDT</span>
-                </div>
                 <button type="button" id="xdRefreshBalanceBtn"
                     class="text-center cursor-pointer hover:opacity-80 transition-opacity">
                     <svg id="xdRefreshBalanceIcon" xmlns="http://www.w3.org/2000/svg" width="15" height="16"
@@ -402,8 +417,17 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data && data.balance !== undefined) {
-                        const el = document.getElementById('balanceText');
-                        if (el) el.textContent = Number(data.balance).toFixed(2);
+                        const totalEl = document.getElementById('totalBalanceText');
+                        const depositEl = document.getElementById('depositBalanceText');
+                        const rewardEl = document.getElementById('rewardBalanceText');
+                        
+                        const depositBalance = Number(data.balance || 0);
+                        const rewardBalance = Number(data.reward_balance || 0);
+                        const totalBalance = depositBalance + rewardBalance;
+                        
+                        if (totalEl) totalEl.textContent = totalBalance.toFixed(2);
+                        if (depositEl) depositEl.textContent = depositBalance.toFixed(2);
+                        if (rewardEl) rewardEl.textContent = rewardBalance.toFixed(2);
                     }
                     // Load current round bets
                     if (data && data.bets && Array.isArray(data.bets)) {

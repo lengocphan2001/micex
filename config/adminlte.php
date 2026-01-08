@@ -307,6 +307,18 @@ return [
             'active' => ['admin/dashboard'],
         ],
         [
+            'text' => 'Chi tiết quỹ',
+            'url' => 'admin/fund-detail',
+            'icon' => 'fas fa-fw fa-coins',
+            'active' => ['admin/fund-detail'],
+        ],
+        [
+            'text' => 'Lịch sử cược',
+            'url' => 'admin/bet-history',
+            'icon' => 'fas fa-fw fa-history',
+            'active' => ['admin/bet-history'],
+        ],
+        [
             'text' => 'Can thiệp kết quả',
             'url' => 'admin/intervene-results',
             'icon' => 'fas fa-fw fa-cog',

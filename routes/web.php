@@ -109,6 +109,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/xanhdo/recent-results', [\App\Http\Controllers\XanhDoController::class, 'getRecentResults'])->name('xanhdo.recent-results');
     Route::get('/api/xanhdo/round-winnings', [\App\Http\Controllers\XanhDoController::class, 'getRoundWinnings'])->name('xanhdo.round-winnings');
 
+    // Wallet API endpoints
+    Route::post('/api/wallet/transfer-reward-to-deposit', [\App\Http\Controllers\WalletController::class, 'transferRewardToDeposit'])->name('wallet.transfer-reward-to-deposit');
+    Route::get('/api/wallet/balances', [\App\Http\Controllers\WalletController::class, 'getBalances'])->name('wallet.balances');
+
     // Assets screen
     Route::get('/assets', function () {
         return view('assets');
@@ -338,6 +342,8 @@ Route::prefix('admin')->name('admin.')->middleware('set.admin.guard')->group(fun
         Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
         
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/fund-detail', [AdminController::class, 'fundDetail'])->name('fund-detail');
+        Route::get('/bet-history', [AdminController::class, 'betHistory'])->name('bet-history');
         Route::get('/intervene-results', [AdminController::class, 'interveneResults'])->name('intervene-results');
         Route::post('/intervene-results/payout-rates', [AdminController::class, 'updatePayoutRates'])->name('intervene-results.update-rates');
         Route::post('/intervene-results/set-round-result', [AdminController::class, 'setRoundResult'])->name('intervene-results.set-result');

@@ -113,14 +113,17 @@ class XanhDoController extends Controller
             // Each selection (number or color) is a separate bet
             // No need to check for duplicate gem_type
 
-            if ($user->balance < $validated['amount']) {
+            // Check total balance (deposit + reward)
+            $totalBalance = $user->getTotalBalance();
+            if ($totalBalance < $validated['amount']) {
                 DB::rollBack();
                 return response()->json([
                     'error' => 'Số dư không đủ để đặt cược.',
                 ], 400);
             }
 
-            $user->balance -= $validated['amount'];
+            // Deduct from wallets (ưu tiên ví nạp trước)
+            $deduction = $user->deductFromWallets($validated['amount']);
             $user->betting_requirement = max(0, ($user->betting_requirement ?? 0) - $validated['amount']);
             $user->save();
 
@@ -138,6 +141,8 @@ class XanhDoController extends Controller
                 'amount' => $validated['amount'],
                 'payout_rate' => $payoutRate,
                 'status' => 'pending',
+                'amount_from_deposit' => $deduction['from_deposit'] ?? 0,
+                'amount_from_reward' => $deduction['from_reward'] ?? 0,
             ]);
 
             DB::commit();
@@ -153,7 +158,9 @@ class XanhDoController extends Controller
                     'amount' => $bet->amount,
                     'payout_rate' => $bet->payout_rate,
                 ],
-                'new_balance' => $user->balance,
+                'balance' => $user->balance,
+                'reward_balance' => $user->reward_balance,
+                'total_balance' => $user->getTotalBalance(),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -200,6 +207,8 @@ class XanhDoController extends Controller
         return response()->json([
             'bets' => $bets,
             'balance' => $user->balance,
+            'reward_balance' => $user->reward_balance ?? 0,
+            'total_balance' => $user->getTotalBalance(),
         ]);
     }
 

@@ -82,9 +82,8 @@ class LuckyMoneyController extends Controller
                 'opened_date' => $today->format('Y-m-d'),
             ]);
 
-            // Add balance to user
-            $user->balance += $amount;
-            $user->save();
+            // Add reward to reward wallet (ví thưởng)
+            $user->addReward($amount);
 
             DB::commit();
 
@@ -92,8 +91,9 @@ class LuckyMoneyController extends Controller
             $user->refresh();
 
             return response()->json([
-                'message' => "Chúc mừng! Bạn đã nhận được " . number_format($amount, 2) . " đá quý!",
+                'message' => "Chúc mừng! Bạn đã nhận được " . number_format($amount, 2) . " đá quý vào ví thưởng!",
                 'amount' => $amount,
+                'reward_balance' => $user->reward_balance,
                 'balance' => $user->balance,
             ]);
         } catch (\Exception $e) {

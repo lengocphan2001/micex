@@ -552,12 +552,18 @@ class Round extends Model
                         
                         \Log::info("Bet {$bet->id}: User {$user->id} won {$payoutAmount}. Balance: {$oldBalance} -> {$user->balance}");
                     } else {
-                        // User lost
+                        // User lost - cộng số tiền thua vào quỹ hệ thống
                         $bet->update([
                             'status' => 'lost',
                         ]);
                         // Balance was already deducted when bet was placed
-                        \Log::info("Bet {$bet->id}: User {$bet->user_id} lost");
+                        
+                        // Cộng số tiền thua vào quỹ hệ thống
+                        $systemFund = (float) \App\Models\SystemSetting::getValue('system_fund', '1000');
+                        $systemFund += $bet->amount;
+                        \App\Models\SystemSetting::setValue('system_fund', (string) $systemFund, 'Tổng quỹ hệ thống');
+                        
+                        \Log::info("Bet {$bet->id}: User {$bet->user_id} lost. System fund increased by {$bet->amount}");
                     }
                 } catch (\Exception $e) {
                         \Log::error("Error processing bet {$bet->id}: " . $e->getMessage());

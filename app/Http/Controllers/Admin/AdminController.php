@@ -8,8 +8,11 @@ use App\Models\DepositRequest;
 use App\Models\SystemSetting;
 use App\Models\Promotion;
 use App\Models\Giftcode;
+use App\Models\GiftcodeUsage;
+use App\Models\LuckyMoneyOpen;
 use App\Models\Notification;
 use App\Models\Round;
+use App\Models\Bet;
 use App\Models\CommissionRate;
 use App\Models\BettingContribution;
 use Illuminate\Http\Request;
@@ -86,6 +89,9 @@ class AdminController extends Controller
             
             // Manual bonus: This would need to be tracked separately, for now set to 0
             $manualBonus = 0;
+            
+            // Get system fund (tổng quỹ hệ thống)
+            $systemFund = (float) SystemSetting::getValue('system_fund', '1000');
         } catch (\Exception $e) {
             // If tables don't exist, set default values
             $systemProfit = 0;
@@ -96,6 +102,7 @@ class AdminController extends Controller
             $promotionBonus = 0;
             $firstDepositBonus = 0;
             $manualBonus = 0;
+            $systemFund = 1000;
         }
 
         // Get active promotion
@@ -110,6 +117,7 @@ class AdminController extends Controller
             'promotionBonus',
             'firstDepositBonus',
             'manualBonus',
+            'systemFund',
             'activePromotion'
         ));
     }
@@ -713,10 +721,13 @@ class AdminController extends Controller
                 $promotionBonus = $baseGemAmount * ($promotion->deposit_percentage / 100);
             }
             
-            // Total amount to add to balance
-            $totalGemAmount = $baseGemAmount + $promotionBonus;
+            // Chỉ cộng tiền nạp vào ví nạp (balance)
+            $user->balance += $baseGemAmount;
             
-            $user->balance += $totalGemAmount;
+            // Cộng khuyến mãi vào ví thưởng (reward_balance) nếu có
+            if ($promotionBonus > 0) {
+                $user->addReward($promotionBonus);
+            }
             
             // Calculate betting requirement:
             // deposit + (promotion_bonus * betting_multiplier)
@@ -744,7 +755,13 @@ class AdminController extends Controller
                 ]);
             }
 
+            // Cộng vào quỹ hệ thống: CHỈ số tiền nạp (không tính khuyến mãi)
+            $systemFund = (float) SystemSetting::getValue('system_fund', '1000');
+            $systemFund += $baseGemAmount;
+            SystemSetting::setValue('system_fund', (string) $systemFund, 'Tổng quỹ hệ thống');
+
             // Create notification for user
+            $totalGemAmount = $baseGemAmount + $promotionBonus;
             Notification::createDepositApproved($user, $depositRequest->amount, $totalGemAmount, $depositRequest->id);
 
             DB::commit();
@@ -812,6 +829,11 @@ class AdminController extends Controller
             $withdrawRequest->approved_at = now();
             $withdrawRequest->notes = $request->input('notes');
             $withdrawRequest->save();
+
+            // Trừ khỏi quỹ hệ thống khi admin duyệt rút tiền
+            $systemFund = (float) SystemSetting::getValue('system_fund', '1000');
+            $systemFund -= $withdrawRequest->gem_amount;
+            SystemSetting::setValue('system_fund', (string) $systemFund, 'Tổng quỹ hệ thống');
 
             // Create notification for user
             $user = $withdrawRequest->user;
@@ -1183,6 +1205,349 @@ public function createGiftcodes(Request $request)
         $giftcode->save();
 
         return back()->with('success', 'Đã huỷ bỏ giftcode thành công.');
+    }
+
+    /**
+     * Fund Detail page - Chi tiết quỹ hệ thống
+     */
+    public function fundDetail()
+    {
+        try {
+            // 1. Header Metrics
+            $initialFund = 1000; // Số vốn quỹ ban đầu
+            
+            // Tính số tiền trong quỹ lúc 00:00 UTC hôm nay
+            // Lấy từ system_fund và trừ đi các giao dịch hôm nay
+            $todayStartUTC = now('UTC')->startOfDay();
+            $currentFund = (float) SystemSetting::getValue('system_fund', '1000');
+            
+            // Tính profit hôm nay (từ 00:00 UTC đến hiện tại)
+            // Profit hôm nay = currentFund - fundAtStartOfDay
+            // Tạm thời dùng initialFund làm baseline, sau có thể lưu fundAtStartOfDay vào SystemSetting
+            $fundAtStartOfDay = (float) SystemSetting::getValue('fund_at_start_of_day_' . $todayStartUTC->format('Y-m-d'), (string) $initialFund);
+            $profit = $currentFund - $fundAtStartOfDay;
+            $profitPercent = $fundAtStartOfDay > 0 ? ($profit / $fundAtStartOfDay) * 100 : 0;
+            $status = $profitPercent >= -5 ? 'Tốt' : ($profitPercent >= -10 ? 'Cảnh báo' : 'Nguy hiểm');
+
+            // 2. Số tiền sàn chi ra trong ngày (từ 00:00 UTC)
+            $today = now('UTC')->startOfDay();
+            $tomorrow = now('UTC')->copy()->addDay()->startOfDay();
+            
+            // Tổng khách hàng mở lì xì
+            $luckyMoneyTotal = \App\Models\LuckyMoneyOpen::where('opened_date', $today->format('Y-m-d'))
+                ->sum('amount') ?? 0;
+            
+            // Tổng khách hàng nhận giftcode
+            $giftcodeTotal = \App\Models\GiftcodeUsage::whereDate('created_at', '>=', $today)
+                ->whereDate('created_at', '<', $tomorrow)
+                ->sum('amount') ?? 0;
+            
+            // Tổng số tiền khuyến mãi (từ deposit requests được approve hôm nay)
+            $promotionTotal = 0;
+            $todayDeposits = DepositRequest::where('status', 'approved')
+                ->whereDate('approved_at', '>=', $today)
+                ->whereDate('approved_at', '<', $tomorrow)
+                ->get();
+            
+            foreach ($todayDeposits as $deposit) {
+                $baseAmount = $deposit->gem_amount ?? ($deposit->amount / SystemSetting::getVndToGemRate());
+                $promotion = Promotion::getActivePromotion($deposit->approved_at);
+                if ($promotion) {
+                    $promotionTotal += $baseAmount * ($promotion->deposit_percentage / 100);
+                }
+            }
+            
+            // Hoa hồng chỉ trả cho đại lý (hôm nay)
+            $commissionPaidToday = \App\Models\UserCommission::where('status', 'withdrawn')
+                ->whereDate('withdrawn_at', '>=', $today)
+                ->whereDate('withdrawn_at', '<', $tomorrow)
+                ->sum('commission_amount') ?? 0;
+            
+            $totalExpensesToday = $luckyMoneyTotal + $giftcodeTotal + $promotionTotal + $commissionPaidToday;
+
+            // 3. Tiền thưởng (từ bets hôm nay)
+            $todayBets = \App\Models\Bet::whereDate('created_at', '>=', $today)
+                ->whereDate('created_at', '<', $tomorrow)
+                ->get();
+            
+            // Khách hàng thua = tổng số tiền họ đã cược và thua
+            $customersLost = $todayBets->where('status', 'lost')->sum('amount') ?? 0;
+            // Khách hàng thắng = tổng số tiền thưởng đã trả
+            $customersWon = $todayBets->where('status', 'won')->sum('payout_amount') ?? 0;
+            // Kết quả = số tiền sàn thu được từ bets (thua - thắng)
+            $rewardResult = $customersLost - $customersWon;
+
+            // 4. Hoạt động cược
+            $totalBetsToday = $todayBets->sum('amount') ?? 0;
+            $totalPayoutToday = $todayBets->where('status', 'won')->sum('payout_amount') ?? 0;
+            $profitFromBets = $totalBetsToday - $totalPayoutToday;
+
+            // 5. User rút tiền cần chú ý (users có nhiều lần rút)
+            $usersWithdrawals = \App\Models\WithdrawRequest::where('status', 'approved')
+                ->select('user_id', DB::raw('SUM(gem_amount) as total_amount'), DB::raw('COUNT(*) as withdrawal_count'))
+                ->groupBy('user_id')
+                ->having('withdrawal_count', '>=', 3)
+                ->orderBy('withdrawal_count', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function ($item) {
+                    $user = User::find($item->user_id);
+                    return [
+                        'username' => $user ? ($user->name ?? $user->email ?? 'N/A') : 'N/A',
+                        'total_amount' => $item->total_amount,
+                        'withdrawal_count' => $item->withdrawal_count,
+                    ];
+                });
+
+            // 6. Tổng cược từ tiền nạp
+            $totalDeposits = DepositRequest::where('status', 'approved')
+                ->sum('gem_amount') ?? 0;
+            
+            // Tính tổng số tiền cược từ tiền nạp (bets của users đã nạp)
+            $usersWithDeposits = DepositRequest::where('status', 'approved')
+                ->distinct('user_id')
+                ->pluck('user_id');
+            
+            $totalBetsFromDeposits = \App\Models\Bet::whereIn('user_id', $usersWithDeposits)
+                ->sum('amount') ?? 0;
+            
+            $winsFromDeposits = \App\Models\Bet::whereIn('user_id', $usersWithDeposits)
+                ->where('status', 'won')
+                ->sum('payout_amount') ?? 0;
+            
+            $lossesFromDeposits = \App\Models\Bet::whereIn('user_id', $usersWithDeposits)
+                ->where('status', 'lost')
+                ->sum('amount') ?? 0;
+            
+            $systemProfitFromDeposits = $lossesFromDeposits - $winsFromDeposits;
+
+            // 7. Tổng nạp và rút
+            $totalDepositAll = DepositRequest::where('status', 'approved')
+                ->sum('gem_amount') ?? 0;
+            
+            $totalWithdrawAll = \App\Models\WithdrawRequest::where('status', 'approved')
+                ->sum('gem_amount') ?? 0;
+
+        } catch (\Exception $e) {
+            // Set default values on error
+            $initialFund = 1000;
+            $fundAtStartOfDay = 1000;
+            $currentFund = 1000;
+            $profit = 0;
+            $profitPercent = 0;
+            $status = 'Tốt';
+            $luckyMoneyTotal = 0;
+            $giftcodeTotal = 0;
+            $promotionTotal = 0;
+            $commissionPaidToday = 0;
+            $totalExpensesToday = 0;
+            $customersLost = 0;
+            $customersWon = 0;
+            $rewardResult = 0;
+            $totalBetsToday = 0;
+            $totalPayoutToday = 0;
+            $profitFromBets = 0;
+            $usersWithdrawals = collect();
+            $totalDeposits = 0;
+            $totalBetsFromDeposits = 0;
+            $winsFromDeposits = 0;
+            $lossesFromDeposits = 0;
+            $systemProfitFromDeposits = 0;
+            $totalDepositAll = 0;
+            $totalWithdrawAll = 0;
+            $totalDepositInflow = 0;
+            $profitFromBetsInflow = 0;
+            $totalInflow = 0;
+            $totalWithdrawOutflow = 0;
+            $promotionOutflow = 0;
+            $commissionOutflow = 0;
+            $totalOutflow = 0;
+            $totalBetsAllTime = 0;
+            $totalPayoutAllTime = 0;
+            $totalProfitFromBetsAllTime = 0;
+            $topProfitableUsers = collect();
+            $totalRewardGiven = 0;
+            $betsFromReward = 0;
+            $payoutFromReward = 0;
+            $profitFromReward = 0;
+            
+            \Log::error('Error calculating fund detail: ' . $e->getMessage());
+        }
+
+        // Additional metrics for detailed tab
+        // 1. Dòng tiền vào (Inflow) - từ 00:00 UTC hôm nay
+        $totalDepositInflow = DepositRequest::where('status', 'approved')
+            ->where('approved_at', '>=', $today)
+            ->where('approved_at', '<', $tomorrow)
+            ->sum('gem_amount') ?? 0;
+        
+        $profitFromBetsInflow = $profitFromBets; // Sàn lời từ cược hôm nay
+        $totalInflow = $totalDepositInflow + $profitFromBetsInflow;
+
+        // 2. Tiền ra trong ngày (Outflow) - từ 00:00 UTC hôm nay
+        $totalWithdrawOutflow = \App\Models\WithdrawRequest::where('status', 'approved')
+            ->where('approved_at', '>=', $today)
+            ->where('approved_at', '<', $tomorrow)
+            ->sum('gem_amount') ?? 0;
+        
+        $promotionOutflow = $promotionTotal; // Thưởng khuyến mãi
+        $commissionOutflow = $commissionPaidToday; // Hoa hồng
+        $totalOutflow = $totalWithdrawOutflow + $promotionOutflow + $commissionOutflow;
+
+        // 3. Thống kê tiền cược (all time)
+        $totalBetsAllTime = \App\Models\Bet::sum('amount') ?? 0;
+        $totalPayoutAllTime = \App\Models\Bet::where('status', 'won')->sum('payout_amount') ?? 0;
+        $totalProfitFromBetsAllTime = $totalBetsAllTime - $totalPayoutAllTime;
+
+        // 4. TOP user lãi nhiều nhất (tính từ bets)
+        // Lãi = tổng tiền thắng - tổng tiền cược
+        $topProfitableUsers = DB::table('bets')
+            ->select('user_id', 
+                DB::raw('SUM(CASE WHEN status = "won" THEN payout_amount ELSE 0 END) as total_won'),
+                DB::raw('SUM(amount) as total_bet')
+            )
+            ->groupBy('user_id')
+            ->havingRaw('SUM(CASE WHEN status = "won" THEN payout_amount ELSE 0 END) - SUM(amount) > 0')
+            ->orderByRaw('SUM(CASE WHEN status = "won" THEN payout_amount ELSE 0 END) - SUM(amount) DESC')
+            ->limit(10)
+            ->get()
+            ->map(function ($item) {
+                $user = User::find($item->user_id);
+                $totalProfit = ($item->total_won ?? 0) - ($item->total_bet ?? 0);
+                
+                // Tạm thời chia đều, sau này cần track chính xác từ ví nào
+                $profitFromReward = $totalProfit * 0.1; // Giả sử 10% từ ví thưởng
+                $profitFromDeposit = $totalProfit * 0.9; // 90% từ ví nạp
+                
+                return [
+                    'username' => $user ? ($user->name ?? $user->email ?? 'N/A') : 'N/A',
+                    'profit_from_reward' => $profitFromReward,
+                    'profit_from_deposit' => $profitFromDeposit,
+                ];
+            });
+
+        // 5. Cược từ tiền thưởng (tracking thực tế dựa trên amount_from_reward)
+        $totalRewardGiven = \App\Models\LuckyMoneyOpen::sum('amount') ?? 0;
+        $totalRewardGiven += \App\Models\GiftcodeUsage::sum('amount') ?? 0;
+        
+        $betsFromReward = \App\Models\Bet::sum('amount_from_reward') ?? 0;
+        
+        // Tính payout tương ứng với phần cược từ ví thưởng (tỉ lệ theo phần trăm số tiền bet)
+        $wonRewardBets = \App\Models\Bet::where('status', 'won')
+            ->where('amount_from_reward', '>', 0)
+            ->get();
+        $payoutFromReward = 0;
+        $usersWinningFromReward = [];
+        foreach ($wonRewardBets as $bet) {
+            $ratio = $bet->amount > 0 ? ($bet->amount_from_reward / $bet->amount) : 0;
+            $portion = ($bet->payout_amount ?? 0) * $ratio;
+            $payoutFromReward += $portion;
+            $usersWinningFromReward[$bet->user_id] = ($usersWinningFromReward[$bet->user_id] ?? 0) + $portion;
+        }
+        
+        // Losses from reward wallet = số tiền stake từ reward khi thua
+        $lossesFromReward = \App\Models\Bet::where('status', 'lost')->sum('amount_from_reward') ?? 0;
+        $profitFromReward = $lossesFromReward - $payoutFromReward;
+        
+        // User rút tiền từ tiền thưởng (log transfer reward->deposit)
+        $rewardTransfers = \App\Models\RewardTransfer::select('user_id', DB::raw('SUM(amount) as total_amount'), DB::raw('COUNT(*) as transfer_count'))
+            ->groupBy('user_id')
+            ->orderBy('total_amount', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(function ($item) {
+                $user = User::find($item->user_id);
+                return [
+                    'username' => $user ? ($user->name ?? $user->email ?? 'N/A') : 'N/A',
+                    'total_amount' => $item->total_amount,
+                    'transfer_count' => $item->transfer_count,
+                ];
+            });
+
+        // 6. User thắng từ thưởng và User rút tiền từ tiền thưởng
+        // TODO: Cần track chính xác khi user thắng từ ví thưởng và rút từ ví thưởng (sau khi chuyển sang ví nạp)
+
+        // 7. Tổng tiền cược từ tiền nạp (đã có)
+        // 8. User rút tiền nhiều nhất (đã có trong $usersWithdrawals)
+
+        return view('admin.fund-detail', compact(
+            'initialFund',
+            'currentFund',
+            'profit',
+            'profitPercent',
+            'status',
+            'luckyMoneyTotal',
+            'giftcodeTotal',
+            'promotionTotal',
+            'commissionPaidToday',
+            'totalExpensesToday',
+            'customersLost',
+            'customersWon',
+            'rewardResult',
+            'totalBetsToday',
+            'totalPayoutToday',
+            'profitFromBets',
+            'usersWithdrawals',
+            'totalDeposits',
+            'totalBetsFromDeposits',
+            'winsFromDeposits',
+            'lossesFromDeposits',
+            'systemProfitFromDeposits',
+            'totalDepositAll',
+            'totalWithdrawAll',
+            // Detailed tab metrics
+            'totalDepositInflow',
+            'profitFromBetsInflow',
+            'totalInflow',
+            'totalWithdrawOutflow',
+            'promotionOutflow',
+            'commissionOutflow',
+            'totalOutflow',
+            'totalBetsAllTime',
+            'totalPayoutAllTime',
+            'totalProfitFromBetsAllTime',
+            'topProfitableUsers',
+            'totalRewardGiven',
+            'betsFromReward',
+            'payoutFromReward',
+            'profitFromReward',
+            'lossesFromReward',
+            'usersWinningFromReward',
+            'rewardTransfers',
+            'fundAtStartOfDay'
+        ));
+    }
+
+    /**
+     * Bet history page
+     */
+    public function betHistory(Request $request)
+    {
+        $game = $request->input('game', 'xanhdo');
+        $username = $request->input('username');
+        $date = $request->input('date'); // Y-m-d
+
+        $query = Bet::with(['user', 'round'])
+            ->when($game, function ($q) use ($game) {
+                $q->whereHas('round', function ($sub) use ($game) {
+                    $sub->where('game_key', $game);
+                });
+            })
+            ->when($username, function ($q) use ($username) {
+                $q->whereHas('user', function ($sub) use ($username) {
+                    $sub->where('name', 'like', "%{$username}%")
+                        ->orWhere('email', 'like', "%{$username}%")
+                        ->orWhere('phone_number', 'like', "%{$username}%");
+                });
+            })
+            ->when($date, function ($q) use ($date) {
+                $q->whereDate('created_at', $date);
+            })
+            ->orderBy('created_at', 'desc');
+
+        $bets = $query->paginate(20)->appends($request->query());
+
+        return view('admin.bet-history', compact('bets', 'game', 'username', 'date'));
     }
 
     /**
