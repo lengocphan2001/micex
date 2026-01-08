@@ -355,4 +355,43 @@ class User extends Authenticatable
             'used_reward_wallet' => $usedRewardWallet,
         ];
     }
+
+    /**
+     * Deduct amount from specific wallet (deposit or reward)
+     * Returns array with deducted amounts and source
+     */
+    public function deductFromSpecificWallet($amount, $walletType = 'deposit')
+    {
+        $fromDeposit = 0;
+        $fromReward = 0;
+        $usedRewardWallet = false;
+
+        if ($walletType === 'reward') {
+            // Deduct from reward wallet only
+            $rewardBalance = $this->reward_balance ?? 0;
+            if ($rewardBalance < $amount) {
+                throw new \Exception('Số dư ví thưởng không đủ để đặt cược.');
+            }
+            $fromReward = $amount;
+            $this->reward_balance -= $amount;
+            $usedRewardWallet = true;
+            $this->last_bet_from_reward_at = now();
+        } else {
+            // Deduct from deposit wallet only
+            $depositBalance = $this->balance ?? 0;
+            if ($depositBalance < $amount) {
+                throw new \Exception('Số dư ví nạp không đủ để đặt cược.');
+            }
+            $fromDeposit = $amount;
+            $this->balance -= $amount;
+        }
+
+        $this->save();
+
+        return [
+            'from_deposit' => $fromDeposit,
+            'from_reward' => $fromReward,
+            'used_reward_wallet' => $usedRewardWallet,
+        ];
+    }
 }

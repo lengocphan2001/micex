@@ -71,6 +71,7 @@ class XanhDoController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'bet_type' => 'nullable|in:number,color',
             'bet_value' => 'nullable|string|max:10', // For number bets: '0'-'9'
+            'wallet_type' => 'nullable|string|in:deposit,reward',
         ]);
 
         $round = Round::getCurrentRound(self::GAME_KEY);
@@ -87,12 +88,6 @@ class XanhDoController extends Controller
         if ($round->status !== 'running' || $currentSecond > 30) {
             return response()->json([
                 'error' => 'Thời gian đặt cược đã kết thúc. Chỉ có thể đặt cược trong 30 giây đầu của mỗi phiên.',
-            ], 400);
-        }
-
-        if ($user->balance < $validated['amount']) {
-            return response()->json([
-                'error' => 'Số dư không đủ để đặt cược.',
             ], 400);
         }
 
@@ -113,17 +108,38 @@ class XanhDoController extends Controller
             // Each selection (number or color) is a separate bet
             // No need to check for duplicate gem_type
 
-            // Check total balance (deposit + reward)
-            $totalBalance = $user->getTotalBalance();
-            if ($totalBalance < $validated['amount']) {
-                DB::rollBack();
-                return response()->json([
-                    'error' => 'Số dư không đủ để đặt cược.',
-                ], 400);
+            // Determine wallet type (default to deposit if not specified)
+            $walletType = $validated['wallet_type'] ?? 'deposit';
+            
+            // Check balance for selected wallet
+            if ($walletType === 'reward') {
+                $walletBalance = $user->reward_balance ?? 0;
+                if ($walletBalance < $validated['amount']) {
+                    DB::rollBack();
+                    return response()->json([
+                        'error' => 'Số dư ví thưởng không đủ để đặt cược.',
+                    ], 400);
+                }
+            } else {
+                $walletBalance = $user->balance ?? 0;
+                if ($walletBalance < $validated['amount']) {
+                    DB::rollBack();
+                    return response()->json([
+                        'error' => 'Số dư ví nạp không đủ để đặt cược.',
+                    ], 400);
+                }
             }
 
-            // Deduct from wallets (ưu tiên ví nạp trước)
-            $deduction = $user->deductFromWallets($validated['amount']);
+            // Deduct from specific wallet
+            try {
+                $deduction = $user->deductFromSpecificWallet($validated['amount'], $walletType);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'error' => $e->getMessage(),
+                ], 400);
+            }
+            
             $user->betting_requirement = max(0, ($user->betting_requirement ?? 0) - $validated['amount']);
             $user->save();
 

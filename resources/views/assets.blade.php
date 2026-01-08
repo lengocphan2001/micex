@@ -32,10 +32,13 @@
             <div class="mt-4 space-y-3 text-white">
                 <div>
                     <p class="text-sm text-blue-100">Tổng tài sản</p>
-                    <p class="text-2xl font-bold flex items-center gap-1" id="totalBalanceDisplay">
-                        {{ number_format(auth()->user() ? (auth()->user()->balance ?? 0) + (auth()->user()->reward_balance ?? 0) : 0, 2, '.', ',') }}
-                        <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-5 h-5 object-contain">
-                    </p>
+                    <div class="flex items-center gap-1">
+                        <p class="text-2xl font-bold flex items-center gap-1" id="totalBalanceDisplay">
+                            {{ number_format(auth()->user() ? (auth()->user()->balance ?? 0) + (auth()->user()->reward_balance ?? 0) : 0, 2, '.', ',') }}
+                            
+                        </p>
+                        <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-5 h-5 object-contain" />
+                    </div>
                 </div>
                 
                 <!-- Two Wallets Display -->
@@ -44,14 +47,14 @@
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-blue-100">Ví nạp:</span>
                             <span class="text-white font-semibold" id="depositBalanceDisplay">{{ number_format(auth()->user()->balance ?? 0, 2, '.', ',') }}</span>
-                            <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-4 h-4 object-contain">
+                            <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-4 h-4 object-contain" />
                         </div>
                     </div>
                     <div class="flex items-center justify-between bg-white/10 rounded-lg px-3 py-2">
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-blue-100">Ví thưởng:</span>
                             <span class="text-white font-semibold" id="rewardBalanceDisplay">{{ number_format(auth()->user()->reward_balance ?? 0, 2, '.', ',') }}</span>
-                            <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-4 h-4 object-contain">
+                            <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-4 h-4 object-contain" />
                         </div>
                         @if((auth()->user()->reward_balance ?? 0) >= 5)
                         <button type="button" id="transferRewardBtn" class="text-xs bg-green-500 hover:bg-green-600 text-white font-semibold px-3 py-1 rounded-full transition-colors">
@@ -63,7 +66,7 @@
                 
                 <div class="text-sm text-blue-100 flex items-center gap-1">
                     Vòng cược chưa hoàn thành : <span class="font-semibold text-white" data-remaining-betting>{{ number_format(auth()->user() ? (auth()->user()->betting_requirement ?? 0) : 0, 2, '.', ',') }}</span> <span class="text-yellow-300">
-                        <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-5 h-5 object-contain">
+                        <img src="{{ asset('images/icons/coin_asset.png') }}" alt="Coin asset" class="w-5 h-5 object-contain" />
                     </span>
                 </div>
                 <div class="flex items-center gap-3 pt-1">

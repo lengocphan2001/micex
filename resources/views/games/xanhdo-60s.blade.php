@@ -107,13 +107,14 @@
                             <div class="flex items-center gap-1" id="lastResultDots">
                                 <span class="w-3 h-3 rounded-full bg-gray-500 cursor-pointer" id="lastResultDot"></span>
                             </div>
-                            <button type="button" id="showRecentResultsFromIcon" class="cursor-pointer hover:opacity-80 transition-opacity">
+                            <button type="button" id="showRecentResultsFromIcon"
+                                class="cursor-pointer hover:opacity-80 transition-opacity">
                                 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
                                     width="21" height="21" viewBox="0 0 21 21" fill="none">
                                     <rect width="21" height="21" fill="url(#pattern0_1159_923)" />
                                     <defs>
-                                        <pattern id="pattern0_1159_923" patternContentUnits="objectBoundingBox" width="1"
-                                            height="1">
+                                        <pattern id="pattern0_1159_923" patternContentUnits="objectBoundingBox"
+                                            width="1" height="1">
                                             <use xlink:href="#image0_1159_923" transform="scale(0.0238095)" />
                                         </pattern>
                                         <image id="image0_1159_923" width="42" height="42" preserveAspectRatio="none"
@@ -159,38 +160,60 @@
                         <p class="text-[#FFFFFFB2] text-[14px] font-medium">Tổng số dư:</p>
                         <span id="totalBalanceText" class="text-white text-[16px] font-medium">0.00</span>
                         <span class="text-[#FFFFFFB2] text-[14px] font-medium">USDT</span>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between text-xs">
-                    <div class="flex items-center gap-2">
-                        <span class="text-[#FFFFFFB2]">Ví nạp:</span>
-                        <span id="depositBalanceText" class="text-white font-medium">0.00</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-[#FFFFFFB2]">Ví thưởng:</span>
-                        <span id="rewardBalanceText" class="text-white font-medium">0.00</span>
+                        <div class="flex items-center justify-between gap-4">
+                            <button type="button" id="xdRefreshBalanceBtn"
+                                class="text-center cursor-pointer hover:opacity-80 transition-opacity">
+                                <svg id="xdRefreshBalanceIcon" xmlns="http://www.w3.org/2000/svg" width="15"
+                                    height="16" viewBox="0 0 15 16" fill="none"
+                                    class="transition-transform duration-300">
+                                    <path
+                                        d="M1.56689 11.1755C1.81326 11.5861 2.11437 11.9693 2.45655 12.3115C4.975 14.83 9.06747 14.83 11.5996 12.3115C12.6261 11.285 13.2147 9.98464 13.4063 8.65698"
+                                        stroke="#707797" stroke-width="1.3" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path
+                                        d="M0.649902 6.82298C0.841523 5.48164 1.43008 4.19498 2.45662 3.16844C4.97507 0.64999 9.06754 0.64999 11.5997 3.16844C11.9555 3.5243 12.243 3.90757 12.4893 4.3045"
+                                        stroke="#707797" stroke-width="1.3" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M1.30664 14.8299V11.1755H4.9611" stroke="#707797" stroke-width="1.3"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M12.7492 0.650024V4.30449H9.09473" stroke="#707797" stroke-width="1.3"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="relative flex-shrink-0">
+                            <button type="button" id="walletToggleBtn"
+                                class="ml-1 w-6 h-6 flex items-center justify-center rounded-full border border-white/30 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            <div id="walletDropdown"
+                                class="hidden absolute right-0 top-full mt-1 z-20 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                                <button type="button" data-wallet="deposit"
+                                    class="w-full flex items-center gap-2 px-3 py-2.5 text-left text-white hover:bg-gray-700 transition-colors wallet-option">
+                                    <span
+                                        class="w-4 h-4 rounded-full border-2 border-green-500 flex items-center justify-center">
+                                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                    </span>
+                                    <span>Ví giao dịch</span>
+                                </button>
+                                <div class="border-t border-gray-700"></div>
+                                <button type="button" data-wallet="reward"
+                                    class="w-full flex items-center gap-2 px-3 py-2.5 text-left text-gray-400 hover:bg-gray-700 transition-colors wallet-option">
+                                    <span class="w-4 h-4 rounded-full border-2 border-gray-500"></span>
+                                    <span>Ví tiền thưởng</span>
+                                </button>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center gap-2">
-                <button type="button" id="xdRefreshBalanceBtn"
-                    class="text-center cursor-pointer hover:opacity-80 transition-opacity">
-                    <svg id="xdRefreshBalanceIcon" xmlns="http://www.w3.org/2000/svg" width="15" height="16"
-                        viewBox="0 0 15 16" fill="none" class="transition-transform duration-300">
-                        <path
-                            d="M1.56689 11.1755C1.81326 11.5861 2.11437 11.9693 2.45655 12.3115C4.975 14.83 9.06747 14.83 11.5996 12.3115C12.6261 11.285 13.2147 9.98464 13.4063 8.65698"
-                            stroke="#707797" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
-                        <path
-                            d="M0.649902 6.82298C0.841523 5.48164 1.43008 4.19498 2.45662 3.16844C4.97507 0.64999 9.06754 0.64999 11.5997 3.16844C11.9555 3.5243 12.243 3.90757 12.4893 4.3045"
-                            stroke="#707797" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
-                        <path d="M1.30664 14.8299V11.1755H4.9611" stroke="#707797" stroke-width="1.3"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                        <path d="M12.7492 0.650024V4.30449H9.09473" stroke="#707797" stroke-width="1.3"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </button>
-            </div>
+
 
             <div class="xd-card rounded-xl p-4 space-y-3">
                 <div class="flex items-center gap-3">
@@ -282,15 +305,16 @@
 
         let xdSelectedPicks = []; // Array of selected picks: ['do', 'xanh', 'tim']
         let xdSelectedNumbers = []; // Array of selected numbers: [0, 1, 2, ...]
-    let xdMyBets = []; // Array of bets for current round
-    let xdLastRoundNumberSeen = null;
-    let xdRoundFlipRetryTimer = null;
-    let xdLastCheckedRound = null; // Track which round we've already checked for winnings
-    let xdRandomAnimationInterval = null; // For random result animation
-    let xdIsAnimating = false; // Track if animation is running
-    let xdLastResultRound = null; // Track which round result we've displayed
-    let xdWinningModalTimeout = null; // Timeout for auto-closing winning modal
-    let xdIsInitialLoad = true; // Track if this is the initial page load
+        let xdMyBets = []; // Array of bets for current round
+        let xdLastRoundNumberSeen = null;
+        let xdRoundFlipRetryTimer = null;
+        let xdLastCheckedRound = null; // Track which round we've already checked for winnings
+        let xdRandomAnimationInterval = null; // For random result animation
+        let xdIsAnimating = false; // Track if animation is running
+        let xdLastResultRound = null; // Track which round result we've displayed
+        let xdWinningModalTimeout = null; // Timeout for auto-closing winning modal
+        let xdIsInitialLoad = true; // Track if this is the initial page load
+        let xdSelectedWallet = 'deposit'; // Selected wallet type: 'deposit' or 'reward'
 
         function xdCalculateRoundNumber() {
             const now = Date.now();
@@ -418,16 +442,15 @@
                     const data = await res.json();
                     if (data && data.balance !== undefined) {
                         const totalEl = document.getElementById('totalBalanceText');
-                        const depositEl = document.getElementById('depositBalanceText');
-                        const rewardEl = document.getElementById('rewardBalanceText');
-                        
+
                         const depositBalance = Number(data.balance || 0);
                         const rewardBalance = Number(data.reward_balance || 0);
-                        const totalBalance = depositBalance + rewardBalance;
-                        
-                        if (totalEl) totalEl.textContent = totalBalance.toFixed(2);
-                        if (depositEl) depositEl.textContent = depositBalance.toFixed(2);
-                        if (rewardEl) rewardEl.textContent = rewardBalance.toFixed(2);
+
+                        if (totalEl) {
+                            // Show balance of selected wallet
+                            const selectedBalance = xdSelectedWallet === 'reward' ? rewardBalance : depositBalance;
+                            totalEl.textContent = selectedBalance.toFixed(2);
+                        }
                     }
                     // Load current round bets
                     if (data && data.bets && Array.isArray(data.bets)) {
@@ -574,7 +597,7 @@
                     const tdResult = document.createElement('td');
                     tdResult.className = 'py-3 px-2';
                     tdResult.textContent = item.result !== null && item.result !== undefined ? item.result :
-                    '-';
+                        '-';
 
                     // Colors
                     const tdColors = document.createElement('td');
@@ -682,124 +705,127 @@
             }
         }
 
-    function xdShowRandomAnimation() {
-        if (xdIsAnimating) return;
-        xdIsAnimating = true;
-        
-        const label = document.getElementById('lastResultLabel');
-        const dotsContainer = document.getElementById('lastResultDots');
-        if (!label || !dotsContainer) {
-            xdIsAnimating = false;
-            return;
-        }
+        function xdShowRandomAnimation() {
+            if (xdIsAnimating) return;
+            xdIsAnimating = true;
 
-        const animationDuration = 5000; // 5 seconds
-        const animationSpeed = 100; // ms between each number change
-        const startTime = Date.now();
-        
-        // Pre-load actual result while animation is running
-        const roundNumber = xdCalculateRoundNumber();
-        const prev = roundNumber - 1;
-        let actualResult = null;
-        let actualResultNum = null;
-        
-        // Load result in background
-        if (prev >= 1) {
-            fetch(`{{ route('xanhdo.round-result') }}?round_number=${prev}`, { 
-                headers: { 'Accept': 'application/json' } 
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.final_result !== null && data.final_result !== '') {
-                    actualResult = data.final_result ?? data.result ?? data.admin_set_result;
-                    actualResultNum = parseInt(actualResult);
-                }
-            })
-            .catch(() => {});
-        }
-
-        xdRandomAnimationInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            const remaining = animationDuration - elapsed;
-            
-            // In the last 500ms, slow down and show actual result if available
-            if (remaining <= 500 && actualResultNum !== null && !isNaN(actualResultNum) && actualResultNum >= 0 && actualResultNum <= 9) {
-                // Show actual result in the last moments
-                label.textContent = actualResultNum;
-                const winningGems = xdNumberToWinningGems(actualResultNum);
-                dotsContainer.innerHTML = '';
-                
-                if (actualResultNum === 0) {
-                    const dot1 = document.createElement('span');
-                    dot1.className = 'w-3 h-3 rounded-full bg-purple-400';
-                    const dot2 = document.createElement('span');
-                    dot2.className = 'w-3 h-3 rounded-full bg-red-400';
-                    dotsContainer.appendChild(dot1);
-                    dotsContainer.appendChild(dot2);
-                } else if (actualResultNum === 5) {
-                    const dot1 = document.createElement('span');
-                    dot1.className = 'w-3 h-3 rounded-full bg-purple-400';
-                    const dot2 = document.createElement('span');
-                    dot2.className = 'w-3 h-3 rounded-full bg-green-400';
-                    dotsContainer.appendChild(dot1);
-                    dotsContainer.appendChild(dot2);
-                } else {
-                    const singleDot = document.createElement('span');
-                    singleDot.className = 'w-3 h-3 rounded-full';
-                    if (winningGems.includes('kcxanh')) {
-                        singleDot.className += ' bg-green-400';
-                    } else if (winningGems.includes('kcdo')) {
-                        singleDot.className += ' bg-red-400';
-                    } else {
-                        singleDot.className += ' bg-gray-500';
-                    }
-                    dotsContainer.appendChild(singleDot);
-                }
-            } else if (elapsed >= animationDuration) {
-                // Animation finished, stop and load actual result
-                clearInterval(xdRandomAnimationInterval);
-                xdRandomAnimationInterval = null;
+            const label = document.getElementById('lastResultLabel');
+            const dotsContainer = document.getElementById('lastResultDots');
+            if (!label || !dotsContainer) {
                 xdIsAnimating = false;
-                // Load actual result immediately (should already be loaded)
-                xdLoadBalanceAndLastResult();
                 return;
-            } else {
-                // Continue random animation
-                const randomNum = Math.floor(Math.random() * 10);
-                label.textContent = randomNum;
-                
-                const winningGems = xdNumberToWinningGems(randomNum);
-                dotsContainer.innerHTML = '';
-                
-                if (randomNum === 0) {
-                    const dot1 = document.createElement('span');
-                    dot1.className = 'w-3 h-3 rounded-full bg-purple-400';
-                    const dot2 = document.createElement('span');
-                    dot2.className = 'w-3 h-3 rounded-full bg-red-400';
-                    dotsContainer.appendChild(dot1);
-                    dotsContainer.appendChild(dot2);
-                } else if (randomNum === 5) {
-                    const dot1 = document.createElement('span');
-                    dot1.className = 'w-3 h-3 rounded-full bg-purple-400';
-                    const dot2 = document.createElement('span');
-                    dot2.className = 'w-3 h-3 rounded-full bg-green-400';
-                    dotsContainer.appendChild(dot1);
-                    dotsContainer.appendChild(dot2);
-                } else {
-                    const singleDot = document.createElement('span');
-                    singleDot.className = 'w-3 h-3 rounded-full';
-                    if (winningGems.includes('kcxanh')) {
-                        singleDot.className += ' bg-green-400';
-                    } else if (winningGems.includes('kcdo')) {
-                        singleDot.className += ' bg-red-400';
-                    } else {
-                        singleDot.className += ' bg-gray-500';
-                    }
-                    dotsContainer.appendChild(singleDot);
-                }
             }
-        }, animationSpeed);
-    }
+
+            const animationDuration = 5000; // 5 seconds
+            const animationSpeed = 100; // ms between each number change
+            const startTime = Date.now();
+
+            // Pre-load actual result while animation is running
+            const roundNumber = xdCalculateRoundNumber();
+            const prev = roundNumber - 1;
+            let actualResult = null;
+            let actualResultNum = null;
+
+            // Load result in background
+            if (prev >= 1) {
+                fetch(`{{ route('xanhdo.round-result') }}?round_number=${prev}`, {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.final_result !== null && data.final_result !== '') {
+                            actualResult = data.final_result ?? data.result ?? data.admin_set_result;
+                            actualResultNum = parseInt(actualResult);
+                        }
+                    })
+                    .catch(() => {});
+            }
+
+            xdRandomAnimationInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const remaining = animationDuration - elapsed;
+
+                // In the last 500ms, slow down and show actual result if available
+                if (remaining <= 500 && actualResultNum !== null && !isNaN(actualResultNum) && actualResultNum >=
+                    0 && actualResultNum <= 9) {
+                    // Show actual result in the last moments
+                    label.textContent = actualResultNum;
+                    const winningGems = xdNumberToWinningGems(actualResultNum);
+                    dotsContainer.innerHTML = '';
+
+                    if (actualResultNum === 0) {
+                        const dot1 = document.createElement('span');
+                        dot1.className = 'w-3 h-3 rounded-full bg-purple-400';
+                        const dot2 = document.createElement('span');
+                        dot2.className = 'w-3 h-3 rounded-full bg-red-400';
+                        dotsContainer.appendChild(dot1);
+                        dotsContainer.appendChild(dot2);
+                    } else if (actualResultNum === 5) {
+                        const dot1 = document.createElement('span');
+                        dot1.className = 'w-3 h-3 rounded-full bg-purple-400';
+                        const dot2 = document.createElement('span');
+                        dot2.className = 'w-3 h-3 rounded-full bg-green-400';
+                        dotsContainer.appendChild(dot1);
+                        dotsContainer.appendChild(dot2);
+                    } else {
+                        const singleDot = document.createElement('span');
+                        singleDot.className = 'w-3 h-3 rounded-full';
+                        if (winningGems.includes('kcxanh')) {
+                            singleDot.className += ' bg-green-400';
+                        } else if (winningGems.includes('kcdo')) {
+                            singleDot.className += ' bg-red-400';
+                        } else {
+                            singleDot.className += ' bg-gray-500';
+                        }
+                        dotsContainer.appendChild(singleDot);
+                    }
+                } else if (elapsed >= animationDuration) {
+                    // Animation finished, stop and load actual result
+                    clearInterval(xdRandomAnimationInterval);
+                    xdRandomAnimationInterval = null;
+                    xdIsAnimating = false;
+                    // Load actual result immediately (should already be loaded)
+                    xdLoadBalanceAndLastResult();
+                    return;
+                } else {
+                    // Continue random animation
+                    const randomNum = Math.floor(Math.random() * 10);
+                    label.textContent = randomNum;
+
+                    const winningGems = xdNumberToWinningGems(randomNum);
+                    dotsContainer.innerHTML = '';
+
+                    if (randomNum === 0) {
+                        const dot1 = document.createElement('span');
+                        dot1.className = 'w-3 h-3 rounded-full bg-purple-400';
+                        const dot2 = document.createElement('span');
+                        dot2.className = 'w-3 h-3 rounded-full bg-red-400';
+                        dotsContainer.appendChild(dot1);
+                        dotsContainer.appendChild(dot2);
+                    } else if (randomNum === 5) {
+                        const dot1 = document.createElement('span');
+                        dot1.className = 'w-3 h-3 rounded-full bg-purple-400';
+                        const dot2 = document.createElement('span');
+                        dot2.className = 'w-3 h-3 rounded-full bg-green-400';
+                        dotsContainer.appendChild(dot1);
+                        dotsContainer.appendChild(dot2);
+                    } else {
+                        const singleDot = document.createElement('span');
+                        singleDot.className = 'w-3 h-3 rounded-full';
+                        if (winningGems.includes('kcxanh')) {
+                            singleDot.className += ' bg-green-400';
+                        } else if (winningGems.includes('kcdo')) {
+                            singleDot.className += ' bg-red-400';
+                        } else {
+                            singleDot.className += ' bg-gray-500';
+                        }
+                        dotsContainer.appendChild(singleDot);
+                    }
+                }
+            }, animationSpeed);
+        }
 
         function xdTick() {
             const roundNumber = xdCalculateRoundNumber();
@@ -937,7 +963,8 @@
                                 gem_type: selection.gem_type,
                                 amount: amount,
                                 bet_type: selection.bet_type,
-                                bet_value: selection.bet_value
+                                bet_value: selection.bet_value,
+                                wallet_type: xdSelectedWallet
                             }),
                         })
                         .then(async response => {
@@ -1053,6 +1080,77 @@
             });
             document.getElementById('confirmBtn')?.addEventListener('click', xdSubmitBet);
 
+            // Wallet dropdown
+            const walletToggleBtn = document.getElementById('walletToggleBtn');
+            const walletDropdown = document.getElementById('walletDropdown');
+            const walletOptions = document.querySelectorAll('.wallet-option');
+
+            if (walletToggleBtn && walletDropdown) {
+                walletToggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    walletDropdown.classList.toggle('hidden');
+                });
+
+                walletOptions.forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const walletType = option.dataset.wallet;
+                        xdSelectedWallet = walletType;
+
+                        // Update radio buttons
+                        walletOptions.forEach(opt => {
+                            const radio = opt.querySelector('span');
+                            if (opt.dataset.wallet === walletType) {
+                                radio.className =
+                                    'w-4 h-4 rounded-full border-2 border-green-500 flex items-center justify-center';
+                                radio.innerHTML =
+                                    '<span class="w-2 h-2 rounded-full bg-green-500"></span>';
+                                opt.classList.remove('text-gray-400');
+                                opt.classList.add('text-white');
+                            } else {
+                                radio.className =
+                                    'w-4 h-4 rounded-full border-2 border-gray-500';
+                                radio.innerHTML = '';
+                                opt.classList.remove('text-white');
+                                opt.classList.add('text-gray-400');
+                            }
+                        });
+
+                        // Update displayed balance
+                        const totalEl = document.getElementById('totalBalanceText');
+                        if (totalEl) {
+                            // Get balances from API or use stored values
+                            fetch('{{ route('xanhdo.my-bet') }}', {
+                                    headers: {
+                                        'Accept': 'application/json'
+                                    }
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data && data.balance !== undefined) {
+                                        const depositBalance = Number(data.balance || 0);
+                                        const rewardBalance = Number(data.reward_balance ||
+                                            0);
+                                        const selectedBalance = walletType === 'reward' ?
+                                            rewardBalance : depositBalance;
+                                        totalEl.textContent = selectedBalance.toFixed(2);
+                                    }
+                                })
+                                .catch(() => {});
+                        }
+
+                        walletDropdown.classList.add('hidden');
+                    });
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!walletToggleBtn.contains(e.target) && !walletDropdown.contains(e.target)) {
+                        walletDropdown.classList.add('hidden');
+                    }
+                });
+            }
+
             // Refresh balance button (like explore)
             document.getElementById('xdRefreshBalanceBtn')?.addEventListener('click', async () => {
                 const icon = document.getElementById('xdRefreshBalanceIcon');
@@ -1068,7 +1166,7 @@
             document.getElementById('lastResultDot')?.addEventListener('click', xdShowRecentResults);
             document.getElementById('showRecentResultsBtn')?.addEventListener('click', xdShowRecentResults);
             document.getElementById('showRecentResultsFromIcon')?.addEventListener('click',
-            xdShowRecentResults);
+                xdShowRecentResults);
             document.getElementById('closeRecentResults')?.addEventListener('click', xdHideRecentResults);
             document.getElementById('recentResultsPopup')?.addEventListener('click', (e) => {
                 if (e.target.id === 'recentResultsPopup') {
