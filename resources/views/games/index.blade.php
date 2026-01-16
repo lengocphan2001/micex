@@ -30,6 +30,19 @@
                 <span class="inline-flex items-center justify-center px-3 py-1 rounded-full bg-[#4B5563] text-white text-xs font-semibold">60s</span>
             </div>
         </a>
+
+        <a href="{{ route('games.trading') }}" class="flex flex-col items-center text-center">
+            <div class="w-20 h-20 rounded-2xl overflow-hidden bg-gray-800 flex items-center justify-center">
+                @if(file_exists(public_path('images/gameitems/trading.png')))
+                    <img src="{{ asset('images/gameitems/trading.png') }}" alt="Trading" class="w-full h-full object-cover">
+                @else
+                    <svg class="w-12 h-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                @endif
+            </div>
+            <div class="mt-2 text-white text-sm font-medium">Trading</div>
+        </a>
     </div>
 </div>
 @endsection

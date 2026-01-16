@@ -17,3 +17,21 @@ Schedule::command('reward:expire')
     ->everyFiveMinutes()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Price Engine - Run every second
+Schedule::command('price:tick')
+    ->everySecond()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Candle Engine - Process candles every second
+Schedule::command('candle:process')
+    ->everySecond()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Trading Bets Engine - Process bets every second
+Schedule::command('trading:process-bets')
+    ->everySecond()
+    ->withoutOverlapping()
+    ->runInBackground();

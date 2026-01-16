@@ -36,6 +36,14 @@ class ExploreController extends Controller
         return view('games.xanhdo-60s');
     }
 
+    /**
+     * Game: Trading
+     */
+    public function trading()
+    {
+        return view('games.trading');
+    }
+
     // Tỉ lệ random cho mỗi loại đá (tổng = 100)
     private const GEM_RANDOM_RATES = [
         'kcxanh' => 40,      // 40%

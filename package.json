@@ -16,6 +16,7 @@
     },
     "dependencies": {
         "laravel-echo": "^2.2.6",
+        "lightweight-charts": "^5.1.0",
         "pusher-js": "^8.4.0"
     }
 }

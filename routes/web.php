@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
     // Game routes
     Route::get('/games/khaithac', [\App\Http\Controllers\ExploreController::class, 'khaithac60s'])->name('games.khaithac');
     Route::get('/games/xanhdo', [\App\Http\Controllers\ExploreController::class, 'xanhDo60s'])->name('games.xanhdo');
+    Route::get('/games/trading', [\App\Http\Controllers\ExploreController::class, 'trading'])->name('games.trading');
     
     // Explore screen (legacy - redirect to games)
     Route::get('/explore', [\App\Http\Controllers\ExploreController::class, 'khaithac60s'])->name('explore');
@@ -108,6 +109,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/xanhdo/round-result', [\App\Http\Controllers\XanhDoController::class, 'getRoundResult'])->name('xanhdo.round-result');
     Route::get('/api/xanhdo/recent-results', [\App\Http\Controllers\XanhDoController::class, 'getRecentResults'])->name('xanhdo.recent-results');
     Route::get('/api/xanhdo/round-winnings', [\App\Http\Controllers\XanhDoController::class, 'getRoundWinnings'])->name('xanhdo.round-winnings');
+    
+    // Trading API endpoints
+    Route::get('/api/trading/ohlc', [\App\Http\Controllers\TradingController::class, 'getOHLC'])->name('trading.ohlc');
+    Route::get('/api/trading/price', [\App\Http\Controllers\TradingController::class, 'getCurrentPrice'])->name('trading.price');
+    Route::get('/api/trading/candles', [\App\Http\Controllers\TradingController::class, 'getCandles'])->name('trading.candles');
+    Route::post('/api/trading/bet', [\App\Http\Controllers\TradingController::class, 'placeBet'])->name('trading.bet');
+    Route::get('/api/trading/bet-result', [\App\Http\Controllers\TradingController::class, 'getBetResult'])->name('trading.bet-result');
+    Route::get('/api/trading/bet-ratio', [\App\Http\Controllers\TradingController::class, 'getBetRatio'])->name('trading.bet-ratio');
 
     // Wallet API endpoints
     Route::post('/api/wallet/transfer-reward-to-deposit', [\App\Http\Controllers\WalletController::class, 'transferRewardToDeposit'])->name('wallet.transfer-reward-to-deposit');
@@ -371,6 +380,8 @@ Route::prefix('admin')->name('admin.')->middleware('set.admin.guard')->group(fun
         Route::post('/promotion-giftcode/giftcode/{id}/cancel', [AdminController::class, 'cancelGiftcode'])->name('giftcode.cancel');
         Route::get('/promotion-giftcode/giftcode/{id}/history', [AdminController::class, 'getGiftcodeHistory'])->name('giftcode.history');
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+        Route::get('/price-control', [\App\Http\Controllers\Admin\PriceControlController::class, 'index'])->name('price-control');
+        Route::post('/price-control/update', [\App\Http\Controllers\Admin\PriceControlController::class, 'update'])->name('price-control.update');
         Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
         Route::post('/settings/maintenance', [AdminController::class, 'updateMaintenance'])->name('settings.maintenance.update');
         Route::post('/settings/commission-rates', [AdminController::class, 'updateCommissionRates'])->name('settings.commission-rates.update');
