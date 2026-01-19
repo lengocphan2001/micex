@@ -24,19 +24,14 @@ class ProcessTradingBets extends Command
 
     private function processBetsForSymbol(string $symbol)
     {
-        // Get the most recent closed 1m candle
-        $lastCandle = Candle::where('symbol', $symbol)
-            ->where('timeframe', '1m')
-            ->orderBy('time', 'desc')
-            ->first();
+        // Calculate previous round time (30 seconds per round)
+        $now = now()->timestamp;
+        $currentRoundTime = floor($now / 30) * 30;
+        $previousRoundTime = $currentRoundTime - 30;
         
-        if (!$lastCandle) {
-            return;
-        }
-        
-        // Get all pending bets for this round_time
+        // Get all pending bets for previous round
         $pendingBets = TradingBet::where('symbol', $symbol)
-            ->where('round_time', $lastCandle->time)
+            ->where('round_time', $previousRoundTime)
             ->where('status', 'pending')
             ->get();
         
@@ -44,7 +39,11 @@ class ProcessTradingBets extends Command
             return;
         }
         
-        $exitPrice = (float)$lastCandle->close;
+        // Get exit price from cache (updated by PriceTick command)
+        $exitPrice = (float)\Illuminate\Support\Facades\Cache::get(
+            "{$symbol}_PRICE",
+            $this->getDefaultPrice($symbol)
+        );
         
         DB::transaction(function () use ($pendingBets, $exitPrice) {
             foreach ($pendingBets as $bet) {
@@ -85,6 +84,9 @@ class ProcessTradingBets extends Command
                         $user->save();
                     }
                     
+                    // Log for debugging
+                    $this->info("Processed bet #{$bet->id}: {$bet->direction} - " . ($isWin ? 'WON' : 'LOST') . " - Profit: {$profit}");
+                    
                 } catch (\Exception $e) {
                     Log::error('Error processing trading bet', [
                         'bet_id' => $bet->id,
@@ -93,5 +95,16 @@ class ProcessTradingBets extends Command
                 }
             }
         });
+    }
+    
+    private function getDefaultPrice(string $symbol): float
+    {
+        return match($symbol) {
+            'BTCUSDT' => 94000,
+            'ETHUSDT' => 3500,
+            'BNBUSDT' => 600,
+            'SOLUSDT' => 100,
+            default => 1000,
+        };
     }
 }

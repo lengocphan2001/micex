@@ -115,8 +115,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/trading/price', [\App\Http\Controllers\TradingController::class, 'getCurrentPrice'])->name('trading.price');
     Route::get('/api/trading/candles', [\App\Http\Controllers\TradingController::class, 'getCandles'])->name('trading.candles');
     Route::post('/api/trading/bet', [\App\Http\Controllers\TradingController::class, 'placeBet'])->name('trading.bet');
+    Route::get('/api/trading/my-bet', [\App\Http\Controllers\TradingController::class, 'getMyBet'])->name('trading.my-bet');
     Route::get('/api/trading/bet-result', [\App\Http\Controllers\TradingController::class, 'getBetResult'])->name('trading.bet-result');
+    Route::post('/api/trading/process-bet-result', [\App\Http\Controllers\TradingController::class, 'processBetResult'])->name('trading.process-bet-result');
     Route::get('/api/trading/bet-ratio', [\App\Http\Controllers\TradingController::class, 'getBetRatio'])->name('trading.bet-ratio');
+    Route::get('/api/trading/admin-settings', [\App\Http\Controllers\TradingController::class, 'getAdminSettings'])->name('trading.admin-settings');
+    Route::post('/api/trading/admin-settings', [\App\Http\Controllers\TradingController::class, 'saveAdminSettings'])->name('trading.admin-settings.save');
 
     // Wallet API endpoints
     Route::post('/api/wallet/transfer-reward-to-deposit', [\App\Http\Controllers\WalletController::class, 'transferRewardToDeposit'])->name('wallet.transfer-reward-to-deposit');

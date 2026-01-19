@@ -256,27 +256,21 @@ class TradingController extends Controller
             $request->validate([
                 'symbol' => 'required|string',
                 'direction' => 'required|in:up,down',
-                'amount' => 'required|numeric|min:1',
+                'amount' => 'required|numeric|min:0.01',
+                'wallet_type' => 'nullable|string|in:deposit,reward',
             ]);
             
             $symbol = $request->input('symbol');
             $direction = $request->input('direction');
             $amount = (float)$request->input('amount');
-            
-            // Check balance
-            if ($user->balance < $amount) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Số dư không đủ'
-                ], 400);
-            }
+            $walletType = $request->input('wallet_type', 'deposit');
             
             // Get current price
             $entryPrice = Cache::get("{$symbol}_PRICE", $this->getDefaultPrice($symbol));
             
-            // Calculate current round time (60 seconds per round)
+            // Calculate current round time (30 seconds per round)
             $now = now()->timestamp;
-            $roundTime = floor($now / 60) * 60;
+            $roundTime = floor($now / 30) * 30;
             
             // Check if user already has a bet for this round
             $existingBet = \App\Models\TradingBet::where('user_id', $user->id)
@@ -292,9 +286,15 @@ class TradingController extends Controller
                 ], 400);
             }
             
-            // Deduct balance
-            $user->balance -= $amount;
-            $user->save();
+            // Deduct from specific wallet
+            try {
+                $deduction = $user->deductFromSpecificWallet($amount, $walletType);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ], 400);
+            }
             
             // Create bet
             $bet = \App\Models\TradingBet::create([
@@ -308,9 +308,14 @@ class TradingController extends Controller
                 'status' => 'pending',
             ]);
             
+            // Refresh user to get updated balance
+            $user->refresh();
+            
             return response()->json([
                 'success' => true,
                 'bet' => $bet,
+                'balance' => $user->balance,
+                'reward_balance' => $user->reward_balance ?? 0,
             ]);
             
         } catch (\Exception $e) {
@@ -339,32 +344,120 @@ class TradingController extends Controller
                     'error' => 'Unauthorized'
                 ], 401);
             }
-            
+
             $betId = $request->input('bet_id');
             $bet = \App\Models\TradingBet::where('id', $betId)
                 ->where('user_id', $user->id)
                 ->first();
-            
+
             if (!$bet) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Bet not found'
                 ], 404);
             }
-            
+
             return response()->json([
                 'success' => true,
                 'bet' => $bet,
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('TradingController::getBetResult error', [
                 'message' => $e->getMessage(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'error' => 'An error occurred'
+            ], 500);
+        }
+    }
+
+    /**
+     * Process bet result (called by frontend when round ends)
+     * Frontend calculates exit_price from candle close, then calls this API
+     */
+    public function processBetResult(Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized'
+                ], 401);
+            }
+
+            $request->validate([
+                'bet_id' => 'required|exists:trading_bets,id',
+                'exit_price' => 'required|numeric',
+            ]);
+
+            $bet = \App\Models\TradingBet::where('id', $request->input('bet_id'))
+                ->where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->first();
+
+            if (!$bet) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Bet not found or already processed'
+                ], 404);
+            }
+
+            $entryPrice = (float)$bet->entry_price;
+            $exitPrice = (float)$request->input('exit_price');
+            $priceChange = $exitPrice - $entryPrice;
+
+            // Determine if bet wins
+            $isWin = false;
+            if ($bet->direction === 'up') {
+                $isWin = $priceChange > 0; // Win if price goes up
+            } else {
+                $isWin = $priceChange < 0; // Win if price goes down
+            }
+
+            // Calculate profit
+            if ($isWin) {
+                $profit = $bet->amount * ($bet->payout_rate - 1); // Profit = amount * (payout_rate - 1)
+                $bet->status = 'won';
+            } else {
+                $profit = -$bet->amount; // Lose entire bet amount
+                $bet->status = 'lost';
+            }
+
+            $bet->exit_price = $exitPrice;
+            $bet->profit = $profit;
+            $bet->result_at = now();
+            $bet->save();
+
+            // Update user balance
+            if ($isWin) {
+                // Return bet amount + profit
+                $user->balance += $bet->amount + $profit;
+                $user->save();
+            }
+            // If lost, balance was already deducted when bet was placed
+
+            return response()->json([
+                'success' => true,
+                'bet' => $bet,
+                'is_win' => $isWin,
+                'profit' => $profit,
+                'balance' => $user->balance,
+                'reward_balance' => $user->reward_balance ?? 0,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('TradingController::processBetResult error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'An error occurred while processing bet result'
             ], 500);
         }
     }
@@ -421,6 +514,134 @@ class TradingController extends Controller
         }
     }
     
+    /**
+     * Get my bet and balance
+     */
+    public function getMyBet(Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized'
+                ], 401);
+            }
+
+            // Get current round time
+            $now = now()->timestamp;
+            $roundTime = floor($now / 30) * 30;
+
+            // Get my bet for current round
+            $myBet = \App\Models\TradingBet::where('user_id', $user->id)
+                ->where('symbol', $request->input('symbol', 'BTCUSDT'))
+                ->where('round_time', $roundTime)
+                ->where('status', 'pending')
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'bet' => $myBet,
+                'balance' => $user->balance,
+                'reward_balance' => $user->reward_balance ?? 0,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('TradingController::getMyBet error', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'An error occurred'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get admin settings
+     */
+    public function getAdminSettings(Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user || !($user->is_admin ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized'
+                ], 401);
+            }
+
+            $symbol = $request->input('symbol', 'BTCUSDT');
+            $control = \App\Models\PriceControl::getOrCreate($symbol);
+
+            return response()->json([
+                'success' => true,
+                'bias_dir' => $control->bias_dir ?? 0,
+                'last_seconds' => $control->last_seconds ?? 10,
+                'bias_power' => $control->bias_power ?? 10,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('TradingController::getAdminSettings error', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'An error occurred'
+            ], 500);
+        }
+    }
+
+    /**
+     * Save admin settings
+     */
+    public function saveAdminSettings(Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user || !($user->is_admin ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized'
+                ], 401);
+            }
+
+            $request->validate([
+                'symbol' => 'required|string',
+                'bias_dir' => 'required|integer|in:-1,0,1',
+                'last_seconds' => 'required|integer|min:1|max:30',
+                'bias_power' => 'required|integer|min:0|max:100',
+            ]);
+
+            $symbol = $request->input('symbol');
+            $control = \App\Models\PriceControl::getOrCreate($symbol);
+
+            $control->update([
+                'bias_dir' => $request->input('bias_dir'),
+                'last_seconds' => $request->input('last_seconds'),
+                'bias_power' => $request->input('bias_power'),
+                'enabled' => $request->input('bias_dir') != 0,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Settings saved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('TradingController::saveAdminSettings error', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'An error occurred'
+            ], 500);
+        }
+    }
+
     private function getDefaultPrice(string $symbol): float
     {
         return match($symbol) {
