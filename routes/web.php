@@ -110,17 +110,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/xanhdo/recent-results', [\App\Http\Controllers\XanhDoController::class, 'getRecentResults'])->name('xanhdo.recent-results');
     Route::get('/api/xanhdo/round-winnings', [\App\Http\Controllers\XanhDoController::class, 'getRoundWinnings'])->name('xanhdo.round-winnings');
     
-    // Trading API endpoints
-    Route::get('/api/trading/ohlc', [\App\Http\Controllers\TradingController::class, 'getOHLC'])->name('trading.ohlc');
-    Route::get('/api/trading/price', [\App\Http\Controllers\TradingController::class, 'getCurrentPrice'])->name('trading.price');
-    Route::get('/api/trading/candles', [\App\Http\Controllers\TradingController::class, 'getCandles'])->name('trading.candles');
-    Route::post('/api/trading/bet', [\App\Http\Controllers\TradingController::class, 'placeBet'])->name('trading.bet');
-    Route::get('/api/trading/my-bet', [\App\Http\Controllers\TradingController::class, 'getMyBet'])->name('trading.my-bet');
-    Route::get('/api/trading/bet-result', [\App\Http\Controllers\TradingController::class, 'getBetResult'])->name('trading.bet-result');
-    Route::post('/api/trading/process-bet-result', [\App\Http\Controllers\TradingController::class, 'processBetResult'])->name('trading.process-bet-result');
-    Route::get('/api/trading/bet-ratio', [\App\Http\Controllers\TradingController::class, 'getBetRatio'])->name('trading.bet-ratio');
-    Route::get('/api/trading/admin-settings', [\App\Http\Controllers\TradingController::class, 'getAdminSettings'])->name('trading.admin-settings');
-    Route::post('/api/trading/admin-settings', [\App\Http\Controllers\TradingController::class, 'saveAdminSettings'])->name('trading.admin-settings.save');
 
     // Wallet API endpoints
     Route::post('/api/wallet/transfer-reward-to-deposit', [\App\Http\Controllers\WalletController::class, 'transferRewardToDeposit'])->name('wallet.transfer-reward-to-deposit');
@@ -337,6 +326,37 @@ Route::middleware('auth')->group(function () {
     // Lucky Money
     Route::get('/api/lucky-money/status', [\App\Http\Controllers\LuckyMoneyController::class, 'getStatus'])->name('lucky-money.status');
     Route::post('/api/lucky-money/open', [\App\Http\Controllers\LuckyMoneyController::class, 'open'])->name('lucky-money.open');
+
+    // Home Statistics
+    Route::get('/api/home/stats', function () {
+        try {
+            // Count users who have active bets (currently trading)
+            $betUsers = \App\Models\Bet::where('status', 'pending')
+                ->select('user_id')
+                ->distinct()
+                ->pluck('user_id')
+                ->toArray();
+            
+            $tradingPeopleCount = count($betUsers);
+            
+            // Calculate total transaction amount
+            $betTotal = \App\Models\Bet::sum('amount') ?? 0;
+            $transactionAmount = $betTotal;
+            
+            return response()->json([
+                'trading_people_count' => $tradingPeopleCount,
+                'transaction_amount' => $transactionAmount,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Home stats API error: ' . $e->getMessage());
+            
+            // Return default values on error
+            return response()->json([
+                'trading_people_count' => 0,
+                'transaction_amount' => 0,
+            ]);
+        }
+    })->name('home.stats');
 
     // Logout route
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');

@@ -17,19 +17,15 @@
         background: #0b0b0b !important;
     }
 
-    .tr-container-wrapper {
-        display: flex;
-        height: calc(100vh - 64px - 80px); /* 64px header + 80px bottom nav */
-        width: 100%;
-        background: #0b0b0b;
-    }
-
     #trChart {
-        flex: 1;
-        min-height: 400px;
-        height: 100%;
-        background: #0b0b0b ;
+        width: 100%;
+        height: 55vh;
+        min-height: 450px;
+        background: #0b0b0b;
         position: relative;
+        border: none !important;
+        outline: none !important;
+        flex-shrink: 0;
     }
 
     /* Force chart canvas to have black background */
@@ -54,7 +50,8 @@
         }
         
         #trChart {
-            height: 400px;
+            height: 50vh;
+            min-height: 400px;
         }
         
         .tr-panel {
@@ -227,6 +224,68 @@
         position: absolute !important;
         left: -9999px !important;
     }
+
+    /* Hide TradingView header/info bar */
+    #trChart > div > div:first-child,
+    #trChart iframe + div,
+    iframe[src*="tradingview"] + div,
+    .tv-header,
+    [class*="header"],
+    [class*="symbol-info"],
+    [class*="pane-legend"],
+    [id*="header"],
+    [id*="symbol"],
+    div[style*="position: absolute"][style*="top: 0"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Ensure chart container takes full height */
+    #trChart {
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Hide any top bar in TradingView iframe */
+    #trChart iframe {
+        border: none !important;
+    }
+
+    /* Remove all borders from TradingView chart */
+    #trChart * {
+        border: none !important;
+        border-width: 0 !important;
+        border-style: none !important;
+        border-color: transparent !important;
+    }
+
+    /* Remove border from TradingView widget container */
+    #trChart > div,
+    #trChart > div > div,
+    #trChart > div > div > div {
+        border: none !important;
+        border-width: 0 !important;
+        outline: none !important;
+    }
+
+    /* Remove border from iframe and its contents */
+    #trChart iframe,
+    #trChart iframe * {
+        border: none !important;
+        border-width: 0 !important;
+        outline: none !important;
+    }
+
+    /* Remove any gray borders or outlines */
+    #trChart,
+    #trChart * {
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+    }
 </style>
 @endpush
 
@@ -237,37 +296,168 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
         </a>
-        <h1 class="text-white text-base font-semibold">BTC / USDT</h1>
+        <h1 class="text-white text-base font-semibold">Trading</h1>
         <div class="w-6"></div>
     </header>
 @endsection
 
 @section('content')
-<div class="tr-container-wrapper">
-    <div id="trChart"></div>
+<div class="flex flex-col h-full" style="height: calc(100vh - 64px - 80px);">
+    <!-- Chart Area -->
+    <div id="trChart" class="flex-shrink-0" style="height: 55vh; min-height: 450px;"></div>
 
-    <div class="tr-panel">
-        <div class="tr-box">
-            <div class="tr-label">⏱ Countdown</div>
-            <div class="tr-timer" id="trTimer">30</div>
+    <!-- Bottom Trading Controls -->
+    <div class="px-4 py-4 space-y-3">
+        <!-- Navigation Tabs -->
+        <div class="flex items-center justify-center gap-0 w-full" style="height: 41px; border-radius: 20px; background: #0a0a0a; position: relative; padding: 2px;">
+            <button id="trTabBuySell" class="flex-1 h-full bg-gray-700 rounded-[18px] text-white text-sm font-semibold transition-all">BUY/SELL</button>
+            <button id="trTabOrder" class="flex-1 h-full rounded-[18px] text-gray-400 text-sm transition-all">Oder</button>
+            <button id="trTabEntry" class="flex-1 h-full rounded-[18px] text-gray-400 text-sm transition-all">Entry</button>
         </div>
 
-        <!-- Wallet Selection -->
-        <div class="tr-wallet-select">
-            <span class="tr-label">Ví:</span>
-            <select id="trWalletSelect">
-                <option value="deposit">Ví giao dịch</option>
-                <option value="reward">Ví tiền thưởng</option>
-            </select>
-            <span class="tr-balance" id="trBalance">0.00 USDT</span>
+        <!-- BUY/SELL Tab Content -->
+        <div id="trTabContentBuySell" class="tab-content space-y-3">
+            <!-- Buy/Sell Sentiment Bar -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-white">24% Sell</span>
+                    <span class="text-white">76% Buy</span>
+                </div>
+                <div class="h-2 bg-gray-800 rounded-full overflow-hidden flex">
+                    <div id="trSellBar" class="bg-red-500 h-full" style="width: 24%;"></div>
+                    <div id="trBuyBar" class="bg-green-500 h-full" style="width: 76%;"></div>
+                </div>
+            </div>
+
+            <!-- Profit Display -->
+            <div class="flex items-center justify-between">
+                <span class="text-white text-sm">Lợi nhuận</span>
+                <span id="trProfitDisplay" class="text-green-500 font-semibold">95% +19,5$</span>
+            </div>
+
+            <!-- Input Fields -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-gray-800 rounded-lg p-3">
+                    <input type="number" id="trBetAmount" value="10" min="0.01" step="0.01" 
+                           class="w-full bg-transparent text-white text-base outline-none" placeholder="$10">
+                </div>
+                <div class="bg-gray-800 rounded-lg p-3 flex items-center justify-center">
+                    <span id="trTimer" class="text-white text-base font-mono">00:00:29</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 gap-3">
+                <button id="trPutBtn" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-lg text-base transition-colors">Sell</button>
+                <button id="trCallBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg text-base transition-colors">Buy</button>
+            </div>
         </div>
 
-        <!-- Bet Amount -->
-        <input type="number" id="trBetAmount" class="tr-bet-amount" value="10" min="0.01" step="0.01" placeholder="Số tiền cược">
+        <!-- Order Tab Content -->
+        <div id="trTabContentOrder" class="tab-content hidden space-y-3">
+            <!-- BUY/SELL Order Summary -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- BUY Panel -->
+                <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-green-500 text-sm font-semibold">BUY</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-white text-sm">$100</span>
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-500 text-xs">Đã khớp BUY</span>
+                        <span class="text-white text-sm">$100</span>
+                    </div>
+                </div>
 
-        <!-- Bet Buttons -->
-        <button id="trCallBtn" class="tr-bet-btn tr-bet-btn-call">⬆ CALL</button>
-        <button id="trPutBtn" class="tr-bet-btn tr-bet-btn-put">⬇ PUT</button>
+                <!-- SELL Panel -->
+                <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-red-500 text-sm font-semibold">SELL</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-white text-sm">$100</span>
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-red-500 text-xs">Đã khớp SELL</span>
+                        <span class="text-white text-sm">$100</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Bet Status -->
+            <div class="bg-gray-800 rounded-lg p-3 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-green-500 text-sm font-semibold">Đặt cược BUY</span>
+                    <span class="text-white text-sm">$100/50</span>
+                </div>
+
+                <!-- Bet Status Indicators -->
+                <div class="space-y-2">
+                    <!-- Đã cược -->
+                    <div class="bg-green-600 rounded-lg p-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span class="text-white text-sm">Đã cược: 50$</span>
+                    </div>
+
+                    <!-- Đang chờ khớp -->
+                    <div class="bg-amber-500 rounded-lg p-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                        </svg>
+                        <span class="text-white text-sm">Đang chờ khớp: 50$</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Refund Information -->
+            <p class="text-gray-400 text-xs text-center">
+                Số tiền chưa khớp sẽ được hoàn trả sau khi hết thời gian
+            </p>
+        </div>
+
+        <!-- Entry Tab Content -->
+        <div id="trTabContentEntry" class="tab-content hidden space-y-3">
+            <!-- Price Information Cards -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Reference Price Card -->
+                <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+                    <span class="text-gray-400 text-xs">Giá tham chiếu</span>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1">
+                            <div class="w-1 h-1 bg-white rounded-full"></div>
+                            <div class="w-1 h-1 bg-white rounded-full"></div>
+                            <div class="w-1 h-1 bg-white rounded-full"></div>
+                        </div>
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Current Price Card -->
+                <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+                    <span class="text-gray-400 text-xs">Giá hiện tại</span>
+                    <div class="text-green-500 text-lg font-semibold">89,300</div>
+                </div>
+            </div>
+
+            <!-- Result Calculation Description -->
+            <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-gray-400 text-xs leading-relaxed">
+                    "Kết quả được tính bằng cách so sánh giá Entry tại giây 55 và giá kết thúc tại giây 60 của BTC/USDT."
+                </p>
+            </div>
+        </div>
 
         @auth
             @if(auth()->user()->is_admin ?? false)
@@ -301,647 +491,161 @@
 @endsection
 
 @push('scripts')
-<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 <script>
-    /* ================== CONFIG ================== */
-    const TR_TF = 30; // 30 seconds per round
-    const TR_SYMBOL = 'BTCUSDT';
-    const TR_ADMIN = {
-        followSpeed: 0.18,
-        wickNoise: 4,
-        biasDir: 0,
-        lastSeconds: 10,
-        biasPower: 10
-    };
-
-    /* ================== STATE ================== */
-    let trPrice = null;
-    let trBinance = null;
-    let trCandle = null;
-    let trStartTime = 0;
-    let trCandleCloses = [];
-    let trEma5 = null;
-    let trEma10 = null;
-    const trK5 = 2 / (5 + 1);
-    const trK10 = 2 / (10 + 1);
-    let trCandleVolume = 0;
-    let trSmoothVolume = 0;
-    let trVolumeColor = "rgba(0,255,156,0.35)";
-    let trSelectedWallet = 'deposit';
-    let trDepositBalance = 0;
-    let trRewardBalance = 0;
-    let trMyBet = null;
-    let trHistoricalCandles = []; // Lưu lịch sử nến
-    let trHistoricalVolumes = []; // Lưu lịch sử volume
-
     /* ================== CHART ================== */
     let trChart = null;
-    let trCandles = null;
-    let trMa5 = null;
-    let trMa10 = null;
-    let trVolumeSeries = null;
     
-    function trInitChart() {
+    // Initialize TradingView widget (UI only - no logic)
+    if (typeof TradingView !== 'undefined') {
         const trChartContainer = document.getElementById("trChart");
-        if (!trChartContainer || trChart) return;
+        if (trChartContainer) {
+            trChart = new TradingView.widget({
+                "autosize": true,
+                "symbol": "BINANCE:BTCUSDT",
+                "interval": "1",
+                "container_id": "trChart",
+                "datafeed": {
+                    onReady: function(callback) {
+                        callback({
+                            supported_resolutions: ["1", "5", "15", "30", "60", "240", "D"],
+                            supports_marks: false,
+                            supports_timescale_marks: false,
+                            supports_time: false
+                        });
+                    },
+                    searchSymbols: function() {},
+                    resolveSymbol: function(symbolName, onSymbolResolvedCallback) {
+                        onSymbolResolvedCallback({
+                            name: symbolName,
+                            ticker: symbolName,
+                            description: "",
+                            type: "crypto",
+                            session: "24x7",
+                            timezone: "Etc/UTC",
+                            exchange: "BINANCE",
+                            minmov: 1,
+                            pricescale: 100,
+                            has_intraday: true,
+                            has_weekly_and_monthly: false,
+                            supported_resolutions: ["1", "5", "15", "30", "60", "240", "D"],
+                            volume_precision: 8,
+                            data_status: "streaming"
+                        });
+                    },
+                    getBars: function(symbolInfo, resolution, from, to, onHistoryCallback, onErrorCallback) {
+                        onHistoryCallback([], { noData: true });
+                    },
+                    subscribeBars: function() {},
+                    unsubscribeBars: function() {}
+                },
+                "locale": "en",
+                "disabled_features": [
+                    "use_localstorage_for_settings",
+                    "volume_force_overlay",
+                    "create_volume_indicator_by_default",
+                    "header_widget",
+                    "header_symbol_search",
+                    "header_compare",
+                    "header_undo_redo",
+                    "header_screenshot",
+                    "header_chart_type",
+                    "header_resolutions",
+                    "header_save_load",
+                    "header_settings",
+                    "header_fullscreen_button",
+                    "header_widget_dom_node",
+                    "show_logo_on_all_charts",
+                    "symbol_info",
+                    "pane_legend"
+                ],
+                "enabled_features": ["study_templates"],
+                "charts_storage_url": "",
+                "charts_storage_api_version": "1.1",
+                "client_id": "tradingview.com",
+                "user_id": "public_user_id",
+                "fullscreen": false,
+                "autosize": true,
+                "studies_overrides": {},
+                "theme": "dark",
+                "overrides": {
+                    "paneProperties.background": "#0b0b0b",
+                    "paneProperties.backgroundType": "solid",
+                    "mainSeriesProperties.candleStyle.upColor": "#00ff9c",
+                    "mainSeriesProperties.candleStyle.downColor": "#ff4d4d",
+                    "mainSeriesProperties.candleStyle.borderUpColor": "#00ff9c",
+                    "mainSeriesProperties.candleStyle.borderDownColor": "#ff4d4d",
+                    "mainSeriesProperties.candleStyle.wickUpColor": "#00ff9c",
+                    "mainSeriesProperties.candleStyle.wickDownColor": "#ff4d4d",
+                    "paneProperties.legendProperties.showLegend": false,
+                    "paneProperties.legendProperties.showSeriesTitle": false,
+                    "paneProperties.legendProperties.showStudyTitle": false,
+                    "paneProperties.legendProperties.showStudyValues": false,
+                    "paneProperties.legendProperties.showSeriesLastValue": false,
+                    "paneProperties.legendProperties.showStudyArguments": false
+                },
+                "hide_top_toolbar": true,
+                "hide_side_toolbar": true,
+                "hide_volume": false
+            });
+        }
+    }
+
+    /* ================== TAB SWITCHING (UI Only) ================== */
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabBuySell = document.getElementById("trTabBuySell");
+        const tabOrder = document.getElementById("trTabOrder");
+        const tabEntry = document.getElementById("trTabEntry");
         
-        // Đảm bảo container có kích thước trước khi khởi tạo chart
-        const rect = trChartContainer.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) {
-            // Nếu container chưa có kích thước, đợi một chút
-            setTimeout(() => trInitChart(), 100);
-            return;
-        }
-        
-        trChart = LightweightCharts.createChart(
-            trChartContainer,
-            {
-                layout: { 
-                    backgroundColor: "#0b0b0b", 
-                    textColor: "#ccc",
-                    background: { type: 'solid', color: '#0b0b0b' }
-                },
-                grid: { 
-                    vertLines: { color: "#222", style: 0 }, 
-                    horzLines: { color: "#222", style: 0 } 
-                },
-                timeScale: { 
-                    timeVisible: true, 
-                    secondsVisible: true,
-                    borderColor: "#333"
-                },
-                rightPriceScale: {
-                    borderColor: "#333"
-                },
-                width: rect.width,
-                height: rect.height
-            }
-        );
+        const contentBuySell = document.getElementById("trTabContentBuySell");
+        const contentOrder = document.getElementById("trTabContentOrder");
+        const contentEntry = document.getElementById("trTabContentEntry");
 
-        trCandles = trChart.addCandlestickSeries({
-            upColor: "#00ff9c",
-            downColor: "#ff4d4d",
-            wickUpColor: "#00ff9c",
-            wickDownColor: "#ff4d4d",
-            borderVisible: false
-        });
-
-        trMa5 = trChart.addLineSeries({ color: "#facc15", lineWidth: 1.3 });
-        trMa10 = trChart.addLineSeries({ color: "#38bdf8", lineWidth: 1.3 });
-
-        trVolumeSeries = trChart.addHistogramSeries({
-            priceFormat: { type: "volume" },
-            priceScaleId: "",
-            scaleMargins: { top: 0.8, bottom: 0 }
-        });
-        
-        // Handle resize
-        window.addEventListener('resize', () => {
-            if (trChart && trChartContainer) {
-                const rect = trChartContainer.getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 0) {
-                    trChart.applyOptions({ 
-                        width: rect.width,
-                        height: rect.height
-                    });
+        function switchTab(activeTab, activeContent) {
+            // Reset all tabs
+            [tabBuySell, tabOrder, tabEntry].forEach(tab => {
+                if (tab) {
+                    tab.classList.remove('bg-gray-700', 'text-white', 'rounded-[18px]');
+                    tab.classList.add('text-gray-400');
                 }
-            }
-        });
-    }
+            });
 
-    // Không giới hạn số nến như mẫu HTML
-
-
-    // Remove TradingView logo if it appears
-    function trRemoveTradingViewLogo() {
-        const logos = document.querySelectorAll('#tv-attr-logo, a[title*="TradingView"], a[title*="Charting by TradingView"]');
-        logos.forEach(logo => {
-            logo.style.display = 'none';
-            logo.remove();
-        });
-    }
-
-    // Remove logo immediately and periodically
-    trRemoveTradingViewLogo();
-    setInterval(trRemoveTradingViewLogo, 1000);
-    
-    // Also remove when chart is created
-    setTimeout(trRemoveTradingViewLogo, 500);
-
-    /* ================== BINANCE WEBSOCKET ================== */
-    let trWs = null;
-    function trConnectBinance() {
-        try {
-            trWs = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@trade");
-            trWs.onmessage = (e) => {
-                try {
-                    const data = JSON.parse(e.data);
-                    trBinance = parseFloat(data.p);
-                    if (trPrice === null) trPrice = trBinance;
-                } catch (err) {
-                    console.error('Error parsing Binance data:', err);
+            // Reset all content
+            [contentBuySell, contentOrder, contentEntry].forEach(content => {
+                if (content) {
+                    content.classList.add('hidden');
                 }
-            };
-            trWs.onerror = (err) => {
-                console.error('Binance WebSocket error:', err);
-            };
-            trWs.onclose = () => {
-                console.log('Binance WebSocket closed, reconnecting...');
-                setTimeout(trConnectBinance, 3000);
-            };
-        } catch (err) {
-            console.error('Error connecting to Binance:', err);
-            // Fallback to Laravel API
-            trLoadPriceFromAPI();
-        }
-    }
+            });
 
-    // Fallback: Load price from Laravel API
-    async function trLoadPriceFromAPI() {
-        try {
-            const res = await fetch('{{ route("trading.price") }}?symbol=' + TR_SYMBOL);
-            const data = await res.json();
-            if (data.success) {
-                trBinance = parseFloat(data.price);
-                if (trPrice === null) trPrice = trBinance;
-            }
-        } catch (err) {
-            console.error('Error loading price from API:', err);
-        }
-    }
-
-    /* ================== LOAD HISTORICAL CANDLES ================== */
-    async function trLoadHistoricalCandles() {
-        try {
-            // Tính toán thời gian: lấy 100 candles 1m gần nhất
-            const now = Math.floor(Date.now() / 1000);
-            const currentBucket = Math.floor(now / TR_TF) * TR_TF;
-            const limit = 100;
-            
-            // Fetch từ Binance API (1m candles)
-            const response = await fetch(`{{ route("trading.ohlc") }}?symbol=${TR_SYMBOL}&interval=1m&limit=${limit}`);
-            const result = await response.json();
-            
-            if (result.success && result.data && result.data.length > 0) {
-                const candles = result.data;
-                const historicalCandles = [];
-                const historicalVolumes = [];
-                
-                // Convert 1m candles thành 30s candles (mỗi 1m = 2 candles 30s)
-                for (let i = 0; i < candles.length; i++) {
-                    const candle = candles[i];
-                    const candleTime = candle.time;
-                    
-                    // Chỉ lấy candles trước round hiện tại
-                    if (candleTime >= currentBucket) continue;
-                    
-                    // Tạo 2 candles 30s từ 1 candle 1m
-                    const midPrice = (parseFloat(candle.open) + parseFloat(candle.close)) / 2;
-                    
-                    const first30s = {
-                        time: candleTime,
-                        open: parseFloat(candle.open),
-                        high: parseFloat(candle.high),
-                        low: parseFloat(candle.low),
-                        close: midPrice,
-                    };
-                    
-                    const second30s = {
-                        time: candleTime + 30,
-                        open: midPrice,
-                        high: parseFloat(candle.high),
-                        low: parseFloat(candle.low),
-                        close: parseFloat(candle.close),
-                    };
-                    
-                    historicalCandles.push(first30s, second30s);
-                    
-                    // Volume chia đều
-                    const halfVolume = parseFloat(candle.volume || 0) / 2;
-                    historicalVolumes.push(
-                        { 
-                            time: candleTime, 
-                            value: halfVolume, 
-                            color: first30s.close >= first30s.open ? "rgba(0,255,156,0.35)" : "rgba(255,77,77,0.35)" 
-                        },
-                        { 
-                            time: candleTime + 30, 
-                            value: halfVolume, 
-                            color: second30s.close >= second30s.open ? "rgba(0,255,156,0.35)" : "rgba(255,77,77,0.35)" 
-                        }
-                    );
-                }
-                
-                if (historicalCandles.length > 0 && trCandles) {
-                    // Set tất cả historical candles (không chỉ 5 nến)
-                    trCandles.setData(historicalCandles);
-                    if (historicalVolumes.length > 0 && trVolumeSeries) {
-                        trVolumeSeries.setData(historicalVolumes);
-                    }
-                    
-                    // Update candle closes từ tất cả historical candles
-                    trCandleCloses = historicalCandles.map(c => c.close);
-                    
-                    // Tính EMA từ tất cả candles
-                    if (trCandleCloses.length >= 5) {
-                        trEma5 = trCandleCloses[0];
-                        for (let i = 1; i < trCandleCloses.length; i++) {
-                            trEma5 = trEma5 + (trCandleCloses[i] - trEma5) * trK5;
-                        }
-                        
-                        // Update MA5 line cho tất cả candles
-                        if (trMa5) {
-                            const ma5Data = [];
-                            let ema5Calc = trCandleCloses[0];
-                            for (let i = 1; i < historicalCandles.length; i++) {
-                                if (i >= 4) { // Bắt đầu từ candle thứ 5
-                                    ema5Calc = ema5Calc + (trCandleCloses[i] - ema5Calc) * trK5;
-                                    ma5Data.push({ time: historicalCandles[i].time, value: ema5Calc });
-                                }
-                            }
-                            if (ma5Data.length > 0) trMa5.setData(ma5Data);
-                        }
-                    }
-                    
-                    // Tính EMA10 nếu có đủ 10 candles
-                    if (trCandleCloses.length >= 10 && trMa10) {
-                        trEma10 = trCandleCloses[0];
-                        for (let i = 1; i < trCandleCloses.length; i++) {
-                            trEma10 = trEma10 + (trCandleCloses[i] - trEma10) * trK10;
-                        }
-                        
-                        const ma10Data = [];
-                        let ema10Calc = trCandleCloses[0];
-                        for (let i = 1; i < historicalCandles.length; i++) {
-                            if (i >= 9) { // Bắt đầu từ candle thứ 10
-                                ema10Calc = ema10Calc + (trCandleCloses[i] - ema10Calc) * trK10;
-                                ma10Data.push({ time: historicalCandles[i].time, value: ema10Calc });
-                            }
-                        }
-                        if (ma10Data.length > 0) trMa10.setData(ma10Data);
-                    } else {
-                        trEma10 = null;
-                        if (trMa10) trMa10.setData([]);
-                    }
-                    
-                    // Set start time và price từ candle cuối cùng
-                    const lastCandle = historicalCandles[historicalCandles.length - 1];
-                    trStartTime = lastCandle.time;
-                    trPrice = lastCandle.close;
-                    
-                    // Khởi tạo candle cho round hiện tại nếu chưa có
-                    const now = Math.floor(Date.now() / 1000);
-                    const currentBucket = Math.floor(now / TR_TF) * TR_TF;
-                    if (trStartTime < currentBucket) {
-                        // Tạo candle mới cho round hiện tại
-                        trStartTime = currentBucket;
-                        trCandle = { 
-                            time: currentBucket, 
-                            open: trPrice, 
-                            high: trPrice, 
-                            low: trPrice, 
-                            close: trPrice 
-                        };
-                        if (trCandles) trCandles.update(trCandle);
-                    }
-                    
-                    console.log(`Loaded ${historicalCandles.length} historical candles`);
-                }
-            }
-        } catch (err) {
-            console.error('Error loading historical candles:', err);
-        }
-    }
-
-    // Initialize chart when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            trInitChart();
-            trConnectBinance();
-            // Load historical candles sau khi chart đã được khởi tạo
-            setTimeout(() => trLoadHistoricalCandles(), 200);
-        });
-    } else {
-        trInitChart();
-        trConnectBinance();
-        // Load historical candles sau khi chart đã được khởi tạo
-        setTimeout(() => trLoadHistoricalCandles(), 200);
-    }
-
-    /* ================== TIMER ================== */
-    setInterval(() => {
-        const now = Math.floor(Date.now() / 1000);
-        const remain = TR_TF - (now % TR_TF) || TR_TF;
-        
-        // Update timer
-        const timerEl = document.getElementById("trTimer");
-        if (timerEl) timerEl.textContent = remain;
-
-        // Disable buttons in last 5 seconds
-        const callBtn = document.getElementById("trCallBtn");
-        const putBtn = document.getElementById("trPutBtn");
-        if (remain < 5 || trMyBet) {
-            if (callBtn) callBtn.disabled = true;
-            if (putBtn) putBtn.disabled = true;
-        } else {
-            if (callBtn) callBtn.disabled = false;
-            if (putBtn) putBtn.disabled = false;
-        }
-    }, 100);
-
-    /* ================== ENGINE ================== */
-    setInterval(() => {
-        if (!trBinance || trPrice === null) return;
-
-        const now = Math.floor(Date.now() / 1000);
-        const bucket = Math.floor(now / TR_TF) * TR_TF;
-        const remain = TR_TF - (now - bucket);
-
-        /* ===== ĐÓNG NẾN ===== */
-        if (trStartTime !== bucket) {
-            if (trCandle && trCandles) {
-                // Add wick noise
-                trCandle.high += Math.random() * TR_ADMIN.wickNoise;
-                trCandle.low -= Math.random() * TR_ADMIN.wickNoise;
-                trCandles.update(trCandle);
-
-                // Update volume color
-                trVolumeColor = trCandle.close >= trCandle.open
-                    ? "rgba(0,255,156,0.35)"
-                    : "rgba(255,77,77,0.35)";
-
-                // Update EMA - giữ 50 nến như mẫu
-                trCandleCloses.push(trCandle.close);
-                if (trCandleCloses.length > 50) trCandleCloses.shift();
-
-                // Update EMA5
-                if (trCandleCloses.length >= 5 && trMa5) {
-                    trEma5 = trEma5 === null ? trCandle.close : trEma5 + (trCandle.close - trEma5) * trK5;
-                    trMa5.update({ time: trCandle.time, value: trEma5 });
-                }
-                
-                // Update EMA10
-                if (trCandleCloses.length >= 10 && trMa10) {
-                    trEma10 = trEma10 === null ? trCandle.close : trEma10 + (trCandle.close - trEma10) * trK10;
-                    trMa10.update({ time: trCandle.time, value: trEma10 });
-                }
-                
-                // Lưu vào historical
-                trHistoricalCandles.push(trCandle);
-                if (trHistoricalCandles.length > 200) {
-                    trHistoricalCandles.shift();
-                }
-
-                // Process bet result when round closes
-                if (trMyBet && trMyBet.status === 'pending') {
-                    // Round just closed, process bet result
-                    trProcessBetResult(trCandle.close);
-                }
+            // Activate selected tab
+            if (activeTab) {
+                activeTab.classList.remove('text-gray-400');
+                activeTab.classList.add('bg-gray-700', 'text-white', 'rounded-[18px]');
             }
 
-            trStartTime = bucket;
-            trCandle = { time: bucket, open: trPrice, high: trPrice, low: trPrice, close: trPrice };
-            if (trCandles) trCandles.update(trCandle);
-            trCandleVolume = 0;
-            trUpdateRoundNo(bucket);
-            
-            // Reset bet after processing (if any)
-            if (trMyBet && trMyBet.status !== 'pending') {
-                trMyBet = null;
+            // Show selected content
+            if (activeContent) {
+                activeContent.classList.remove('hidden');
             }
-            return;
         }
 
-        /* ===== FOLLOW BINANCE ===== */
-        let move = (trBinance - trPrice) * TR_ADMIN.followSpeed;
-
-        /* ===== ÉP TRONG GIÂY CUỐI ===== */
-        if (remain <= TR_ADMIN.lastSeconds && TR_ADMIN.biasDir !== 0 && trCandle) {
-            const target = trCandle.open + TR_ADMIN.biasDir * TR_ADMIN.biasPower;
-            const dist = target - trPrice;
-            const step = dist * 0.08; // 8% mỗi tick
-            move = step; // ÉP GHI ĐÈ BINANCE
-        }
-
-        trPrice += move;
-
-        // Đảm bảo trCandle tồn tại trước khi update
-        if (!trCandle) {
-            // Khởi tạo candle nếu chưa có
-            trStartTime = bucket;
-            trCandle = { time: bucket, open: trPrice, high: trPrice, low: trPrice, close: trPrice };
-            if (trCandles) trCandles.update(trCandle);
-            trCandleVolume = 0;
-            return;
-        }
-
-        trCandle.close = trPrice;
-        trCandle.high = Math.max(trCandle.high, trPrice);
-        trCandle.low = Math.min(trCandle.low, trPrice);
-        if (trCandles) trCandles.update(trCandle);
-
-        // Update volume
-        trCandleVolume += Math.abs(move) * 1.1 + Math.random() * 0.4;
-        trSmoothVolume = trSmoothVolume * 0.88 + trCandleVolume * 0.12;
-
-        if (trVolumeSeries) {
-            trVolumeSeries.update({
-                time: trCandle.time,
-                value: Math.round(trSmoothVolume),
-                color: trVolumeColor
+        if (tabBuySell) {
+            tabBuySell.addEventListener('click', function() {
+                switchTab(tabBuySell, contentBuySell);
             });
         }
 
-        // Update current price display (if element exists)
-        const priceEl = document.getElementById("trCurrentPrice");
-        if (priceEl) priceEl.textContent = trPrice.toFixed(2);
-    }, 320);
-
-    /* ================== BETTING ================== */
-    async function trLoadBalances() {
-        try {
-            const res = await fetch('{{ route("trading.my-bet") }}', {
-                headers: { 'Accept': 'application/json' }
+        if (tabOrder) {
+            tabOrder.addEventListener('click', function() {
+                switchTab(tabOrder, contentOrder);
             });
-            if (!res.ok) return;
-            const data = await res.json();
-            trDepositBalance = Number(data.balance || 0);
-            trRewardBalance = Number(data.reward_balance || 0);
-            trUpdateBalanceDisplay();
-        } catch (e) {
-            console.error('Error loading balances:', e);
-        }
-    }
-
-    function trUpdateBalanceDisplay() {
-        const balance = trSelectedWallet === 'reward' ? trRewardBalance : trDepositBalance;
-        document.getElementById("trBalance").textContent = balance.toFixed(2) + ' USDT';
-    }
-
-    async function trPlaceBet(direction) {
-        const amount = parseFloat(document.getElementById("trBetAmount").value);
-        if (!amount || amount <= 0) {
-            alert('Vui lòng nhập số tiền cược hợp lệ');
-            return;
         }
 
-        try {
-            const res = await fetch('{{ route("trading.bet") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                },
-                body: JSON.stringify({
-                    symbol: TR_SYMBOL,
-                    direction: direction,
-                    amount: amount,
-                    wallet_type: trSelectedWallet
-                })
+        if (tabEntry) {
+            tabEntry.addEventListener('click', function() {
+                switchTab(tabEntry, contentEntry);
             });
-
-            const result = await res.json();
-
-            if (result.success) {
-                trMyBet = result.bet;
-                trLoadBalances();
-                alert('Đặt cược thành công!');
-            } else {
-                alert(result.error || 'Đặt cược thất bại');
-            }
-        } catch (error) {
-            console.error('Error placing bet:', error);
-            alert('Có lỗi xảy ra khi đặt cược');
         }
-    }
-
-    /**
-     * Process bet result when round closes
-     * Frontend calculates exit_price and calls API to process
-     */
-    async function trProcessBetResult(exitPrice) {
-        if (!trMyBet || trMyBet.status !== 'pending') return;
-
-        try {
-            const res = await fetch('{{ route("trading.process-bet-result") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                },
-                body: JSON.stringify({
-                    bet_id: trMyBet.id,
-                    exit_price: exitPrice
-                })
-            });
-
-            const result = await res.json();
-
-            if (result.success) {
-                trMyBet = result.bet;
-                
-                if (result.is_win) {
-                    alert(`Thắng! Lợi nhuận: +$${result.profit.toFixed(2)}`);
-                } else {
-                    alert(`Thua! Mất: -$${Math.abs(result.profit).toFixed(2)}`);
-                }
-                
-                // Update balances
-                trDepositBalance = result.balance || 0;
-                trRewardBalance = result.reward_balance || 0;
-                trUpdateBalanceDisplay();
-                
-                // Reset bet after showing result
-                setTimeout(() => {
-                    trMyBet = null;
-                }, 1000);
-            } else {
-                console.error('Error processing bet result:', result.error);
-            }
-        } catch (error) {
-            console.error('Error processing bet result:', error);
-        }
-    }
-
-    function trUpdateRoundNo(bucket) {
-        // Round number update if needed
-    }
-
-    /* ================== ADMIN ================== */
-    async function trLoadAdminSettings() {
-        try {
-            const res = await fetch('/api/trading/admin-settings?symbol=' + TR_SYMBOL);
-            const data = await res.json();
-            if (data.success) {
-                TR_ADMIN.biasDir = data.bias_dir || 0;
-                TR_ADMIN.lastSeconds = data.last_seconds || 10;
-                TR_ADMIN.biasPower = data.bias_power || 10;
-                document.getElementById("trBiasDir").value = TR_ADMIN.biasDir;
-                document.getElementById("trLastSeconds").value = TR_ADMIN.lastSeconds;
-                document.getElementById("trBiasPower").value = TR_ADMIN.biasPower;
-                document.getElementById("trLastSecondsValue").textContent = TR_ADMIN.lastSeconds;
-                document.getElementById("trBiasPowerValue").textContent = TR_ADMIN.biasPower;
-            }
-        } catch (e) {
-            console.error('Error loading admin settings:', e);
-        }
-    }
-
-    async function trSaveAdminSettings() {
-        try {
-            const res = await fetch('/api/trading/admin-settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                },
-                body: JSON.stringify({
-                    symbol: TR_SYMBOL,
-                    bias_dir: TR_ADMIN.biasDir,
-                    last_seconds: TR_ADMIN.lastSeconds,
-                    bias_power: TR_ADMIN.biasPower
-                })
-            });
-            const result = await res.json();
-            if (result.success) {
-                alert('Đã lưu cài đặt admin!');
-            } else {
-                alert('Lỗi khi lưu cài đặt');
-            }
-        } catch (error) {
-            console.error('Error saving admin settings:', error);
-            alert('Có lỗi xảy ra');
-        }
-    }
-
-    /* ================== EVENT LISTENERS ================== */
-    document.getElementById("trCallBtn").addEventListener('click', () => trPlaceBet('up'));
-    document.getElementById("trPutBtn").addEventListener('click', () => trPlaceBet('down'));
-    document.getElementById("trWalletSelect").addEventListener('change', (e) => {
-        trSelectedWallet = e.target.value;
-        trUpdateBalanceDisplay();
     });
-
-    // Admin controls
-    const adminPanel = document.querySelector('.tr-admin-panel');
-    if (adminPanel) {
-        document.getElementById("trBiasDir").addEventListener('change', (e) => {
-            TR_ADMIN.biasDir = +e.target.value;
-        });
-        document.getElementById("trLastSeconds").addEventListener('input', (e) => {
-            TR_ADMIN.lastSeconds = +e.target.value;
-            document.getElementById("trLastSecondsValue").textContent = e.target.value;
-        });
-        document.getElementById("trBiasPower").addEventListener('input', (e) => {
-            TR_ADMIN.biasPower = +e.target.value;
-            document.getElementById("trBiasPowerValue").textContent = e.target.value;
-        });
-        document.getElementById("trSaveAdmin").addEventListener('click', trSaveAdminSettings);
-        trLoadAdminSettings();
-    }
-
-    /* ================== INIT ================== */
-    trLoadBalances();
-    setInterval(trLoadBalances, 10000); // Update balance every 10 seconds
 </script>
 @endpush

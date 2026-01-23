@@ -1,42 +1,111 @@
-<nav class="fixed bottom-0 left-0 right-0 w-full bg-[#111111] border-t border-gray-800 px-3 z-50 md:left-auto md:right-auto md:max-w-[450px]">
+<nav
+    class="fixed bottom-0 left-0 right-0 w-full bg-[#111111] border-t border-gray-800 px-3 z-50 md:left-auto md:right-auto md:max-w-[450px]">
     <div class="flex items-center justify-between text-gray-300 text-xs gap-1">
         <!-- Home -->
-        <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14">
-            <svg class="w-6 h-6 {{ request()->routeIs('dashboard') ? 'text-blue-500' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        <a href="{{ route('dashboard') }}"
+            class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M7.34261 5.79319C4.23133 8.05367 2.67568 9.18391 2.06469 10.8534C2.01568 10.9874 1.97159 11.123 1.93253 11.2602C1.44551 12.97 2.03971 14.7988 3.22811 18.4563C4.41652 22.1138 5.01072 23.9426 6.40973 25.0396C6.52195 25.1276 6.63737 25.2115 6.75574 25.291C7.2535 25.6255 7.80215 25.8471 8.45833 25.994V20.7896C8.45833 17.7291 10.9394 15.248 14 15.248C17.0606 15.248 19.5417 17.7291 19.5417 20.7896V25.994C20.1979 25.8471 20.7465 25.6255 21.2443 25.291C21.3626 25.2115 21.4781 25.1276 21.5903 25.0396C22.9893 23.9426 23.5835 22.1138 24.7719 18.4563C25.9603 14.7988 26.5545 12.97 26.0675 11.2602C26.0284 11.123 25.9843 10.9874 25.9353 10.8534C25.3243 9.18392 23.7687 8.05368 20.6574 5.7932C17.5461 3.53272 15.9905 2.40247 14.2139 2.3373C14.0713 2.33207 13.9287 2.33207 13.7862 2.3373C12.0095 2.40247 10.4539 3.53271 7.34261 5.79319Z"
+                    fill="{{ request()->routeIs('dashboard') ? 'white' : 'none' }}" />
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M17.7917 26.2188V20.7896C17.7917 18.6956 16.0941 16.998 14 16.998C11.9059 16.998 10.2083 18.6956 10.2083 20.7896V26.2188C11.2268 26.2825 12.459 26.2825 14 26.2825C15.541 26.2825 16.7732 26.2825 17.7917 26.2188ZM14.875 20.7896C14.875 20.3064 14.4832 19.9146 14 19.9146C13.5167 19.9146 13.125 20.3064 13.125 20.7896V23.123C13.125 23.6062 13.5167 23.998 14 23.998C14.4832 23.998 14.875 23.6062 14.875 23.123V20.7896Z"
+                    fill="{{ request()->routeIs('dashboard') ? 'white' : 'none' }}" />
             </svg>
-            <span class="text-xs whitespace-nowrap {{ request()->routeIs('dashboard') ? 'text-blue-500' : 'text-gray-400' }}">Trang chủ</span>
+
+            <span
+                class="text-xs whitespace-nowrap {{ request()->routeIs('dashboard') ? 'text-white' : 'text-gray-400' }}">Trang
+                chủ</span>
         </a>
 
         <!-- Intro -->
-        <a href="{{ route('subordinate-system') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg w-14 text-center">
-            <svg class="w-6 h-6 {{ request()->routeIs('subordinate-system') ? 'text-blue-500' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        <a href="{{ route('subordinate-system') }}"
+            class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg w-14 text-center">
+            <svg width="30" height="22" viewBox="0 0 30 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M0.75 7.43219C0.75 3.47917 4.32572 0.390349 8.44653 0.783689L13.9142 1.30559C14.47 1.35864 15.03 1.35864 15.5858 1.30559L21.0535 0.783689C25.1743 0.390349 28.75 3.47917 28.75 7.43219V15.4495C28.75 20.2513 22.1758 22.0713 19.4842 18.0147C17.5657 15.1233 13.1824 15.0267 11.1262 17.8305L10.7283 18.3732C7.65302 22.5666 0.75 20.4896 0.75 15.3708V7.43219Z"
+                    stroke="white" stroke-opacity="{{ request()->routeIs('subordinate-system') ? '1' : '0.5' }}" stroke-width="1.5" />
+                <g opacity="{{ request()->routeIs('subordinate-system') ? '1' : '0.3' }}">
+                    <ellipse cx="23.15" cy="7.39895" rx="1.4" ry="1.33633" fill="white" />
+                    <path
+                        d="M23.1504 6.56262C23.6693 6.56282 24.0496 6.95861 24.0498 7.39856C24.0498 7.83867 23.6694 8.23528 23.1504 8.23547C22.6311 8.23547 22.25 7.83878 22.25 7.39856C22.2502 6.9585 22.6313 6.56262 23.1504 6.56262Z"
+                        stroke="white" stroke-opacity="{{ request()->routeIs('subordinate-system') ? '1' : '0.5' }}" />
+                    <ellipse cx="20.35" cy="11.4079" rx="1.4" ry="1.33633" fill="white" />
+                    <path
+                        d="M20.3504 10.5715C20.8693 10.5717 21.2496 10.9675 21.2498 11.4075C21.2498 11.8476 20.8694 12.2442 20.3504 12.2444C19.8312 12.2444 19.45 11.8477 19.45 11.4075C19.4502 10.9674 19.8313 10.5715 20.3504 10.5715Z"
+                        stroke="white" stroke-opacity="{{ request()->routeIs('subordinate-system') ? '1' : '0.5' }}" />
+                    <path d="M9.15002 12.076L9.15002 6.73071" stroke="white" stroke-opacity="{{ request()->routeIs('subordinate-system') ? '1' : '0.5' }}" stroke-width="1.5"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M6.35001 9.40332H11.95" stroke="white" stroke-opacity="{{ request()->routeIs('subordinate-system') ? '1' : '0.5' }}" stroke-width="1.5"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </g>
             </svg>
-            <span class="text-xs whitespace-nowrap {{ request()->routeIs('subordinate-system') ? 'text-blue-500' : 'text-gray-400' }}">Giới thiệu</span>
+
+            <span
+                class="text-xs whitespace-nowrap {{ request()->routeIs('subordinate-system') ? 'text-white' : 'text-gray-400' }}">Giới
+                thiệu</span>
         </a>
 
         <!-- Explore (center item - floating) -->
-        <a href="{{ route('games.index') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14 -mt-5">
-            <img src="{{ asset('images/icons/gioithieu.png') }}" alt="Khám phá" class="w-14 h-10">
-            <span class="text-xs whitespace-nowrap mt-1 {{ request()->routeIs('games.*') || request()->routeIs('explore') ? 'text-blue-500' : 'text-gray-400' }}">Khám phá</span>
+        <a href="{{ route('games.index') }}"
+            class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg text-center w-14 -mt-5">
+            <div class="bg-blue-500 rounded-full flex items-center justify-center">
+                <svg width="42" height="43" viewBox="0 0 46 46" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M23.0599 3.89319C19.3224 3.89319 15.834 4.96652 12.9015 6.80652L26.0499 19.974L26.069 14.7224C26.069 13.9365 26.7207 13.2849 27.5065 13.2849C28.3115 13.2849 28.944 13.9365 28.944 14.7224L28.9249 23.4432C28.9249 24.0374 28.5607 24.5549 28.024 24.7657C27.8515 24.8424 27.6599 24.8807 27.4874 24.8807C27.104 24.8807 26.7399 24.7274 26.4715 24.459L10.774 8.74235C10.6974 8.66569 10.6399 8.58902 10.5824 8.51236C6.48069 12.039 3.89319 17.2524 3.89319 23.0599C3.89319 33.6399 12.4799 42.2265 23.0599 42.2265C26.7974 42.2265 30.2857 41.1532 33.2182 39.3132L20.0699 26.1457L20.0507 31.3974C20.0507 32.1832 19.399 32.8349 18.6132 32.8349C17.8082 32.8349 17.1757 32.1832 17.1757 31.3974L17.1949 22.6765C17.1949 22.0824 17.559 21.5649 18.0957 21.354C18.6132 21.124 19.2457 21.239 19.6482 21.6607L35.3457 37.3774C35.4224 37.454 35.4799 37.5307 35.5374 37.6074C39.639 34.0807 42.2265 28.8674 42.2265 23.0599C42.2265 12.4799 33.6399 3.89319 23.0599 3.89319Z"
+                        fill="white" />
+                </svg>
+            </div>
+
+
+            <span
+                class="text-xs whitespace-nowrap mt-1 {{ request()->routeIs('games.*') || request()->routeIs('explore') ? 'text-white' : 'text-gray-400' }}">Khám
+                phá</span>
         </a>
 
         <!-- Assets -->
-        <a href="{{ route('assets') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg w-14 text-center">
-            <svg class="w-6 h-6 {{ request()->routeIs('assets') ? 'text-blue-500' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+        <a href="{{ route('assets') }}"
+            class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg w-14 text-center">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M20.6966 26.5416H7.30329C4.39829 26.5416 2.04163 24.1849 2.04163 21.2799V13.4283C2.04163 10.5233 4.39829 8.16663 7.30329 8.16663H20.6966C23.6016 8.16663 25.9583 10.5233 25.9583 13.4283V15.1083C25.9583 15.5866 25.5616 15.9833 25.0833 15.9833H22.7266C22.3183 15.9833 21.945 16.135 21.6766 16.415L21.665 16.4266C21.3383 16.7416 21.1866 17.1733 21.2216 17.6166C21.2916 18.3866 22.0266 19.0049 22.8666 19.0049H25.0833C25.5616 19.0049 25.9583 19.4016 25.9583 19.8799V21.2683C25.9583 24.1849 23.6016 26.5416 20.6966 26.5416ZM7.30329 9.91663C5.36663 9.91663 3.79163 11.4916 3.79163 13.4283V21.2799C3.79163 23.2166 5.36663 24.7916 7.30329 24.7916H20.6966C22.6333 24.7916 24.2083 23.2166 24.2083 21.2799V20.7666H22.8666C21.105 20.7666 19.6116 19.4599 19.4716 17.7799C19.3783 16.8233 19.7283 15.8783 20.4283 15.19C21.035 14.5716 21.8516 14.2333 22.7266 14.2333H24.2083V13.4283C24.2083 11.4916 22.6333 9.91663 20.6966 9.91663H7.30329Z"
+                    fill="white" fill-opacity="{{ request()->routeIs('assets') ? '1' : '0.5' }}" />
+                <path
+                    d="M2.91663 15.3534C2.43829 15.3534 2.04163 14.9567 2.04163 14.4784V9.14678C2.04163 7.40845 3.13829 5.83338 4.75996 5.21505L14.0233 1.71505C14.98 1.35338 16.0416 1.48177 16.87 2.0651C17.71 2.64844 18.2 3.59343 18.2 4.60843V9.04175C18.2 9.52008 17.8033 9.91675 17.325 9.91675C16.8466 9.91675 16.45 9.52008 16.45 9.04175V4.60843C16.45 4.1651 16.24 3.75675 15.8666 3.50008C15.4933 3.24341 15.05 3.18508 14.63 3.34841L5.36663 6.84841C4.42163 7.21008 3.77996 8.13178 3.77996 9.14678V14.4784C3.79163 14.9684 3.39496 15.3534 2.91663 15.3534Z"
+                    fill="white" fill-opacity="{{ request()->routeIs('assets') ? '1' : '0.5' }}" />
+                <path
+                    d="M22.8666 20.7666C21.105 20.7666 19.6116 19.4599 19.4716 17.7799C19.3783 16.8116 19.7283 15.8666 20.4283 15.1783C21.0233 14.5716 21.84 14.2333 22.715 14.2333H25.1416C26.2966 14.2683 27.1833 15.1782 27.1833 16.2982V18.7016C27.1833 19.8216 26.2966 20.7316 25.1766 20.7666H22.8666ZM25.1183 15.9833H22.7266C22.3183 15.9833 21.945 16.1349 21.6766 16.4149C21.3383 16.7416 21.175 17.1849 21.2216 17.6282C21.2916 18.3982 22.0266 19.0166 22.8666 19.0166H25.1533C25.305 19.0166 25.445 18.8766 25.445 18.7016V16.2982C25.445 16.1232 25.305 15.9949 25.1183 15.9833Z"
+                    fill="white" fill-opacity="{{ request()->routeIs('assets') ? '1' : '0.5' }}" />
+                <path
+                    d="M16.3333 14.875H8.16663C7.68829 14.875 7.29163 14.4783 7.29163 14C7.29163 13.5217 7.68829 13.125 8.16663 13.125H16.3333C16.8116 13.125 17.2083 13.5217 17.2083 14C17.2083 14.4783 16.8116 14.875 16.3333 14.875Z"
+                    fill="white" fill-opacity="{{ request()->routeIs('assets') ? '1' : '0.5' }}" />
             </svg>
-            <span class="text-xs whitespace-nowrap {{ request()->routeIs('assets') ? 'text-blue-500' : 'text-gray-400' }}">Tài sản</span>
+
+            <span
+                class="text-xs whitespace-nowrap {{ request()->routeIs('assets') ? 'text-white' : 'text-gray-400' }}">Tài
+                sản</span>
         </a>
 
         <!-- Profile -->
         <a href="{{ route('me') }}" class="flex flex-col items-center gap-0.5 py-2 px-2 rounded-lg w-14 text-center">
-            <svg class="w-6 h-6 {{ request()->routeIs('me') ? 'text-blue-500' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M14.14 14.91C14.0583 14.8983 13.9533 14.8983 13.86 14.91C11.8067 14.84 10.1733 13.16 10.1733 11.095C10.1733 8.98331 11.8767 7.26831 14 7.26831C16.1117 7.26831 17.8267 8.98331 17.8267 11.095C17.815 13.16 16.1933 14.84 14.14 14.91Z"
+                    stroke="white" stroke-opacity="{{ request()->routeIs('me') ? '1' : '0.5' }}" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                <path
+                    d="M21.8634 22.6099C19.7867 24.5116 17.0334 25.6666 14.0001 25.6666C10.9667 25.6666 8.21339 24.5116 6.13672 22.6099C6.25339 21.5133 6.95339 20.4399 8.20172 19.5999C11.3984 17.4766 16.6251 17.4766 19.7984 19.5999C21.0467 20.4399 21.7467 21.5133 21.8634 22.6099Z"
+                    stroke="white" stroke-opacity="{{ request()->routeIs('me') ? '1' : '0.5' }}" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                <path
+                    d="M14 25.6667C20.4434 25.6667 25.6667 20.4434 25.6667 14C25.6667 7.55672 20.4434 2.33337 14 2.33337C7.55672 2.33337 2.33337 7.55672 2.33337 14C2.33337 20.4434 7.55672 25.6667 14 25.6667Z"
+                    stroke="white" stroke-opacity="{{ request()->routeIs('me') ? '1' : '0.5' }}" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
             </svg>
-            <span class="text-xs whitespace-nowrap {{ request()->routeIs('me') ? 'text-blue-500' : 'text-gray-400' }}">Của tôi</span>
+
+            <span class="text-xs whitespace-nowrap {{ request()->routeIs('me') ? 'text-white' : 'text-gray-400' }}">Của
+                tôi</span>
         </a>
     </div>
 </nav>
-

@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Micex">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#181A20">
+    <meta name="theme-color" content="#141517">
     <link rel="apple-touch-icon" href="{{ asset('images/icons/metalogo.png') }}">
     <link rel="apple-touch-icon" sizes="192x192" href="{{ asset('images/icons/metalogo.png') }}">
     <link rel="apple-touch-icon" sizes="512x512" href="{{ asset('images/icons/metalogo.png') }}">
@@ -132,7 +132,7 @@
         }
     </style>
 </head>
-<body class="bg-[#181A20] md:bg-gray-800 h-screen w-screen overflow-hidden flex items-center justify-center">
+<body class="bg-[#141517] md:bg-gray-800 h-screen w-screen overflow-hidden flex items-center justify-center">
     <div class="w-full md:max-w-[450px] h-full flex flex-col mx-auto bg-gray-900 md:shadow-2xl text-white relative">
         <!-- Fixed Header -->
         <div class="fixed top-0 left-0 right-0 z-40 bg-gray-900 md:left-1/2 md:-translate-x-1/2 md:max-w-[450px]">
@@ -140,7 +140,7 @@
         </div>
 
         <!-- Scrollable Main Content -->
-        <main class="flex-1 overflow-y-auto hide-scrollbar text-base leading-relaxed" style="background-color: #181A20; padding-top: 64px; padding-bottom: 80px; height: 100%;">
+        <main class="flex-1 overflow-y-auto hide-scrollbar text-base leading-relaxed" style="background-color: #141517; padding-top: 64px; padding-bottom: 80px; height: 100%;">
             @yield('content')
         </main>
 

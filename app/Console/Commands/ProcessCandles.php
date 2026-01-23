@@ -103,7 +103,6 @@ class ProcessCandles extends Command
             
             if ($previousCandle) {
                 // Previous candle exists, check if we need to process bets
-                // This will be handled by ProcessTradingBets command running every second
             }
         }
     }
