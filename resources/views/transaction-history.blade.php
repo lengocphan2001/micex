@@ -19,7 +19,7 @@
     <!-- Filters -->
     @php
         $gameFilter = $gameFilter ?? 'all';
-        $gameOptions = $gameOptions ?? ['all' => 'Tất cả', 'khaithac' => 'Khai thác 60s', 'xanhdo' => 'Xanh đỏ 60s'];
+        $gameOptions = $gameOptions ?? ['all' => 'Tất cả', 'khaithac' => 'Khai thác 60s', 'xanhdo' => 'Xanh đỏ 60s', 'trading' => 'Trading'];
     @endphp
     <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar mb-4">
         @foreach($gameOptions as $key => $label)
@@ -37,13 +37,20 @@
             @php
                 $round = $bet->round;
                 $gameKey = $round ? ($round->game_key ?? 'khaithac') : 'khaithac';
-                $gameName = $gameKey === 'xanhdo' ? 'Xanh đỏ 60s' : 'Khai thác 60s';
+                $gameName = match($gameKey) {
+                    'xanhdo' => 'Xanh đỏ 60s',
+                    'trading' => 'Trading',
+                    default => 'Khai thác 60s',
+                };
 
                 $createdAt = $bet->created_at;
                 $time = $createdAt->format('Y-m-d H:i:s');
 
                 // Choice label
-                if ($gameKey === 'xanhdo') {
+                if ($gameKey === 'trading') {
+                    // For trading game, use bet_direction (BUY/SELL)
+                    $choiceLabel = $bet->bet_direction === 'BUY' ? 'BUY' : ($bet->bet_direction === 'SELL' ? 'SELL' : '-');
+                } elseif ($gameKey === 'xanhdo') {
                     // If bet_type is 'number', show the number; if 'color', show the color
                     if ($bet->bet_type === 'number' && $bet->bet_value !== null) {
                         $choiceLabel = $bet->bet_value; // Show the number
@@ -60,7 +67,10 @@
                 if ($round) {
                     $finalResult = $round->admin_set_result ?? $round->final_result ?? null;
                     if ($finalResult !== null && $finalResult !== '') {
-                        if ($gameKey === 'xanhdo') {
+                        if ($gameKey === 'trading') {
+                            // For trading game, final_result is "BUY" or "SELL"
+                            $resultLabel = $finalResult === 'BUY' ? 'BUY' : ($finalResult === 'SELL' ? 'SELL' : $finalResult);
+                        } elseif ($gameKey === 'xanhdo') {
                             // For xanhdo, final_result is a number (0-9) stored as string
                             // Convert to string first to ensure consistent comparison
                             $finalResultStr = (string) $finalResult;

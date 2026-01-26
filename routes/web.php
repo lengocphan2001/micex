@@ -110,6 +110,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/xanhdo/recent-results', [\App\Http\Controllers\XanhDoController::class, 'getRecentResults'])->name('xanhdo.recent-results');
     Route::get('/api/xanhdo/round-winnings', [\App\Http\Controllers\XanhDoController::class, 'getRoundWinnings'])->name('xanhdo.round-winnings');
     
+    // Trading API endpoints
+    Route::get('/api/trading/current-round', [\App\Http\Controllers\TradingController::class, 'getCurrentRound'])->name('trading.current-round');
+    Route::post('/api/trading/bet', [\App\Http\Controllers\TradingController::class, 'placeBet'])->name('trading.bet');
+    Route::get('/api/trading/my-bets', [\App\Http\Controllers\TradingController::class, 'getMyBets'])->name('trading.my-bets');
+    Route::get('/api/trading/round-winnings', [\App\Http\Controllers\TradingController::class, 'getRoundWinnings'])->name('trading.round-winnings');
+    
 
     // Wallet API endpoints
     Route::post('/api/wallet/transfer-reward-to-deposit', [\App\Http\Controllers\WalletController::class, 'transferRewardToDeposit'])->name('wallet.transfer-reward-to-deposit');
@@ -198,17 +204,30 @@ Route::middleware('auth')->group(function () {
         return view('me-change-fund-password');
     })->name('me.change-fund-password');
 
-    Route::get('/transaction-history', function () {
+    Route::get('/transaction-history', function (\Illuminate\Http\Request $request) {
         $user = Auth::guard('web')->user();
         if (!$user) {
             return redirect()->route('login');
         }
         
+        // Get game filter from request
+        $gameFilter = $request->get('game', 'all');
+        
         // Get user's bets with round information, ordered by created_at desc
-        $bets = \App\Models\Bet::where('user_id', $user->id)
-            ->with('round')
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $betsQuery = \App\Models\Bet::where('user_id', $user->id)
+            ->with('round');
+        
+        // Filter by game if not 'all'
+        if ($gameFilter !== 'all') {
+            $betsQuery->whereHas('round', function ($query) use ($gameFilter) {
+                $query->where('game_key', $gameFilter);
+            });
+        }
+        
+        $bets = $betsQuery->orderBy('created_at', 'desc')->paginate(20);
+        
+        // Append game filter to pagination links
+        $bets->appends(['game' => $gameFilter]);
         
         // Gem types mapping
         $gemTypes = [
@@ -223,7 +242,15 @@ Route::middleware('auth')->group(function () {
             'kimcuong' => ['name' => 'Kim Cương Đỏ', 'icon' => 'kcdo.png'],
         ];
         
-        return view('transaction-history', compact('bets', 'gemTypes'));
+        // Game options for filter
+        $gameOptions = [
+            'all' => 'Tất cả',
+            'khaithac' => 'Khai thác 60s',
+            'xanhdo' => 'Xanh đỏ 60s',
+            'trading' => 'Trading',
+        ];
+        
+        return view('transaction-history', compact('bets', 'gemTypes', 'gameFilter', 'gameOptions'));
     })->name('transaction-history');
 
     Route::get('/notifications', function () {

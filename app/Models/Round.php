@@ -22,6 +22,8 @@ class Round extends Model
         'started_at',
         'ended_at',
         'break_until',
+        'start_price',
+        'end_price',
     ];
 
     protected $casts = [
@@ -29,6 +31,8 @@ class Round extends Model
         'ended_at' => 'datetime',
         'break_until' => 'datetime',
         'results' => 'array', // JSON array of results
+        'start_price' => 'decimal:8',
+        'end_price' => 'decimal:8',
     ];
 
     /**
@@ -245,11 +249,18 @@ class Round extends Model
         // Random first result
         $firstResult = \App\Http\Controllers\ExploreController::randomGemType();
         
+        // For trading game: save BTC price at round start
+        $startPrice = null;
+        if ($this->game_key === 'trading') {
+            $startPrice = \Illuminate\Support\Facades\Cache::get('BTCUSDT_PRICE', 94000);
+        }
+        
         $this->update([
             'status' => 'running',
             'started_at' => now(),
             'current_second' => 1,
             'current_result' => $firstResult,
+            'start_price' => $startPrice,
         ]);
     }
 
@@ -275,11 +286,18 @@ class Round extends Model
             return; // Đã finish rồi, không làm gì
         }
         
+        // For trading game: save BTC price at round end
+        $endPrice = null;
+        if ($this->game_key === 'trading') {
+            $endPrice = \Illuminate\Support\Facades\Cache::get('BTCUSDT_PRICE', 94000);
+        }
+        
         $this->update([
             'status' => 'finished',
             'final_result' => $finalResult,
             'ended_at' => now(),
             'break_until' => null,
+            'end_price' => $endPrice,
         ]);
         
         // Refresh để đảm bảo có final_result
@@ -290,6 +308,11 @@ class Round extends Model
         
         // Process all bets for this round
         $this->processBets();
+        
+        // For trading game: process refunds for unmatched bets
+        if ($this->game_key === 'trading') {
+            \App\Http\Controllers\TradingController::processRefunds($this->id);
+        }
         
         // KHÔNG cleanup ngay sau khi finish round
         // Cleanup sẽ được thực hiện định kỳ hoặc khi thực sự cần (> 500 rounds)
@@ -434,9 +457,15 @@ class Round extends Model
         // 7: số 7, màu xanh (kcxanh)
         // 8: số 8, màu đỏ (kcdo)
         // 9: số 9, màu xanh (kcxanh)
+        $isTrading = ($this->game_key ?? 'khaithac') === 'trading';
         $isXanhDo = ($this->game_key ?? 'khaithac') === 'xanhdo';
         $winningGemTypes = [];
         $winningNumbers = [];
+        
+        // Trading game logic: final_result is "BUY" or "SELL"
+        if ($isTrading) {
+            $winningDirection = $this->final_result; // "BUY" or "SELL"
+        }
         
         if ($isXanhDo && is_numeric($this->final_result)) {
             $resultNum = (int) $this->final_result;
@@ -519,14 +548,27 @@ class Round extends Model
                             \Log::error("Bet {$bet->id}: Balance mismatch! Expected: {$newBalance}, Actual: {$user->balance}");
                         }
                     } else if (
-                        (!$isXanhDo && $bet->gem_type === $this->final_result)
+                        ($isTrading && $bet->bet_direction === $winningDirection)
+                        || (!$isXanhDo && !$isTrading && $bet->gem_type === $this->final_result)
                         || ($isXanhDo && $this->isWinningBet($bet, $resultNum, $winningGemTypes))
                     ) {
+                        // For trading: Only calculate payout for matched_amount (pending_amount was refunded)
                         // For xanhdo: When a number is drawn, bets on that number AND all corresponding colors win
                         // Example: Number 1 → bets on number 1 (stored as kcxanh) AND color xanh (kcxanh) both win
                         // Example: Number 0 → bets on number 0 (stored as kcdo or daquy) AND color đỏ (kcdo) AND color tím (daquy) all win
                         // User won (normal result)
-                        $payoutAmount = $bet->amount * $bet->payout_rate;
+                        
+                        // For trading: only calculate payout based on matched_amount
+                        $betAmount = $isTrading ? ($bet->matched_amount ?? 0) : $bet->amount;
+                        
+                        if ($isTrading && $betAmount <= 0) {
+                            // No matched amount, mark as lost (pending was refunded)
+                            $bet->update(['status' => 'lost']);
+                            \Log::info("Bet {$bet->id}: Trading bet with no matched amount, marked as lost");
+                            continue;
+                        }
+                        
+                        $payoutAmount = $betAmount * $bet->payout_rate;
                         
                         // Get user with lock to prevent race condition
                         $user = \App\Models\User::where('id', $bet->user_id)->lockForUpdate()->first();
@@ -607,10 +649,44 @@ class Round extends Model
      * Đá có nhiều tiền đặt cược nhất sẽ KHÔNG được random (không thắng)
      * Random trong 2 đá còn lại
      * For xanhdo game, returns a number (0-9) instead of gem type
+     * For trading game, returns "BUY" or "SELL" based on bet amounts
      */
     public function randomResultBasedOnBets()
     {
+        $isTrading = ($this->game_key ?? 'khaithac') === 'trading';
         $isXanhDo = ($this->game_key ?? 'khaithac') === 'xanhdo';
+        
+        // Trading game: return BUY or SELL based on BTC price movement
+        if ($isTrading) {
+            // Get BTC prices from round
+            $startPrice = $this->start_price;
+            $endPrice = $this->end_price ?? \Illuminate\Support\Facades\Cache::get('BTCUSDT_PRICE', 94000);
+            
+            // If start_price is not set, try to get from cache (fallback)
+            if (!$startPrice) {
+                $startPrice = \Illuminate\Support\Facades\Cache::get('BTCUSDT_PRICE', 94000);
+            }
+            
+            // Compare prices: if price went up → BUY wins, if price went down → SELL wins
+            if ($endPrice > $startPrice) {
+                // Price increased → BUY wins
+                return 'BUY';
+            } elseif ($endPrice < $startPrice) {
+                // Price decreased → SELL wins
+                return 'SELL';
+            } else {
+                // Price unchanged → random BUY or SELL using seed (deterministic)
+                $seed = $this->seed . '_final_result';
+                $hash = 0;
+                for ($i = 0; $i < strlen($seed); $i++) {
+                    $char = ord($seed[$i]);
+                    $hash = (($hash << 5) - $hash) + $char;
+                    $hash = $hash & 0x7FFFFFFF;
+                }
+                $rand = (abs($hash) % 10000) % 2;
+                return $rand === 0 ? 'BUY' : 'SELL';
+            }
+        }
         
         if ($isXanhDo) {
             // For xanhdo, return a random number 0-9

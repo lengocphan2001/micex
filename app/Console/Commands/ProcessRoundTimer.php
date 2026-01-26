@@ -7,6 +7,7 @@ use App\Models\SystemSetting;
 use App\Http\Controllers\ExploreController;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class ProcessRoundTimer extends Command
 {
@@ -99,7 +100,7 @@ class ProcessRoundTimer extends Command
     public function handle()
     {
         // Process independently per game (each game has its own round stream)
-        $games = ['khaithac', 'xanhdo'];
+        $games = ['khaithac', 'xanhdo', 'trading'];
 
         // Tính round number từ BASE_TIME (giống client) - shared timeline
         $currentRoundNumber = $this->calculateRoundNumber();
@@ -143,6 +144,23 @@ class ProcessRoundTimer extends Command
                     $now = Carbon::now('UTC');
                     $countdown = max(0, (int) floor(($deadline->timestamp - $now->timestamp)));
 
+                    // For trading game: refund unmatched bets when betting window closes (55 seconds)
+                    // Check if we've already processed refunds for this round
+                    $refundProcessedKey = "trading_refund_{$round->id}";
+                    if ($gameKey === 'trading' && $currentSecond > 55 && $currentSecond <= 56) {
+                        // Only process once when crossing 55 second threshold
+                        $refundProcessed = Cache::get($refundProcessedKey, false);
+                        if (!$refundProcessed) {
+                            try {
+                                \App\Http\Controllers\TradingController::processRefundsForBettingWindow($round->id);
+                                Cache::put($refundProcessedKey, true, now()->addMinutes(5));
+                                $this->info("[{$gameKey}] Processed betting window refunds for round {$round->round_number}");
+                            } catch (\Exception $e) {
+                                \Log::error("Error processing betting window refunds for round {$round->id}: " . $e->getMessage());
+                            }
+                        }
+                    }
+
                     // Nếu đã đến giây 60 hoặc quá deadline (countdown = 0), finish round
                     if ($currentSecond >= 60 || $countdown <= 0) {
                         // Refresh round để lấy admin_set_result mới nhất từ database
@@ -155,6 +173,13 @@ class ProcessRoundTimer extends Command
                             continue;
                         }
 
+                        // For trading game: save end_price before calculating result
+                        if ($gameKey === 'trading') {
+                            $endPrice = \Illuminate\Support\Facades\Cache::get('BTCUSDT_PRICE', 94000);
+                            $round->update(['end_price' => $endPrice]);
+                            $round->refresh();
+                        }
+                        
                         // Ưu tiên admin_set_result nếu có (NOTE: string "0" is a valid value, do NOT use truthy check)
                         $finalResult = null;
                         if ($round->admin_set_result !== null && $round->admin_set_result !== '') {
@@ -162,7 +187,12 @@ class ProcessRoundTimer extends Command
                             $this->info("[{$gameKey}] Round {$round->round_number} using admin_set_result: {$finalResult}");
                         } else {
                             $finalResult = $round->randomResultBasedOnBets();
-                            $this->info("[{$gameKey}] Round {$round->round_number} using random result based on bets: {$finalResult}");
+                            // Different log messages for different games
+                            if ($gameKey === 'trading') {
+                                $this->info("[{$gameKey}] Round {$round->round_number} using result based on BTC price: {$finalResult}");
+                            } else {
+                                $this->info("[{$gameKey}] Round {$round->round_number} using random result based on bets: {$finalResult}");
+                            }
                         }
 
                         $round->finish($finalResult);

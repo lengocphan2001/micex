@@ -15,7 +15,10 @@ class Bet extends Model
         'gem_type',
         'bet_type',
         'bet_value',
+        'bet_direction',
         'amount',
+        'matched_amount',
+        'pending_amount',
         'amount_from_deposit',
         'amount_from_reward',
         'payout_rate',
@@ -25,6 +28,8 @@ class Bet extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'matched_amount' => 'decimal:2',
+        'pending_amount' => 'decimal:2',
         'amount_from_deposit' => 'decimal:2',
         'amount_from_reward' => 'decimal:2',
         'payout_rate' => 'decimal:2',

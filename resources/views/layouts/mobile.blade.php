@@ -250,6 +250,11 @@
         }
 
         function showGlobalResultPopup(result, amount, payoutRate = null, options = {}) {
+            // Don't show on trading page - trading has its own result handling
+            if (window.location.pathname.includes('/games/trading')) {
+                return;
+            }
+            
             if (result !== 'won') return; // Chỉ hiển thị khi thắng
             
             const popup = document.getElementById('resultPopup');
@@ -356,6 +361,11 @@
             
             // Handle round finish event
             async function handleRoundFinish(roundNumber) {
+                // Don't run on trading page - trading has its own result handling
+                if (window.location.pathname.includes('/games/trading')) {
+                    return;
+                }
+                
                 try {
                     // Get client bet info from localStorage
                     const clientBetInfoStr = localStorage.getItem('clientBetInfo');
@@ -460,6 +470,11 @@
         
         // Check for round finish (client-side timer)
         function startRoundFinishDetection() {
+            // Don't run on trading page - trading has its own result handling
+            if (window.location.pathname.includes('/games/trading')) {
+                return;
+            }
+            
             // Clear existing interval
             if (roundFinishCheckInterval) {
                 clearInterval(roundFinishCheckInterval);
