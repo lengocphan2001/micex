@@ -28,6 +28,7 @@ class TradingController extends Controller
             'direction' => 'required|in:BUY,SELL',
             'amount' => 'required|numeric|min:0.01',
             'wallet_type' => 'nullable|in:deposit,reward',
+            'entry_price' => 'nullable|numeric|min:0',
         ]);
 
         // Get current round
@@ -108,7 +109,7 @@ class TradingController extends Controller
             $user->betting_requirement = max(0, ($user->betting_requirement ?? 0) - $validated['amount']);
             $user->save();
 
-            // Create bet
+            // Create bet (entry_price = giá BTC khi user vào lệnh, gửi từ FE)
             $bet = Bet::create([
                 'round_id' => $round->id,
                 'user_id' => $user->id,
@@ -117,6 +118,7 @@ class TradingController extends Controller
                 'amount' => $validated['amount'],
                 'matched_amount' => 0,
                 'pending_amount' => $validated['amount'],
+                'entry_price' => isset($validated['entry_price']) ? (float) $validated['entry_price'] : null,
                 'payout_rate' => 1.95, // Dummy value for trading
                 'status' => 'pending',
                 'amount_from_deposit' => $deduction['from_deposit'] ?? 0,
@@ -252,10 +254,12 @@ class TradingController extends Controller
         $betData = $bets->map(function($bet) {
             return [
                 'id' => $bet->id,
+                'round_id' => $bet->round_id,
                 'direction' => $bet->bet_direction,
                 'amount' => $bet->amount,
                 'matched_amount' => $bet->matched_amount ?? 0,
                 'pending_amount' => $bet->pending_amount ?? ($bet->amount - ($bet->matched_amount ?? 0)),
+                'entry_price' => $bet->entry_price ? (float) $bet->entry_price : null,
                 'status' => $bet->status,
                 'payout_amount' => $bet->payout_amount,
                 'payout_rate' => $bet->payout_rate,
@@ -300,7 +304,7 @@ class TradingController extends Controller
             $phase = 'result';
         }
 
-        // Get total BUY and SELL amounts
+        // Tổng BUY/SELL đang pending (để tính % thanh sentiment)
         $buyAmount = Bet::where('round_id', $round->id)
             ->where('bet_direction', 'BUY')
             ->where('status', 'pending')
@@ -315,6 +319,25 @@ class TradingController extends Controller
         $buyPercentage = $totalAmount > 0 ? round(($buyAmount / $totalAmount) * 100) : 0;
         $sellPercentage = $totalAmount > 0 ? round(($sellAmount / $totalAmount) * 100) : 0;
 
+        // BUY = tổng amount cược vào BUY (tất cả user). Đã khớp = tổng - chưa khớp (sum matched_amount)
+        $totalBuyAll = (float) Bet::where('round_id', $round->id)
+            ->where('bet_direction', 'BUY')
+            ->sum('amount');
+        $totalSellAll = (float) Bet::where('round_id', $round->id)
+            ->where('bet_direction', 'SELL')
+            ->sum('amount');
+        $totalBuyMatchedAll = (float) Bet::where('round_id', $round->id)
+            ->where('bet_direction', 'BUY')
+            ->sum('matched_amount');
+        $totalSellMatchedAll = (float) Bet::where('round_id', $round->id)
+            ->where('bet_direction', 'SELL')
+            ->sum('matched_amount');
+
+        // Giá tham chiếu = giá khi user vào lệnh (start_price của round)
+        $referencePrice = $round->start_price ? (float) $round->start_price : null;
+        // Giá hiện tại = BTC realtime từ cache (chạy theo PriceTick)
+        $currentPrice = (float) \Illuminate\Support\Facades\Cache::get('BTCUSDT_PRICE', 94000);
+
         return response()->json([
             'round' => [
                 'id' => $round->id,
@@ -324,12 +347,18 @@ class TradingController extends Controller
                 'current_second' => $currentSecond,
                 'final_result' => $round->final_result,
                 'started_at' => $round->started_at?->toIso8601String(),
+                'reference_price' => $referencePrice,
+                'current_price' => $currentPrice,
             ],
             'statistics' => [
                 'buy_amount' => $buyAmount,
                 'sell_amount' => $sellAmount,
                 'buy_percentage' => $buyPercentage,
                 'sell_percentage' => $sellPercentage,
+                'total_buy_all' => $totalBuyAll,
+                'total_sell_all' => $totalSellAll,
+                'total_buy_matched_all' => $totalBuyMatchedAll,
+                'total_sell_matched_all' => $totalSellMatchedAll,
             ],
         ]);
     }

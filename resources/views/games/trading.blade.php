@@ -359,7 +359,7 @@
         <!-- BUY/SELL Tab Content -->
         <div id="trTabContentBuySell" class="tab-content space-y-3">
             <!-- Balance and Wallet Selection -->
-            <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+            <div class="bg-[#232944] rounded-lg p-3 space-y-2">
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <p class="text-gray-400 text-sm font-medium">Tổng số dư:</p>
@@ -418,15 +418,15 @@
                 </div>
             </div>
 
-            <!-- Buy/Sell Sentiment Bar -->
+            <!-- Buy/Sell Sentiment Bar (tổng bet tất cả user - cập nhật từ API statistics) -->
             <div class="space-y-2">
                 <div class="flex items-center justify-between text-xs">
-                    <span class="text-white">24% Sell</span>
-                    <span class="text-white">76% Buy</span>
+                    <span id="trSellPercentText" class="text-white">0% Sell</span>
+                    <span id="trBuyPercentText" class="text-white">0% Buy</span>
                 </div>
-                <div class="h-2 bg-gray-800 rounded-full overflow-hidden flex">
-                    <div id="trSellBar" class="bg-red-500 h-full" style="width: 24%;"></div>
-                    <div id="trBuyBar" class="bg-green-500 h-full" style="width: 76%;"></div>
+                <div class="h-2 bg-[#232944] rounded-full overflow-hidden flex gap-0.5">
+                    <div id="trSellBar" class="bg-red-500 h-full rounded-l-full flex-shrink-0" style="width: 24%;"></div>
+                    <div id="trBuyBar" class="bg-green-500 h-full rounded-r-full flex-shrink-0" style="width: 76%;"></div>
                 </div>
             </div>
 
@@ -438,11 +438,11 @@
 
             <!-- Input Fields -->
             <div class="flex gap-3">
-                <div class="bg-gray-800 rounded-lg p-3 flex-[2]">
+                <div class="bg-[#232944] rounded-lg p-3 flex-[2]">
                     <input type="number" id="trBetAmount" value="10" min="0.01" step="0.01" 
                            class="w-full bg-transparent text-white text-base outline-none" placeholder="$10">
                 </div>
-                <div class="bg-gray-800 rounded-lg p-3 flex-[1] flex items-center justify-center">
+                <div class="bg-[#232944] rounded-lg p-3 flex-[1] flex items-center justify-center">
                     <span id="trTimer" class="text-white text-base font-mono">00:00:29</span>
                 </div>
             </div>
@@ -455,79 +455,90 @@
         </div>
 
         <!-- Order Tab Content -->
-        <div id="trTabContentOrder" class="tab-content hidden space-y-3">
-            <!-- BUY/SELL Order Summary -->
-            <div class="grid grid-cols-2 gap-3">
-                <!-- BUY Panel -->
-                <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+        <div id="trTabContentOrder" class="tab-content hidden flex flex-col" style="max-height: calc(100vh - 200px); overflow-y: auto;">
+            <div class="space-y-3 flex-1">
+                <!-- Matched BUY/SELL Summary Cards -->
+                <div class="flex gap-3 w-full">
+                    <div class="flex-1 w-full bg-[#232944] rounded-xl p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-green-500 text-sm font-semibold">BUY</span>
+                            <span id="trMatchedBuyAmount" class="text-white text-sm font-medium">$0.00</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span><span class="text-gray-400 text-sm font-medium">Đã khớp</span><span class="text-green-500 text-sm font-medium"> BUY</span></span>
+                            <span id="trMatchedBuyAmountDetail" class="text-white text-sm">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 w-full bg-[#232944] rounded-xl p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-red-500 text-sm font-semibold">SELL</span>
+                            <span id="trMatchedSellAmount" class="text-white text-sm font-medium">$0.00</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span><span class="text-gray-400 text-sm font-medium">Đã khớp</span><span class="text-red-500 text-sm font-medium"> SELL</span></span>
+                            <span id="trMatchedSellAmountDetail" class="text-white text-sm">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BUY Block -->
+                <div class="bg-[#232944] rounded-lg p-3 space-y-3">
                     <div class="flex items-center justify-between">
-                        <span class="text-green-500 text-sm font-semibold">BUY</span>
+                        <span class="text-green-500 text-sm font-semibold">Đặt cược BUY</span>
                         <span id="trBuyTotalAmount" class="text-white text-sm">$0.00</span>
                     </div>
-                    <div class="flex items-start justify-between gap-2">
-                        <span class="text-green-500 text-xs">Đã khớp BUY</span>
-                        <span id="trBuyMatchedAmount" class="text-white text-sm">$0.00</span>
+                    <div id="trBuyBetsContainer" class="space-y-2">
+                        <!-- BUY bet items will be dynamically inserted here -->
                     </div>
                 </div>
 
-                <!-- SELL Panel -->
-                <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+                <!-- SELL Block -->
+                <div class="bg-[#232944] rounded-lg p-3 space-y-3">
                     <div class="flex items-center justify-between">
-                        <span class="text-red-500 text-sm font-semibold">SELL</span>
+                        <span class="text-red-500 text-sm font-semibold">Đặt cược SELL</span>
                         <span id="trSellTotalAmount" class="text-white text-sm">$0.00</span>
                     </div>
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="text-red-500 text-xs">Đã khớp SELL</span>
-                        <span id="trSellMatchedAmount" class="text-white text-sm">$0.00</span>
+                    <div id="trSellBetsContainer" class="space-y-2">
+                        <!-- SELL bet items will be dynamically inserted here -->
                     </div>
                 </div>
-            </div>
 
-            <!-- Current Bet Status -->
-            <!-- All Bets Container -->
-            <div id="trBetsContainer" class="space-y-3 hidden">
-                <!-- Bet items will be dynamically inserted here -->
-            </div>
+                <!-- No Orders Message -->
+                <div id="trNoOrdersMessage" class="bg-[#232944] rounded-lg p-6 text-center">
+                    <p class="text-gray-400 text-sm">Chưa có đơn đặt cược nào</p>
+                </div>
 
-            <!-- No Orders Message -->
-            <div id="trNoOrdersMessage" class="bg-gray-800 rounded-lg p-6 text-center">
-                <p class="text-gray-400 text-sm">Chưa có đơn đặt cược nào</p>
+                <!-- Refund Information -->
+                <p class="text-gray-400 text-xs text-center">
+                    Số tiền chưa khớp sẽ được hoàn trả sau khi hết thời gian
+                </p>
             </div>
-
-            <!-- Refund Information -->
-            <p class="text-gray-400 text-xs text-center">
-                Số tiền chưa khớp sẽ được hoàn trả sau khi hết thời gian
-            </p>
         </div>
 
         <!-- Entry Tab Content -->
         <div id="trTabContentEntry" class="tab-content hidden space-y-3">
             <!-- Price Information Cards -->
             <div class="grid grid-cols-2 gap-3">
-                <!-- Reference Price Card -->
-                <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+                <!-- Reference Price Card: giá khi user vào lệnh (start của round) -->
+                <div class="bg-[#232944] rounded-lg p-3 space-y-2">
                     <span class="text-gray-400 text-xs">Giá tham chiếu</span>
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-1">
-                            <div class="w-1 h-1 bg-white rounded-full"></div>
-                            <div class="w-1 h-1 bg-white rounded-full"></div>
-                            <div class="w-1 h-1 bg-white rounded-full"></div>
-                        </div>
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span id="trEntryReferencePrice" class="text-white text-lg font-semibold">--</span>
+                        <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
                     </div>
                 </div>
 
-                <!-- Current Price Card -->
-                <div class="bg-gray-800 rounded-lg p-3 space-y-2">
+                <!-- Current Price Card: giá BTC hiện tại (realtime) -->
+                <div class="bg-[#232944] rounded-lg p-3 space-y-2">
                     <span class="text-gray-400 text-xs">Giá hiện tại</span>
-                    <div class="text-green-500 text-lg font-semibold">89,300</div>
+                    <div id="trEntryCurrentPrice" class="text-green-500 text-lg font-semibold">--</div>
                 </div>
             </div>
 
             <!-- Result Calculation Description -->
-            <div class="bg-gray-800 rounded-lg p-4">
+            <div class="bg-[#232944] rounded-lg p-4">
                 <p class="text-gray-400 text-xs leading-relaxed">
                     "Kết quả được tính bằng cách so sánh giá Entry tại giây 55 và giá kết thúc tại giây 60 của BTC/USDT."
                 </p>
@@ -700,7 +711,9 @@
     let trWinningModalTimeout = null; // Timeout for auto-closing winning modal
     let trIsInitialLoad = true; // Track if this is the initial page load
     let trLastShownRoundNumber = null; // Track which round number we've already shown modal for
-    
+    let trCurrentBtcPrice = null; // Giá BTC hiện tại (lấy từ Binance FE), dùng khi vào lệnh và hiển thị tab Entry
+    let trPreviousRoundNumber = null; // Để phát hiện round vừa kết thúc (khi round_number tăng)
+
     // Clear clientBetInfo from other games when on trading page
     // This prevents global result popup from showing results from other games
     if (localStorage.getItem('clientBetInfo')) {
@@ -715,29 +728,66 @@
             const data = await response.json();
             
             if (data.round) {
-                // Check if round finished and show result notification
-                if (data.round.status === 'finished' && data.round.final_result) {
-                    if (trLastProcessedRoundId !== data.round.id) {
-                        // New round finished, show result
-                        const result = data.round.final_result;
-                        if (typeof showToast === 'function') {
-                            showToast(`Kết quả: ${result} thắng!`, result === 'BUY' ? 'success' : 'error');
-                        }
-                        trLastProcessedRoundId = data.round.id;
-                        console.log('Round finished:', data.round.round_number, 'Result:', data.round.final_result);
-                        
-                        // Update bets - this will check for winnings and show modal automatically
-                        await updateMyBets();
-                    }
+                const currentRoundNumber = data.round.round_number;
+
+                // Phát hiện round vừa kết thúc: (1) API trả về status finished HOẶC (2) round_number tăng (API thường trả về round mới nên không có status finished)
+                let finishedRoundNumber = null;
+                if (data.round.status === 'finished' && data.round.final_result && trLastProcessedRoundId !== data.round.id) {
+                    finishedRoundNumber = data.round.round_number;
+                    trLastProcessedRoundId = data.round.id;
+                } else if (trPreviousRoundNumber !== null && currentRoundNumber > trPreviousRoundNumber) {
+                    finishedRoundNumber = trPreviousRoundNumber;
                 }
-                
+                trPreviousRoundNumber = currentRoundNumber;
+
+                if (finishedRoundNumber != null) {
+                    console.log('Round finished:', finishedRoundNumber, 'Result:', data.round.final_result || '(from round number change)');
+                    await updateMyBets();
+                    await trCheckRoundWinnings(finishedRoundNumber);
+                }
+
                 trRoundData = data.round;
                 updateTimer();
                 updateStatistics(data.statistics);
+                updateEntryTabPrices();
             }
         } catch (error) {
             console.error('Error fetching round data:', error);
         }
+    }
+
+    // Lấy giá BTC từ Binance (gọi ở FE)
+    async function fetchBtcPriceFromBinance() {
+        try {
+            const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+            const data = await res.json();
+            const p = data && data.price != null ? parseFloat(data.price) : null;
+            if (p != null && !isNaN(p)) return p;
+        } catch (e) {
+            console.warn('Fetch Binance price failed:', e);
+        }
+        return null;
+    }
+
+    function formatPrice(num) {
+        if (num == null || isNaN(num)) return '--';
+        const n = Number(num);
+        if (n === 0) return '0';
+        return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    // Cập nhật tab Entry: Giá tham chiếu = giá vào lệnh (entry_price của bet user), Giá hiện tại = Binance
+    function updateEntryTabPrices() {
+        const refEl = document.getElementById('trEntryReferencePrice');
+        const curEl = document.getElementById('trEntryCurrentPrice');
+        if (curEl) curEl.textContent = trCurrentBtcPrice != null ? formatPrice(trCurrentBtcPrice) : '--';
+        let refPrice = null;
+        if (trRoundData && trMyBets && trMyBets.length > 0) {
+            const roundBets = trMyBets.filter(b => b.round_id === trRoundData.id);
+            const latest = roundBets[0];
+            if (latest && latest.entry_price != null) refPrice = latest.entry_price;
+        }
+        if (refEl) refEl.textContent = refPrice != null ? formatPrice(refPrice) : '--';
     }
 
     // Get user's bets
@@ -762,14 +812,8 @@
                             hasNewWonBets = true;
                             totalWinnings += payoutAmount;
                             console.log('🎉 NEW WINNING BET!', bet.id, 'Payout:', payoutAmount);
-                            if (typeof showToast === 'function') {
-                                showToast(`Đặt cược ${bet.direction} thắng! Nhận được $${payoutAmount.toFixed(2)}`, 'success');
-                            }
                         } else if (trLastBetStatuses[bet.id] === 'pending' && bet.status === 'lost') {
                             // Bet lost
-                            if (typeof showToast === 'function') {
-                                showToast(`Đặt cược ${bet.direction} thua`, 'error');
-                            }
                         }
                         trLastBetStatuses[bet.id] = bet.status;
                     }
@@ -803,8 +847,9 @@
                 
                 trMyBets = data.bets;
                 updateOrderTab();
+                updateEntryTabPrices();
             }
-            
+
             // Update balances
             if (data.balance !== undefined) {
                 trUserBalances.balance = parseFloat(data.balance) || 0;
@@ -871,19 +916,36 @@
         }
     }
 
-    // Update statistics (BUY/SELL percentages)
+    // Update statistics: % thanh sentiment + hai thẻ BUY/SELL (tổng bet tất cả user: khớp + đang chờ)
     function updateStatistics(stats) {
         if (!stats) return;
         
         const sellBar = document.getElementById('trSellBar');
         const buyBar = document.getElementById('trBuyBar');
-        const sellText = document.querySelector('#trTabContentBuySell .text-white:first-child');
-        const buyText = document.querySelector('#trTabContentBuySell .text-white:last-child');
+        const sellText = document.getElementById('trSellPercentText');
+        const buyText = document.getElementById('trBuyPercentText');
         
-        if (sellBar) sellBar.style.width = stats.sell_percentage + '%';
-        if (buyBar) buyBar.style.width = stats.buy_percentage + '%';
-        if (sellText) sellText.textContent = stats.sell_percentage + '% Sell';
-        if (buyText) buyText.textContent = stats.buy_percentage + '% Buy';
+        const sellPct = Number(stats.sell_percentage) || 0;
+        const buyPct = Number(stats.buy_percentage) || 0;
+        
+        if (sellBar) sellBar.style.width = `calc(${sellPct}% - 2px)`;
+        if (buyBar) buyBar.style.width = `calc(${buyPct}% - 2px)`;
+        if (sellText) sellText.textContent = sellPct + '% Sell';
+        if (buyText) buyText.textContent = buyPct + '% Buy';
+
+        // BUY = tổng amount cược BUY. Đã khớp BUY = tổng - chưa khớp (số matched)
+        const totalBuyAll = Number(stats.total_buy_all) || 0;
+        const totalSellAll = Number(stats.total_sell_all) || 0;
+        const totalBuyMatchedAll = Number(stats.total_buy_matched_all) || 0;
+        const totalSellMatchedAll = Number(stats.total_sell_matched_all) || 0;
+        const matchedBuyEl = document.getElementById('trMatchedBuyAmount');
+        const matchedBuyDetailEl = document.getElementById('trMatchedBuyAmountDetail');
+        const matchedSellEl = document.getElementById('trMatchedSellAmount');
+        const matchedSellDetailEl = document.getElementById('trMatchedSellAmountDetail');
+        if (matchedBuyEl) matchedBuyEl.textContent = '$' + totalBuyAll.toFixed(2);
+        if (matchedBuyDetailEl) matchedBuyDetailEl.textContent = '$' + totalBuyMatchedAll.toFixed(2);
+        if (matchedSellEl) matchedSellEl.textContent = '$' + totalSellAll.toFixed(2);
+        if (matchedSellDetailEl) matchedSellDetailEl.textContent = '$' + totalSellMatchedAll.toFixed(2);
     }
 
     // Update Order tab with user's bets
@@ -895,186 +957,133 @@
         const buyBets = trMyBets.filter(b => b.direction === 'BUY');
         const sellBets = trMyBets.filter(b => b.direction === 'SELL');
 
-        const totalBuyMatched = buyBets.reduce((sum, b) => sum + (parseFloat(b.matched_amount) || 0), 0);
-        const totalBuyPending = buyBets.reduce((sum, b) => sum + (parseFloat(b.pending_amount) || 0), 0);
-        const totalSellMatched = sellBets.reduce((sum, b) => sum + (parseFloat(b.matched_amount) || 0), 0);
-        const totalSellPending = sellBets.reduce((sum, b) => sum + (parseFloat(b.pending_amount) || 0), 0);
+        const totalBuyAmount = buyBets.reduce((sum, b) => sum + (parseFloat(b.matched_amount) || 0) + (parseFloat(b.pending_amount) || 0), 0);
+        const totalSellAmount = sellBets.reduce((sum, b) => sum + (parseFloat(b.matched_amount) || 0) + (parseFloat(b.pending_amount) || 0), 0);
 
-        // Update BUY panel with dynamic data
-        const buyTotalAmountEl = document.getElementById('trBuyTotalAmount');
-        const buyMatchedAmountEl = document.getElementById('trBuyMatchedAmount');
-        
-        if (buyTotalAmountEl) {
-            buyTotalAmountEl.textContent = '$' + (totalBuyMatched + totalBuyPending).toFixed(2);
-        }
-        
-        if (buyMatchedAmountEl) {
-            buyMatchedAmountEl.textContent = '$' + totalBuyMatched.toFixed(2);
-        }
+        // Update total amounts in Order tab (chỉ tổng của user trong từng khối Đặt cược BUY/SELL)
+        const buyTotalAmount = document.getElementById('trBuyTotalAmount');
+        const sellTotalAmount = document.getElementById('trSellTotalAmount');
+        if (buyTotalAmount) buyTotalAmount.textContent = '$' + totalBuyAmount.toFixed(2);
+        if (sellTotalAmount) sellTotalAmount.textContent = '$' + totalSellAmount.toFixed(2);
+        // Hai thẻ Đã khớp BUY/SELL được cập nhật từ updateStatistics (tổng tất cả user)
 
-        // Update SELL panel with dynamic data
-        const sellTotalAmountEl = document.getElementById('trSellTotalAmount');
-        const sellMatchedAmountEl = document.getElementById('trSellMatchedAmount');
-        
-        if (sellTotalAmountEl) {
-            sellTotalAmountEl.textContent = '$' + (totalSellMatched + totalSellPending).toFixed(2);
-        }
-        
-        if (sellMatchedAmountEl) {
-            sellMatchedAmountEl.textContent = '$' + totalSellMatched.toFixed(2);
-        }
-
-        // Show/hide bets container and no orders message
-        const betsContainer = document.getElementById('trBetsContainer');
+        // Get containers
+        const buyBetsContainer = document.getElementById('trBuyBetsContainer');
+        const sellBetsContainer = document.getElementById('trSellBetsContainer');
         const noOrdersMessage = document.getElementById('trNoOrdersMessage');
-        
-        if (trMyBets.length > 0) {
-            // Show bets container, hide no orders message
-            if (betsContainer) betsContainer.classList.remove('hidden');
-            if (noOrdersMessage) noOrdersMessage.classList.add('hidden');
-            
-            // Clear existing bet items
-            if (betsContainer) {
-                betsContainer.innerHTML = '';
-            }
-            
-            // Render ALL bets (both BUY and SELL)
-            trMyBets.forEach(bet => {
-                const matchedAmount = parseFloat(bet.matched_amount) || 0;
-                const pendingAmount = parseFloat(bet.pending_amount) || 0;
-                const totalAmount = parseFloat(bet.amount) || 0;
-                const payoutAmount = parseFloat(bet.payout_amount) || 0;
-                
-                // Create bet item container - Rectangle 672 style
-                const betItem = document.createElement('div');
-                betItem.className = 'p-3';
-                betItem.style.cssText = 'background: #232944; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1);';
-                
-                // First line: BUY/SELL + Amount
-                const firstLine = document.createElement('div');
-                firstLine.className = 'flex items-center justify-between mb-2';
-                
-                const directionText = document.createElement('span');
-                directionText.className = bet.direction === 'BUY' 
-                    ? 'text-green-500 text-sm font-semibold' 
-                    : 'text-red-500 text-sm font-semibold';
-                directionText.textContent = bet.direction;
-                
-                const amountContainer = document.createElement('div');
-                amountContainer.className = 'flex items-center gap-1';
-                
-                const amountText = document.createElement('span');
-                amountText.className = 'text-white text-sm';
-                amountText.textContent = `$${totalAmount.toFixed(2)}`;
-                
-                const chevronIcon = document.createElement('svg');
-                chevronIcon.className = 'w-4 h-4 text-gray-400';
-                chevronIcon.setAttribute('fill', 'none');
-                chevronIcon.setAttribute('stroke', 'currentColor');
-                chevronIcon.setAttribute('viewBox', '0 0 24 24');
-                chevronIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>';
-                
-                amountContainer.appendChild(amountText);
-                amountContainer.appendChild(chevronIcon);
-                
-                firstLine.appendChild(directionText);
-                firstLine.appendChild(amountContainer);
-                
-                // Second line: Đã khớp BUY/SELL + Matched Amount (only if matched_amount > 0)
-                if (matchedAmount > 0) {
-                    const secondLine = document.createElement('div');
-                    secondLine.className = 'flex items-center justify-between mb-2';
-                    
-                    const matchedLabel = document.createElement('span');
-                    matchedLabel.className = 'text-sm';
-                    const matchedLabelText = document.createElement('span');
-                    matchedLabelText.className = 'text-gray-400';
-                    matchedLabelText.textContent = 'Đã khớp ';
-                    const matchedDirection = document.createElement('span');
-                    matchedDirection.className = bet.direction === 'BUY' 
-                        ? 'text-green-500' 
-                        : 'text-red-500';
-                    matchedDirection.textContent = bet.direction;
-                    matchedLabel.appendChild(matchedLabelText);
-                    matchedLabel.appendChild(matchedDirection);
-                    
-                    const matchedAmountText = document.createElement('span');
-                    matchedAmountText.className = 'text-white text-sm';
-                    matchedAmountText.textContent = `$${matchedAmount.toFixed(2)}`;
-                    
-                    secondLine.appendChild(matchedLabel);
-                    secondLine.appendChild(matchedAmountText);
-                    betItem.appendChild(secondLine);
-                }
-                
-                // Third line: Đang chờ khớp BUY/SELL + Pending Amount (only if pending_amount > 0)
-                if (pendingAmount > 0) {
-                    const thirdLine = document.createElement('div');
-                    thirdLine.className = 'flex items-center justify-between';
-                    
-                    const pendingLabel = document.createElement('span');
-                    pendingLabel.className = 'text-sm';
-                    const pendingLabelText = document.createElement('span');
-                    pendingLabelText.className = 'text-gray-400';
-                    pendingLabelText.textContent = 'Đang chờ khớp ';
-                    const pendingDirection = document.createElement('span');
-                    pendingDirection.className = bet.direction === 'BUY' 
-                        ? 'text-green-500' 
-                        : 'text-red-500';
-                    pendingDirection.textContent = bet.direction;
-                    pendingLabel.appendChild(pendingLabelText);
-                    pendingLabel.appendChild(pendingDirection);
-                    
-                    const pendingAmountText = document.createElement('span');
-                    pendingAmountText.className = 'text-white text-sm';
-                    pendingAmountText.textContent = `$${pendingAmount.toFixed(2)}`;
-                    
-                    thirdLine.appendChild(pendingLabel);
-                    thirdLine.appendChild(pendingAmountText);
-                    betItem.appendChild(thirdLine);
-                }
-                
-                // Fourth line: Thắng/Thua (if bet is finished)
-                if (bet.status === 'won') {
-                    const fourthLine = document.createElement('div');
-                    fourthLine.className = 'flex items-center justify-between mt-2';
-                    
-                    const wonLabel = document.createElement('span');
-                    wonLabel.className = 'text-green-500 text-sm font-semibold';
-                    wonLabel.textContent = 'Thắng';
-                    
-                    const wonAmountText = document.createElement('span');
-                    wonAmountText.className = 'text-white text-sm font-semibold';
-                    wonAmountText.textContent = `$${payoutAmount.toFixed(2)}`;
-                    
-                    fourthLine.appendChild(wonLabel);
-                    fourthLine.appendChild(wonAmountText);
-                    betItem.appendChild(fourthLine);
-                } else if (bet.status === 'lost') {
-                    const fourthLine = document.createElement('div');
-                    fourthLine.className = 'flex items-center justify-between mt-2';
-                    
-                    const lostLabel = document.createElement('span');
-                    lostLabel.className = 'text-red-500 text-sm font-semibold';
-                    lostLabel.textContent = 'Thua';
-                    
-                    fourthLine.appendChild(lostLabel);
-                    betItem.appendChild(fourthLine);
-                }
-                
-                // Assemble bet item
-                betItem.appendChild(firstLine);
-                
-                // Add to container
-                if (betsContainer) {
-                    betsContainer.appendChild(betItem);
-                }
+
+        // Clear existing bet items
+        if (buyBetsContainer) buyBetsContainer.innerHTML = '';
+        if (sellBetsContainer) sellBetsContainer.innerHTML = '';
+
+        // Render BUY bets
+        if (buyBets.length > 0 && buyBetsContainer) {
+            buyBets.forEach(bet => {
+                const betItem = createBetItem(bet);
+                buyBetsContainer.appendChild(betItem);
             });
+        }
+
+        // Render SELL bets
+        if (sellBets.length > 0 && sellBetsContainer) {
+            sellBets.forEach(bet => {
+                const betItem = createBetItem(bet);
+                sellBetsContainer.appendChild(betItem);
+            });
+        }
+
+        // Show/hide no orders message
+        if (trMyBets.length > 0) {
+            if (noOrdersMessage) noOrdersMessage.classList.add('hidden');
         } else {
-            // Hide bets container, show no orders message
-            if (betsContainer) betsContainer.classList.add('hidden');
             if (noOrdersMessage) noOrdersMessage.classList.remove('hidden');
         }
+    }
+
+    // Helper function to create bet item
+    function createBetItem(bet) {
+        const matchedAmount = parseFloat(bet.matched_amount) || 0;
+        const pendingAmount = parseFloat(bet.pending_amount) || 0;
+        const payoutAmount = parseFloat(bet.payout_amount) || 0;
+        
+        // Create bet item container - chỉ chứa badges, không có header
+        const betItem = document.createElement('div');
+        betItem.className = 'w-fit space-y-2';
+        
+        // Bet status indicators container - all badges in one block
+        const indicatorsContainer = document.createElement('div');
+        indicatorsContainer.className = 'space-y-2';
+        
+        // Đã cược badge (if matched_amount > 0)
+        if (matchedAmount > 0) {
+            const matchedBadge = document.createElement('div');
+            matchedBadge.className = 'p-3 flex items-center gap-2';
+            matchedBadge.style.cssText = 'background: #328357; border-radius: 20px;';
+            matchedBadge.innerHTML = `
+            <div class="flex items-center rounded-full justify-center border border-[#0AFF68] p-1 w-6 h-6">
+                <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M0.473877 4.4541L4.76831 7.9541L10.4739 0.454102" stroke="white" stroke-width="1.5"/>
+</svg>
+</div>
+
+                <span class="text-[#0AFF68] text-sm">Đã cược: $${matchedAmount.toFixed(2)}</span>
+            `;
+            indicatorsContainer.appendChild(matchedBadge);
+        }
+        
+        // Đang chờ khớp badge (if pending_amount > 0)
+        if (pendingAmount > 0) {
+            const pendingBadge = document.createElement('div');
+            pendingBadge.className = 'p-3 flex items-center gap-2';
+            pendingBadge.style.cssText = 'background: #554524; border-radius: 20px;';
+            pendingBadge.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path opacity="0.3" d="M10 1.6665L10 4.1665" stroke="#E4B754" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path opacity="0.3" d="M10 15.833L10 18.333" stroke="#E4B754" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path opacity="0.3" d="M18.3334 10L15.8334 10" stroke="#E4B754" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path opacity="0.3" d="M4.16663 10L1.66663 10" stroke="#E4B754" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M15.8925 4.10723L14.1248 5.875" stroke="#E4B754" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5.87519 14.1248L4.10742 15.8926" stroke="#E4B754" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4.10748 4.10723L5.87524 5.875" stroke="#E4B754" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14.1248 14.1248L15.8926 15.8926" stroke="#E4B754" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="text-[#E8B139] text-sm">Đang chờ khớp: $${pendingAmount.toFixed(2)}</span>
+            `;
+            indicatorsContainer.appendChild(pendingBadge);
+        }
+        
+        // Thắng badge (if status = 'won')
+        if (bet.status === 'won') {
+            const wonBadge = document.createElement('div');
+            wonBadge.className = 'p-3 flex items-center gap-2';
+            wonBadge.style.cssText = 'background: #22c55e; border-radius: 20px;';
+            wonBadge.innerHTML = `
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-white text-sm font-semibold">Thắng: $${payoutAmount.toFixed(2)}</span>
+            `;
+            indicatorsContainer.appendChild(wonBadge);
+        }
+        
+        // Thua badge (if status = 'lost')
+        if (bet.status === 'lost') {
+            const lostBadge = document.createElement('div');
+            lostBadge.className = 'p-3 flex items-center gap-2';
+            lostBadge.style.cssText = 'background: #ef4444; border-radius: 20px;';
+            lostBadge.innerHTML = `
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-white text-sm font-semibold">Thua</span>
+            `;
+            indicatorsContainer.appendChild(lostBadge);
+        }
+        
+        // Assemble bet item - chỉ có badges, không có header
+        betItem.appendChild(indicatorsContainer);
+        
+        return betItem;
     }
 
     // Place bet (BUY or SELL)
@@ -1088,19 +1097,9 @@
             const elapsed = Math.floor((now - startedAt) / 1000);
             
             if (elapsed > 55) {
-                if (typeof showToast === 'function') {
-                    showToast('Thời gian đặt cược đã kết thúc. Chỉ có thể đặt cược trong 55 giây đầu của mỗi phiên.', 'error');
-                } else {
-                    alert('Thời gian đặt cược đã kết thúc. Chỉ có thể đặt cược trong 55 giây đầu của mỗi phiên.');
-                }
                 return;
             }
         } else if (!trRoundData || trRoundData.status !== 'running') {
-            if (typeof showToast === 'function') {
-                showToast('Round chưa bắt đầu hoặc đã kết thúc.', 'error');
-            } else {
-                alert('Round chưa bắt đầu hoặc đã kết thúc.');
-            }
             return;
         }
         
@@ -1112,11 +1111,6 @@
 
         const amount = parseFloat(amountInput.value);
         if (!amount || amount <= 0) {
-            if (typeof showToast === 'function') {
-                showToast('Vui lòng nhập số tiền hợp lệ', 'error');
-            } else {
-                alert('Vui lòng nhập số tiền hợp lệ');
-            }
             return;
         }
 
@@ -1126,11 +1120,6 @@
             : trUserBalances.balance;
         
         if (amount > selectedBalance) {
-            if (typeof showToast === 'function') {
-                showToast('Số dư không đủ để đặt cược', 'error');
-            } else {
-                alert('Số dư không đủ để đặt cược');
-            }
             return;
         }
 
@@ -1150,34 +1139,19 @@
                 body: JSON.stringify({
                     direction: direction,
                     amount: amount,
-                    wallet_type: trSelectedWallet
+                    wallet_type: trSelectedWallet,
+                    entry_price: trCurrentBtcPrice != null ? trCurrentBtcPrice : undefined
                 })
             });
 
             const data = await response.json();
 
             if (data.success) {
-                if (typeof showToast === 'function') {
-                    showToast('Đặt cược thành công!', 'success');
-                } else {
-                    alert('Đặt cược thành công!');
-                }
                 await updateMyBets();
                 await updateRoundData();
-            } else {
-                if (typeof showToast === 'function') {
-                    showToast(data.error || 'Có lỗi xảy ra khi đặt cược', 'error');
-                } else {
-                    alert(data.error || 'Có lỗi xảy ra khi đặt cược');
-                }
             }
         } catch (error) {
             console.error('Error placing bet:', error);
-            if (typeof showToast === 'function') {
-                showToast('Có lỗi xảy ra khi đặt cược', 'error');
-            } else {
-                alert('Có lỗi xảy ra khi đặt cược');
-            }
         } finally {
             if (buyBtn) buyBtn.disabled = false;
             if (sellBtn) sellBtn.disabled = false;
@@ -1345,14 +1319,22 @@
             });
         }
 
-        // Initialize: fetch round data and start timer
+        // Initialize: fetch round data, bets, và giá BTC (tab Entry)
         updateRoundData();
         updateMyBets();
-        
-        // Update every second
+        fetchBtcPriceFromBinance().then(function(p) {
+            if (p != null) trCurrentBtcPrice = p;
+            updateEntryTabPrices();
+        });
+
+        // Update every second: timer, round, và giá BTC từ Binance (tab Entry)
         trTimerInterval = setInterval(function() {
             updateTimer();
             updateRoundData();
+            fetchBtcPriceFromBinance().then(function(p) {
+                if (p != null) trCurrentBtcPrice = p;
+                updateEntryTabPrices();
+            });
         }, 1000);
 
         // Update bets every 3 seconds
